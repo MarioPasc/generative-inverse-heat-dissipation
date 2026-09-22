@@ -96,6 +96,18 @@ In flight when the machine went down (both agents were told to commit their inte
 | T2.3 pilot (3060) | `ticket/T2.3-local-pilot-3060`, `wt/T2.3` | memory sweep + `ixi,A0` pilots at lr 2e-4 / 1e-4, `ixi,A3`, `lsun_church,A0` in `$IHDM_DATA_ROOT/_runs_local/`; killed by the reboot | read the interim log; the runs resume from `checkpoints-meta/` by re-issuing the same command; respawn a T2.3 agent (opus5-high) with the same prompt (log §1) plus "continue from the interim state" |
 | T3.1 Picasso setup | `ticket/T3.1-picasso-setup` (pushed), `wt/T3.1` | driver probe and/or the import-check job on Picasso (job ids in its log); clone at `fscratch/repos/generative-inverse-heat-dissipation` on the ticket branch; env `fscratch/conda_envs/ihdm`; data synced (pre-N4 hashes) | `ssh picasso 'sacct -u mpascual --starttime today'`; read `~/execs/ihdm/logs/`; respawn or resume T3.1 to write `picasso_setup.md`, then merge |
 
+T2.3 interim (committed `ae8fb30` on its branch, log §5): peak GB = 1.705·B + 1.30 on the 3060
+(batch 2: 4.7 GB, 2.1 it/s; batch 4: 8.1 GB, 1.14 it/s, 4.5 img/s; batch 6 OOM); A100 extrapolation
+batch 16 → 28.6 GB (fits), **batch 24 → 42 GB (does not fit; D4″'s "raise to 24" is moot)**; lr 2e-4
+stable to step 525 (no NaN, loss 3.8 → 1.2), lr 1e-4 comparison NOT run; A3, Churches, resume test,
+sampler and `pilot_3060.md` NOT done. **Budget risk to settle with the T3.2 probe's real A100
+numbers**: training ≈ 10–13 h per 40k run at batch 16 (≈ 300–390 A100-h for 30 runs, against the
+proposal's 150) and the `05-metrics` sampling plan (≈ 25k chains per run at ≈ 5 s per chain) would
+cost ≈ 950–1,260 A100-h. Remedies to decide next session, in this order: measure real A100 it/s
+and s/chain at large sampling batches (64–128) first; cut LSD to 4 checkpoints (10k/20k/30k/40k)
+with 500 samples each and share one 2k final set for LSD, FID/KID and $M$; keep the 40 × 50
+diversity set; then the pre-registered drop order (tier-3 seeds → A2 → iterations 40k → 30k).
+
 Next steps, in order: (1) verify/merge T3.1 and T2.3; (2) spawn **T1.4** (N4; ticket written,
 D15) — it rebuilds `ixi`/`oasis1`, refits `schedules/`, updates `data_profile.md`; then re-sync the
 two MRI datasets to Picasso (hashes change); (3) T3.2 probe (batch 16 vs 24, 3 epochs, resume,
