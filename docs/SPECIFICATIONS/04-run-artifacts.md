@@ -77,7 +77,10 @@ The released keys `training.snapshot_freq`, `snapshot_freq_for_preemption`, `sam
 names for compatibility with `sample.py`/`evaluate.py`.
 
 Arms A2′ are only valid for photograph datasets; the factory raises `ValueError` for
-`"ixi,A2p"`. Bedrooms accepts only A0 and A3.
+`"ixi,A2p"`. The transfer pair (`oasis1` and `lsun_bedroom`) accepts only A0 and A3. The 30
+experiment cells are exposed as the module constant `configs.spectral.arms.EXPERIMENT_CELLS`
+(read by T3.3). `run_id` lives in `config.run_id` and is refreshed by `train()` after
+ml_collections applies `--config.seed` overrides (the override happens after `get_config`).
 
 `run_id = f"{dataset_id}_{arm}_s{seed}"` (arm ∈ {A0, A1, A2, A3, A2p}); `workdir = <run_root>/<run_id>`.
 
