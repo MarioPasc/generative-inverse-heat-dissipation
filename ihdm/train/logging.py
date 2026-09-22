@@ -15,6 +15,7 @@ in the window are ``null``, never 0.
 from __future__ import annotations
 
 import json
+import math
 import time
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,17 @@ OCTAVE_BIN_NAMES: tuple[str, ...] = (
     "32-64",
     "64-96",
 )
+
+
+def _finite(value: Any) -> Any:
+    """Recursively replace non-finite floats by ``None`` so the record is strict JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _finite(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_finite(item) for item in value]
+    return value
 
 
 def octave_bin(sigma_b: float) -> str | None:
@@ -133,9 +145,17 @@ class MetricsLogger:
             torch.cuda.reset_peak_memory_stats()
 
     def _write(self, record: dict[str, Any]) -> None:
-        """Append one JSON object to ``metrics.jsonl`` and flush it to disk."""
+        """Append one JSON object to ``metrics.jsonl`` and flush it to disk.
+
+        Non-finite floats become ``null``: ``json.dumps`` would otherwise emit the bare tokens
+        ``NaN`` / ``Infinity``, which Python reads back but ``jq``, ``pandas.read_json`` and
+        every strict parser reject. This is not hypothetical: with AMP the first optimiser steps
+        are commonly skipped by the ``GradScaler``, leaving non-finite gradients behind, so
+        ``grad_norm`` is non-finite on the first log line of a real GPU run. ``allow_nan=False``
+        keeps the guarantee if a new field is ever added without going through :func:`_finite`.
+        """
         with self._path.open("a") as handle:
-            handle.write(json.dumps(record) + "\n")
+            handle.write(json.dumps(_finite(record), allow_nan=False) + "\n")
 
     def _loss_per_octave(self) -> dict[str, float | None]:
         """Average the window's per-sample losses into the octave bins of the blur schedule."""
