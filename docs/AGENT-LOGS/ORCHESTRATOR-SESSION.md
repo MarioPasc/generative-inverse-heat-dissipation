@@ -83,6 +83,26 @@ records the ticket id, agent, model/effort, base SHA and any mid-flight correcti
   shared env's editable install. Rule from W2 on: agents use `PYTHONPATH=<worktree>`; the
   orchestrator re-runs `pip install -e .` on `main` after each merge.
 
+## 5a. Handoff at the reboot of 2026-09-22 (evening) — resume from here
+
+State of `main` (`origin/main` = local `main`, everything pushed): T0.1, T1.1, T1.2, T1.3, T2.1,
+T2.2 merged; 310 tests green (`OMP_NUM_THREADS=2 pytest -q -m "not integration"`); the four datasets
+validated at `$IHDM_DATA_ROOT`; `schedules/` frozen (pre-N4); recipe batch 16 / 40k in `arms.py`.
+
+In flight when the machine went down (both agents were told to commit their interim state):
+
+| ticket | branch / worktree | what was running | how to resume |
+|---|---|---|---|
+| T2.3 pilot (3060) | `ticket/T2.3-local-pilot-3060`, `wt/T2.3` | memory sweep + `ixi,A0` pilots at lr 2e-4 / 1e-4, `ixi,A3`, `lsun_church,A0` in `$IHDM_DATA_ROOT/_runs_local/`; killed by the reboot | read the interim log; the runs resume from `checkpoints-meta/` by re-issuing the same command; respawn a T2.3 agent (opus5-high) with the same prompt (log §1) plus "continue from the interim state" |
+| T3.1 Picasso setup | `ticket/T3.1-picasso-setup` (pushed), `wt/T3.1` | driver probe and/or the import-check job on Picasso (job ids in its log); clone at `fscratch/repos/generative-inverse-heat-dissipation` on the ticket branch; env `fscratch/conda_envs/ihdm`; data synced (pre-N4 hashes) | `ssh picasso 'sacct -u mpascual --starttime today'`; read `~/execs/ihdm/logs/`; respawn or resume T3.1 to write `picasso_setup.md`, then merge |
+
+Next steps, in order: (1) verify/merge T3.1 and T2.3; (2) spawn **T1.4** (N4; ticket written,
+D15) — it rebuilds `ixi`/`oasis1`, refits `schedules/`, updates `data_profile.md`; then re-sync the
+two MRI datasets to Picasso (hashes change); (3) T3.2 probe (batch 16 vs 24, 3 epochs, resume,
+sampler timing) with the lr from T2.3; (4) T3.3 array via `picasso-sbatch`; (5) M4 metrics tickets
+while the queue runs. Peers [Proposal-Specifier] and [Experiment-Reviewer] hold the current numbers
+(pre-N4) and expect the post-N4 ones for the Fig. 1 caption.
+
 ## 6. Open threads
 
 - [ask Mario] items above.
