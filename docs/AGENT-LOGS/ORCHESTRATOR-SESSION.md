@@ -125,3 +125,5 @@ while the queue runs. Peers [Proposal-Specifier] and [Experiment-Reviewer] hold 
 
 - [ask Mario] items above.
 - Registration is the schedule risk: T1.1 is the longest CPU ticket (≈ 1 h per cohort).
+
+- Follow-up (T3.1): `environment.yml` pins only `torch>=2.4` (resolved to 2.14.0+cu130 on both machines); pin the exact torch/torchvision versions once the Picasso driver probe (job 2403074) answers, so the env is reproducible.
