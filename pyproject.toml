@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ihdm"
+version = "0.1.0"
+description = "Spectral-allocation IHDM experiment (UAM GenAI course, 2026)."
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.4",
+    "torchvision",
+    "numpy>=1.26,<3",
+    "scipy",
+    "pandas",
+    "SimpleITK>=2.3",
+    "nibabel",
+    "Pillow",
+    "scikit-image",
+    "matplotlib",
+    "ml-collections",
+    "absl-py",
+    "tensorboard",
+    "tqdm",
+    "pyarrow",
+    "huggingface_hub",
+    "clean-fid",
+    "prdc",
+    "blobfile",
+    "opencv-python-headless",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+include = ["ihdm*", "scripts", "model_code", "configs*"]
+# `scripts/` and `configs/` (and its dataset subfolders) have no `__init__.py` in
+# the released code; enable PEP 420 namespace-package discovery so an editable
+# install still exposes `scripts.datasets` and `configs.spectral.smoke` for
+# `import`, without adding `__init__.py` files outside T0.1's ownership.
+namespaces = true
+
+[tool.ruff]
+line-length = 100
+exclude = ["model_code", "scripts/cleanfid_alternatives.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+markers = ["integration"]
+testpaths = ["tests"]
