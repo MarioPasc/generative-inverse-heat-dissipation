@@ -265,7 +265,9 @@ def main(argv: list[str] | None = None) -> int:
     resolved = resolve_request(request, config)
     seeds_u8, seed_idx = _load_seeds(args, config)
     payload = load_checkpoint(ckpt_path, device)
-    model = load_ema_model(ckpt_path, config, device)
+    model = load_ema_model(ckpt_path, config, device, payload=payload)
+    # The weights now live in the model; drop the second copy before the chain allocates.
+    payload = {key: value for key, value in payload.items() if key != "ema_state_dict"}
 
     start = time.perf_counter()
     samples = sample_from_seeds(model, config, seeds_u8, request, device)

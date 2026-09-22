@@ -219,7 +219,10 @@ def _check_schedule(payload: dict[str, Any], config: Any, ckpt_path: Path) -> No
 
 
 def load_ema_model(
-    ckpt_path: Path, config: Any, device: torch.device | str = "cpu"
+    ckpt_path: Path,
+    config: Any,
+    device: torch.device | str = "cpu",
+    payload: dict[str, Any] | None = None,
 ) -> torch.nn.Module:
     """Instantiate the released U-Net and load the checkpoint's EMA weights into it.
 
@@ -232,6 +235,9 @@ def load_ema_model(
         ``model.blur_schedule_sha256`` is checked against the checkpoint.
     device : torch.device | str
         Where the model is placed.
+    payload : dict[str, Any] | None
+        An already-read checkpoint payload, so a caller that needs the metadata first does not
+        read the (200 MB+) file twice.
 
     Returns
     -------
@@ -248,7 +254,10 @@ def load_ema_model(
 
     ckpt_path = Path(ckpt_path)
     device = torch.device(device)
-    payload = load_checkpoint(ckpt_path, device)
+    if payload is None:
+        payload = load_checkpoint(ckpt_path, device)
+    elif "ema_state_dict" not in payload:
+        raise SamplingError(f"{ckpt_path}: the given payload has no 'ema_state_dict'")
     _check_schedule(payload, config, ckpt_path)
 
     model = UNetModel(config).to(device)
