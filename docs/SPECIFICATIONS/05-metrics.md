@@ -3,8 +3,9 @@
 All images are $192^2$ grayscale in $[0,1]$; $W = 192$; "mode" means a 2-D DCT-II (orthonormal)
 coefficient $(i, j)$, $i, j \in \{0, \dots, W-1\}$, with radial index $n = \sqrt{i^2 + j^2}$; a mode
 with index $n$ carries $n/2$ **cycles per image**. Octave bins (in cycles per image) are the ones of
-every table in the project: $[0.5, 1), [1, 2), [2, 4), [4, 8), [8, 16), [16, 32), [32, 64), [64, 96]$
-(the last bin is the corner band up to the maximal radial index).
+every table in the project: $[0.5, 1), [1, 2), [2, 4), [4, 8), [8, 16), [16, 32), [32, 64), [64, 96]$;
+modes above 96 cycles per image (the corner modes, up to 135) are excluded, as in every table of
+the project.
 
 Reference set = the `ref` split of the same dataset (800 images), never the training split.
 
@@ -50,27 +51,36 @@ $\sigma_B = 16$ px. Report the mean over the 40 seeds and the per-seed values.
 
 ## 4. Memorisation ratio $M$
 
-For a set $Y$ of samples (the 40 × 50 diversity samples) and the training split $X_{\text{train}}$
-(3200 images), with $d(y) = \min_{x \in X_{\text{train}}} \|y - x\|_2$ (pixel space, DC removed) and
-the same distance $d(r)$ for held-out real images $r \in X_{\text{ref}} \setminus \text{seeds}$:
+Computed on **training-seeded** samples (the copying the design worries about is copying of the
+training seeds handed over by the prior; a held-out-seeded sample can never be closer to the
+training set than a new real image, so $M$ on the §3 set would be ≈ 1 by construction). $Y$ = the
+5k final-checkpoint samples of §7 (one per training seed, seeds drawn with replacement). With
+$d(y) = \min_{x \in X_{\text{train}}} \|y - x\|_2$ over the **full** training split including the
+sample's own seed (pixel space, DC removed), and the same distance $d(r)$ for held-out real
+images $r \in X_{\text{ref}} \setminus \text{seed subjects}$:
 
 $$M = \frac{\operatorname{median}_{y \in Y} d(y)}{\operatorname{median}_{r} d(r)}.$$
 
 $M = 1$: as far from the training set as a new real image; $M < 1$: closer than real held-out
 images (copying). Also $M_{\text{lp}}$ after the $\sigma_B = 16$ low-pass on both numerator and
-denominator, and the fraction of samples whose nearest training neighbour is the seed's own subject
-(MRI) or the seed image (photographs). Computed with `torch.cdist` in chunks on the GPU or CPU.
+denominator, and `seed_nn_fraction`: the fraction of samples whose nearest training image is its
+own seed (MRI: any slice of the seed's subject; photographs: the seed image). Computed with
+`torch.cdist` in chunks on the GPU or CPU. The held-out-seeded 40 × 50 set is used for §3 and §5
+only.
 
 ## 5. Inherited band (mechanism check, eq. (13.3) of learning/03)
 
 For each seed $s$ with samples $y_{s,m}$: per-mode variance of the samples about their seed,
 $V_s(i,j) = \frac1{50}\sum_m (\hat y_{s,m}(i,j) - \hat x_s(i,j))^2$, averaged over seeds and
 normalised by the population per-mode variance $P_{\text{ref}}(i,j)$; plotted (radial profile)
-against the prediction line $d_{K}^2(n) = (1 - e^{-\lambda_n t_K})^2$ with $\lambda_n$ the DCT
-Laplacian eigenvalue of the mode and $t_K = \sigma_{B,\max}^2/2$. A straight line through the
-origin means the model inherits exactly the modes the prior hands it. Report the inherited share:
-$\sum_{n} P_{\text{ref}}(n)\, e^{-2\lambda_n t_K} / \sum_n P_{\text{ref}}(n)$ (prediction) against
-the measured $1 - \sum V / \sum P_{\text{ref}}$ restricted to the low band.
+against the **linear-Gaussian prediction** $1 - d_K^2(n) = 1 - e^{-2\lambda_n t_K}$ with
+$\lambda_n$ the DCT Laplacian eigenvalue of the mode and $t_K = \sigma_{B,\max}^2/2$: the chain
+regenerates the removed part of each mode, whose variance is $(1 - d_K^2) P$, while the surviving
+part $d_K x_{\text{seed}}$ is constant across the 50 samples and contributes no variance (at
+$d_K = 0.5$ the prediction is $0.75$). The measured curve lying on the line means the model
+inherits exactly the modes the prior hands it; curvature is the finding. Report the inherited
+share: $\sum_{n} P_{\text{ref}}(n)\, e^{-2\lambda_n t_K} / \sum_n P_{\text{ref}}(n)$ (prediction)
+against the measured $1 - \sum V / \sum P_{\text{ref}}$ restricted to the low band.
 
 ## 6. PCA around the seed (figure only)
 
@@ -84,7 +94,12 @@ seeds, arrows from the seed to the sample centroid.
 over the 3200 training images with distinct sampling noise) and the 800 reference images, both
 grayscale replicated to 3 channels and resized by clean-fid's own pipeline; `prdc` recall and
 coverage on the same Inception features with $k = 5$. Reported with a bootstrap CI over samples.
-Never compared across datasets; compared across arms within a dataset only.
+Never compared across datasets; compared across arms within a dataset only. **FID against an
+800-image reference is biased upward (bias ∝ $1/N_{\text{ref}}$)**; the bias cancels in
+differences between arms because the reference is identical for all arms, but absolute values are
+not comparable to the paper's: **KID (unbiased) is the headline of the two**, every FID is printed
+with its $N_{\text{ref}}$, and no absolute FID is quoted against the paper without that caveat.
+The same 5k training-seeded samples are the set on which §4's $M$ is computed.
 
 ## 8. Statistics (T4.3 / T6.1)
 
