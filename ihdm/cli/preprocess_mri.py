@@ -47,7 +47,6 @@ from ihdm.preprocess.mri import (
     scale_intensity,
     slices_to_uint8,
     template_geometry,
-    to_display_orientation,
 )
 from ihdm.preprocess.raw_mri import (
     COHORTS,
@@ -667,7 +666,7 @@ def _orientation_sheet(
     return qc.orientation_sheet(qc_dir / "orientation_sheet.png", rows, geometry)
 
 
-__all__ = ["main", "to_display_orientation"]
+__all__ = ["main"]
 
 if __name__ == "__main__":
     raise SystemExit(main())
