@@ -433,7 +433,9 @@ def _validate_images(
 
     flat = images.reshape(images.shape[0], -1)
     constant_idx = np.flatnonzero(flat.max(axis=1) == flat.min(axis=1))
-    violations.extend(f"images.npy: image idx={i} is entirely constant" for i in constant_idx.tolist())
+    violations.extend(
+        f"images.npy: image idx={i} is entirely constant" for i in constant_idx.tolist()
+    )
 
     mean_val = float(images.mean())
     if not (5.0 < mean_val < 200.0):
@@ -450,7 +452,9 @@ def _validate_index(index: pd.DataFrame, images: np.ndarray | None) -> list[str]
         return violations
 
     if images is not None and len(index) != images.shape[0]:
-        violations.append(f"index.csv: {len(index)} rows does not match images.npy N={images.shape[0]}")
+        violations.append(
+            f"index.csv: {len(index)} rows does not match images.npy N={images.shape[0]}"
+        )
 
     if not (index["idx"].to_numpy() == np.arange(len(index))).all():
         violations.append("index.csv: 'idx' column does not equal the row position")

@@ -107,7 +107,9 @@ def make_loaders(config: Any) -> tuple[DataLoader, DataLoader]:
         ``config.seed``; the eval loader does not shuffle.
     """
     root = Path(config.data.root) / config.data.dataset
-    train_dataset = NpyImageDataset(root, config.data.split_train, random_flip=config.data.random_flip)
+    train_dataset = NpyImageDataset(
+        root, config.data.split_train, random_flip=config.data.random_flip
+    )
     eval_dataset = NpyImageDataset(root, config.data.split_eval, random_flip=False)
 
     generator = torch.Generator()
