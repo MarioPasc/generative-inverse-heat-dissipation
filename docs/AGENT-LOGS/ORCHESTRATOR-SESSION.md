@@ -50,7 +50,8 @@ described").
 
 | wave | tickets | agents | base | verdicts | merged |
 |---|---|---|---|---|---|
-| W0 | T0.1 | sonnet5-xhigh | `<sha>` | | |
+| W0 | T0.1 | sonnet5-xhigh | `c23fbff` | ACCEPT | `1c7e2c5` |
+| W1 | T1.1 ‖ T1.2 | opus5-xhigh ‖ opus5-high | `1c7e2c5` | | |
 
 (Updated as waves complete; each wave's detail is `M<k>-<slug>/WAVE-<id>.md`.)
 
