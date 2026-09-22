@@ -167,7 +167,17 @@ Everything else in `model_code/`, `scripts/`, `sample.py`, `evaluate.py` is read
 ## 6. Smoke config (`configs/spectral/smoke.py`)
 
 `get_config()` for the synthetic dataset written by the test fixtures: `image_size=32`, `K=8`,
-`model_channels=16`, `channel_mult=(1, 2)`, `num_res_blocks=1`, `attention_levels=()`, batch 4,
-`n_iters=6`, `ckpt_every=3`, `resume_every=2`, `log_every=1`, `eval_every=3`, `grid_every=3`, CPU.
+`model_channels=32` (the released `GroupNorm32` needs channel counts divisible by 32; 16 crashes),
+`channel_mult=(1, 2)`, `num_res_blocks=1`, `attention_levels=()`, batch 4, `n_iters=6`,
+`ckpt_every=3`, `resume_every=2`, `log_every=1`, `eval_every=3`, `grid_every=3`, CPU.
 Used by `tests/train/test_smoke_train.py` (runs `train.train(config, tmp_workdir)` twice to test
 resume) and by the Picasso import-check job.
+
+**CPU-on-a-CUDA-host caveat (found by T0.1).** `model_code/utils.create_model` wraps the model in
+`torch.nn.DataParallel(model, device_ids=None)`, which scatters inputs to `cuda:0` whenever CUDA is
+visible, regardless of `config.device`; a CPU smoke run on a GPU host therefore fails with a
+device mismatch. Tests that run the released trainer on CPU do so in a subprocess with
+`CUDA_VISIBLE_DEVICES=""` (T0.1's `tests/train/test_released_smoke.py`); T2.1 keeps that pattern.
+Code that only needs the network for inference (T2.2's sampler, T4.x) instantiates
+`model_code.unet.UNetModel(config).to(device)` directly and loads the EMA state dict (keys without
+the `module.` prefix), never `create_model`.
