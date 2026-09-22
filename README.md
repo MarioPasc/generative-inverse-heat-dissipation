@@ -108,3 +108,12 @@ If you use the code in this repository for your research, please cite the paper 
 
 This software is provided under the [MIT license](LICENSE).
 
+## Spectral-allocation experiment (UAM GenAI course, 2026)
+
+This fork also hosts a course-project experiment on whether the terminal blur and the blur
+schedule should depend on the spectrum of the data (brain MRI vs. photographs). The
+specification, milestones and contracts live under `docs/README.md`; start there.
+
+Environment: `conda env create -f environment.yml` (env name `ihdm`), then `pip install -e .`.
+Run the test suite with `pytest -q` (see `pyproject.toml` for markers and paths).
+
