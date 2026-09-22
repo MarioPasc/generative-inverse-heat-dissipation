@@ -84,10 +84,23 @@ def schedules_dir(tmp_path, monkeypatch) -> Path:
     return target
 
 
-@pytest.fixture(scope="session")
-def smoke_dataset(tmp_path_factory) -> Path:
-    """A 64-image, 32x32 standard-format dataset for the smoke run (8 subjects x 8 slices)."""
-    root = tmp_path_factory.mktemp("t21_data") / "synthetic"
+def build_dataset(parent: Path, dataset_id: str) -> Path:
+    """Write a 64-image, 32x32 standard-format dataset (8 subjects x 8 slices) at
+    ``parent/dataset_id``.
+
+    Parameters
+    ----------
+    parent : Path
+        The directory that plays the role of ``config.data.root``.
+    dataset_id : str
+        The dataset folder name, which is also ``config.data.dataset``.
+
+    Returns
+    -------
+    Path
+        The dataset directory.
+    """
+    root = Path(parent) / dataset_id
     n_subjects, n_slices = 8, 8
     n = n_subjects * n_slices
     rng = np.random.default_rng(0)
@@ -111,7 +124,7 @@ def smoke_dataset(tmp_path_factory) -> Path:
         }
     )
     meta = DatasetMeta(
-        dataset_id="synthetic",
+        dataset_id=dataset_id,
         n_images=n,
         image_size=32,
         dtype="uint8",
@@ -120,12 +133,24 @@ def smoke_dataset(tmp_path_factory) -> Path:
         git_sha="test",
         created="2026-09-22T00:00:00",
         raw_root=str(root),
-        parameters={"note": "synthetic fixture for the T2.1 smoke run"},
+        parameters={"note": "synthetic fixture for the T2.1 trainer tests"},
         counts={"subjects_total": n_subjects, "subjects_used": n_subjects,
                 "slices_per_subject": n_slices},
     )
     write_dataset(root, images, index, splits, meta)
     return root
+
+
+@pytest.fixture
+def dataset_factory():
+    """Expose :func:`build_dataset` so a test can write a dataset under any id."""
+    return build_dataset
+
+
+@pytest.fixture(scope="session")
+def smoke_dataset(tmp_path_factory) -> Path:
+    """A 64-image, 32x32 standard-format dataset for the smoke run."""
+    return build_dataset(tmp_path_factory.mktemp("t21_data"), "synthetic")
 
 
 def run_training(data_root: Path, workdir: Path, n_iters: int, timeout: int = 300):

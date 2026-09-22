@@ -47,6 +47,13 @@ def get_dataset(config, uniform_dequantization=False, train_batch_size=None,
     if not eval_batch_size:
         eval_batch_size = config.eval.batch_size
 
+    # Our standard-format datasets are matched first: "lsun_church" is both a member of
+    # NPY_DATASETS and the name of a released torchvision LSUN branch below, which would
+    # otherwise shadow it and route every churches run to an lmdb store that this project
+    # does not produce. The released branches are kept untouched for the released configs.
+    if config.data.dataset in NPY_DATASETS:
+        return ihdm_dataset.make_loaders(config)
+
     if config.data.dataset == 'MNIST':
         training_data = datasets.MNIST(
             root="data", train=True, download=True, transform=transform)
@@ -78,8 +85,6 @@ def get_dataset(config, uniform_dequantization=False, train_batch_size=None,
                                batch_size=eval_batch_size, image_size=config.data.image_size,
                                random_flip=False)
         return trainloader, testloader
-    elif config.data.dataset in NPY_DATASETS:
-        return ihdm_dataset.make_loaders(config)
     else:
         raise ValueError
 
