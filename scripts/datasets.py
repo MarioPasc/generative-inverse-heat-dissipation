@@ -2,13 +2,15 @@
 
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
-from mpi4py import MPI
 import blobfile as bf
 from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets
 from torchvision import transforms, datasets
 import torch
 from PIL import Image
+
+from ihdm.data.dataset import NPY_DATASETS
+from ihdm.data import dataset as ihdm_dataset
 
 
 class UniformDequantize(object):
@@ -76,6 +78,8 @@ def get_dataset(config, uniform_dequantization=False, train_batch_size=None,
                                batch_size=eval_batch_size, image_size=config.data.image_size,
                                random_flip=False)
         return trainloader, testloader
+    elif config.data.dataset in NPY_DATASETS:
+        return ihdm_dataset.make_loaders(config)
     else:
         raise ValueError
 
@@ -122,12 +126,19 @@ def load_data(
         class_names = [bf.basename(path).split("_")[0] for path in all_files]
         sorted_classes = {x: i for i, x in enumerate(sorted(set(class_names)))}
         classes = [sorted_classes[x] for x in class_names]
+    try:
+        from mpi4py import MPI
+        shard = MPI.COMM_WORLD.Get_rank()
+        num_shards = MPI.COMM_WORLD.Get_size()
+    except ImportError:
+        shard = 0
+        num_shards = 1
     dataset = ImageDataset(
         image_size,
         all_files,
         classes=classes,
-        shard=MPI.COMM_WORLD.Get_rank(),
-        num_shards=MPI.COMM_WORLD.Get_size(),
+        shard=shard,
+        num_shards=num_shards,
         random_flip=random_flip
     )
     if deterministic:
