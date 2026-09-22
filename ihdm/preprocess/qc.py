@@ -277,7 +277,7 @@ def registration_sheet(
     tiles += sorted(subject_slices.items())
     n_cols = 6
     n_rows = int(np.ceil(len(tiles) / n_cols))
-    figure, axes = plt.subplots(n_rows, n_cols, figsize=(2.0 * n_cols, 2.15 * n_rows))
+    figure, axes = plt.subplots(n_rows, n_cols, figsize=(2.0 * n_cols, 2.5 * n_rows))
     for axis, (label, tile) in zip(np.ravel(axes), tiles, strict=False):
         _imshow(axis, tile, title=label)
         axis.contour(mask_slice.astype(float), levels=[0.5], colors="lime", linewidths=0.7)
@@ -288,7 +288,7 @@ def registration_sheet(
         f"(axial plane, MNI z = {z_mm:+.0f} mm)",
         fontsize=9,
     )
-    return _save(figure, path)
+    return _save(figure, path, h_pad=2.2)
 
 
 def metric_distribution(path: Path, records: Sequence[SubjectRecord], gate: GateResult) -> Path:
@@ -543,14 +543,14 @@ def levels_sheet(path: Path, slices: np.ndarray, z_mm: Sequence[float], subject:
     n = len(slices)
     n_cols = 5
     n_rows = int(np.ceil(n / n_cols))
-    figure, axes = plt.subplots(n_rows, n_cols, figsize=(2.0 * n_cols, 2.15 * n_rows))
+    figure, axes = plt.subplots(n_rows, n_cols, figsize=(2.0 * n_cols, 2.5 * n_rows))
     for index, axis in enumerate(np.ravel(axes)):
         if index >= n:
             axis.axis("off")
             continue
         _imshow(axis, slices[index], title=f"slice {index} · z = {z_mm[index]:+.0f} mm")
     figure.suptitle(f"Axial levels of subject {subject} (stored orientation)", fontsize=9)
-    return _save(figure, path)
+    return _save(figure, path, h_pad=2.2)
 
 
 def intensity_sheet(path: Path, images: np.ndarray, cohort: str) -> Path:
@@ -596,11 +596,22 @@ def intensity_sheet(path: Path, images: np.ndarray, cohort: str) -> Path:
     return _save(figure, path)
 
 
-def _save(figure: plt.Figure, path: Path) -> Path:
-    """Write a figure to ``path`` and close it."""
+def _save(figure: plt.Figure, path: Path, h_pad: float = 1.0) -> Path:
+    """Write a figure to ``path`` and close it.
+
+    Parameters
+    ----------
+    figure : plt.Figure
+        The figure to write.
+    path : Path
+        Destination PNG.
+    h_pad : float
+        Extra vertical padding between rows, so per-tile titles never overlap the row
+        above them on the multi-row sheets.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    figure.tight_layout(rect=(0, 0, 1, 0.96))
+    figure.tight_layout(rect=(0, 0, 1, 0.96), h_pad=h_pad)
     figure.savefig(path, dpi=_DPI)
     plt.close(figure)
     logger.info("wrote %s", path)
