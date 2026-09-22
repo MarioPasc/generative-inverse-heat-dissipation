@@ -51,9 +51,10 @@ described").
 | wave | tickets | agents | base | verdicts | merged |
 |---|---|---|---|---|---|
 | W0 | T0.1 | sonnet5-xhigh | `c23fbff` | ACCEPT | `1c7e2c5` |
-| W1 | T1.1 ‖ T1.2 | opus5-xhigh ‖ opus5-high | `1c7e2c5` | T1.2 ACCEPT; T1.1 running (resumed after the 19:20 rate-limit cutoff) | T1.2 `c5ca1ad` |
+| W1 | T1.1 ‖ T1.2 | opus5-xhigh ‖ opus5-high | `1c7e2c5` | T1.2 ACCEPT; T1.1 ACCEPT (IXI 539/581 pass, 400 used, 70 min; OASIS-1 405/416 pass, 400 used, 50 min; both cohorts validated, QC sheets eyeballed by the orchestrator: template outline on every brain, A top / L left; IXI200 excluded by hand after a metric-gate miss, `fov_fraction_window` noted as the better gross-failure detector) | T1.2 `c5ca1ad`; T1.1 `1c7a678` |
 | W2 | T2.1 (started early: contracts only, no M1 data needed) | opus5-xhigh | `9f61ba7` | ACCEPT (154 tests; found the `lsun_church` routing bug, the float64-lr resume bug, the 61 M-param memory wall) | `1382a77` |
-| W3 | T2.2 (slot 2 while T1.1 runs) | opus5-high | see below | | |
+| W3 | T2.2 (slot 2 while T1.1 runs) | opus5-high | `a0bc936` | running | |
+| W4 | T1.3 | opus5-xhigh | `1c7a678` | running | |
 
 (Updated as waves complete; each wave's detail is `M<k>-<slug>/WAVE-<id>.md`.)
 
