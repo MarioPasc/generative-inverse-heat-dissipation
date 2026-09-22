@@ -87,8 +87,24 @@ All four match. The script exits non-zero and names the dataset on any mismatch.
 The data costs 36 files and ~0.6 GB. The conda prefix is the expensive object: 36,396 files, which
 is 15 % of the FSCRATCH soft file quota on its own. Package caches were kept out of `$HOME` (whose
 file quota is the tightest at 35.0k soft) and cleaned afterwards, so the prefix is all that
-remains. The 30-run array's own file budget (D5″: 16 EMA checkpoints per run) still has to be
-checked against this headroom before T3.3.
+remains.
+
+**File-count headroom for T3.3** (the array has to be sized against this, not against space):
+
+| quantity | value |
+|---|---|
+| FSCRATCH files in use after this ticket | 216.1k |
+| soft quota (7-day grace, login warning) | 250.0k → **≈ 34k files of headroom** |
+| hard quota (writes blocked immediately) | 400.0k → ≈ 184k files |
+| FSCRATCH space in use / soft / hard | 0.47 TB / 1.40 TB / 1.68 TB |
+
+Space is not the binding constraint: D5″ projects ≈ 112 GB of EMA checkpoints plus ≈ 21 GB of
+`full_final.pt` for the 30 runs, against ~0.93 TB of space headroom. The file count is. At 30 runs
+the array may spend about 1,100 files on checkpoints alone (16 EMA + 1 final + a resume
+checkpoint each), which fits, but sample archives and per-checkpoint metric files are what would
+not: budget **under ~34k new files** in total, or write per-run artefacts to `$LOCALSCRATCH` and
+copy back one archive per run. Re-read `quota` live before submitting the array; this number is
+account state and other work moves it.
 
 ## 6. Job ids
 
