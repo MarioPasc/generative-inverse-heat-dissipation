@@ -108,4 +108,8 @@ def get_initial_sample(config, forward_heat_module, delta, batch_size=None):
     original_images = initial_sample.clone()
     initial_sample = forward_heat_module(initial_sample,
                                          config.model.K * torch.ones(initial_sample.shape[0], dtype=torch.long).to(config.device))
+    # Hook point (04-run-artifacts.md §5, decision D3): the paper's prior is
+    # N(u_K, delta^2 I); the released code returned the noiseless blur.
+    if config.get("sampling") and config.sampling.get("prior_noise", False):
+        initial_sample = initial_sample + delta * torch.randn_like(initial_sample)
     return initial_sample, original_images
