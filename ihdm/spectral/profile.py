@@ -366,7 +366,7 @@ def build_checklist(
             "v", "the two brain schedules agree within 35% (max) and the photograph schedule "
             "differs from IXI's by more than 50%",
             deviation_max["oasis1"] <= 0.35 and deviation_max["lsun_church"] > 0.50,
-            "max |s_own / s_ixi - 1|: "
+            "max abs(s_own / s_ixi - 1): "
             + ", ".join(
                 f"{DATASET_LABELS[d]} {deviation_max[d]:.0%}" for d in DATASETS if d != "ixi"
             ),
