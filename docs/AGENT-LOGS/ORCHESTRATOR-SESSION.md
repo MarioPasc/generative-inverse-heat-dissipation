@@ -65,6 +65,20 @@ records the ticket id, agent, model/effort, base SHA and any mid-flight correcti
 
 (FIXUPs, RETURNs, contract changes — appended as they happen.)
 
+- W0/T0.1: approved `blobfile` + `opencv-python-headless`; accepted `model_channels=32` and the
+  subprocess CPU smoke test; specs amended (`04` §6).
+- W1: relayed the byte-exact contents of the three shared files (`ihdm/preprocess/__init__.py`,
+  `ihdm/cli/__init__.py`, `ihdm/preprocess/errors.py`) from T1.1 to T1.2 so the merge is trivial
+  (agents cannot address each other by name in this harness; `main` relays).
+- W1/T1.2: accepted the dedup-induced index shift for Churches (row 1855 duplicate of 1623) and the
+  shard-row naming of the raw PNGs; both documented in `meta.json`. Verdict ACCEPT, merged `c5ca1ad`.
+- W1/T1.1: contract amended on the agent's measurements: the 300-iteration cap on the finest
+  registration level is not a failure (converged metric, flat valley); FAIL = metric rule
+  (median + 3 MAD) plus eye. Recorded in the ticket file.
+- Environment hazard found by both W1 agents: `pip install -e .` from a worktree re-points the
+  shared env's editable install. Rule from W2 on: agents use `PYTHONPATH=<worktree>`; the
+  orchestrator re-runs `pip install -e .` on `main` after each merge.
+
 ## 6. Open threads
 
 - [ask Mario] items above.
