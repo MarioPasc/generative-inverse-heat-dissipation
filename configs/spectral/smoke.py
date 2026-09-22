@@ -1,9 +1,9 @@
 """CPU smoke-test config: tiny model, tiny images, 6 iterations, on a synthetic dataset.
 
 Frozen contract: ``docs/SPECIFICATIONS/04-run-artifacts.md`` §6. Used by
-``tests/train/test_released_smoke.py`` (T0.1, runs the unmodified ``train.py`` for
-5 iterations) and, in later tickets, by ``tests/train/test_smoke_train.py`` and the
-Picasso import-check job.
+``tests/train/test_smoke_train.py`` and ``tests/train/test_checkpoint_format.py`` (T2.1,
+which run ``train.train`` end to end over the synthetic fixture) and by the Picasso
+import-check job.
 
 Sets every key the released ``train.py``/``scripts/losses.py``/``scripts/sampling.py``
 read (the old cadence names: ``snapshot_freq``, ``snapshot_freq_for_preemption``,
@@ -14,6 +14,8 @@ values, per ``04-run-artifacts.md`` §2's "kept under the old names for
 compatibility" pattern. ``data.dataset = "synthetic"`` names the folder a test
 fixture writes under ``data.root`` (set by the test, not fixed here).
 """
+
+import hashlib
 
 import ml_collections
 import numpy as np
@@ -31,6 +33,12 @@ def get_config() -> ml_collections.ConfigDict:
         deterministic CPU run over the synthetic fixture dataset.
     """
     config = ml_collections.ConfigDict()
+
+    # run identity, mirroring configs/spectral/arms.py so train.py reads the same keys
+    # on both configs. "smoke" is not one of the five arms; the trainer only echoes it.
+    config.dataset_id = "synthetic"
+    config.arm = "smoke"
+    config.run_id = "synthetic_smoke_s1"
 
     # training
     config.training = training = ml_collections.ConfigDict()
@@ -110,7 +118,15 @@ def get_config() -> ml_collections.ConfigDict:
             )
         )
     )
-    model.train_level_max_inclusive = False
+    # Provenance keys of 04-run-artifacts.md §3.1/§3.3; the smoke schedule is generated here
+    # rather than loaded from schedules/, so it has no file and its hash is of its own bytes.
+    model.blur_schedule_name = "smoke_log_K8"
+    model.blur_schedule_file = ""
+    model.blur_schedule_sha256 = hashlib.sha256(
+        np.ascontiguousarray(model.blur_schedule).tobytes()
+    ).hexdigest()
+    # D3, as in the arm configs: level K is used at sampling time, so it is trained.
+    model.train_level_max_inclusive = True
 
     # optimization
     config.optim = optim = ml_collections.ConfigDict()
