@@ -1,0 +1,163 @@
+{
+  "ixi_W2": {
+    "K": 200,
+    "created": "2026-09-22T18:39:15+00:00",
+    "fitted_on": "ixi/train",
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": "93e99e89d96b984210f88b02d3c1970bf893825e972bda6b1b44662223b4b46f",
+    "kind": "matched",
+    "levels_per_octave": {
+      "0.5-1": 19,
+      "1-2": 29,
+      "16-32": 24,
+      "2-4": 37,
+      "32-64": 23,
+      "4-8": 33,
+      "64-96": 9,
+      "8-16": 26
+    },
+    "n_images": 3200,
+    "sha256": "7dc71364a9db2f8f0f796f4c53b776e400086c6200c8177986fea0c4af93adcd",
+    "sigma_max": 96.0,
+    "sigma_min": 0.5,
+    "spread": 1.001841
+  },
+  "ixi_W8": {
+    "K": 200,
+    "created": "2026-09-22T18:39:57+00:00",
+    "fitted_on": "ixi/train",
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": "93e99e89d96b984210f88b02d3c1970bf893825e972bda6b1b44662223b4b46f",
+    "kind": "matched",
+    "levels_per_octave": {
+      "0.5-1": 24,
+      "1-2": 36,
+      "16-32": 18,
+      "2-4": 47,
+      "32-64": 0,
+      "4-8": 43,
+      "64-96": 0,
+      "8-16": 32
+    },
+    "n_images": 3200,
+    "sha256": "252de31be929945c5f45651b3a7ba6231e0bf760e33a50f87c751e3ce47af330",
+    "sigma_max": 24.0,
+    "sigma_min": 0.5,
+    "spread": 1.004402
+  },
+  "log_W2": {
+    "K": 200,
+    "created": "2026-09-22T18:38:30+00:00",
+    "fitted_on": null,
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": null,
+    "kind": "log",
+    "levels_per_octave": {
+      "0.5-1": 27,
+      "1-2": 26,
+      "16-32": 26,
+      "2-4": 26,
+      "32-64": 26,
+      "4-8": 26,
+      "64-96": 16,
+      "8-16": 27
+    },
+    "n_images": null,
+    "sha256": "ad9c8c1163f5d7904587490fc107d4497039f1aafd1c8090a41ad11c2351bdb0",
+    "sigma_max": 96.0,
+    "sigma_min": 0.5,
+    "spread": null
+  },
+  "log_W8": {
+    "K": 200,
+    "created": "2026-09-22T18:38:30+00:00",
+    "fitted_on": null,
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": null,
+    "kind": "log",
+    "levels_per_octave": {
+      "0.5-1": 36,
+      "1-2": 36,
+      "16-32": 21,
+      "2-4": 35,
+      "32-64": 0,
+      "4-8": 36,
+      "64-96": 0,
+      "8-16": 36
+    },
+    "n_images": null,
+    "sha256": "840237df58f9e337f0ca1ffbf786b7d368be93bcee0ebe7e53f9c9f2974f8ab5",
+    "sigma_max": 24.0,
+    "sigma_min": 0.5,
+    "spread": null
+  },
+  "lsun_bedroom_W2": {
+    "K": 200,
+    "created": "2026-09-22T18:42:12+00:00",
+    "fitted_on": "lsun_bedroom/train",
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": "7e4c98d1544620047967f69d2df2bdcf685e363a9eccfd71607666d6fe5687d6",
+    "kind": "matched",
+    "levels_per_octave": {
+      "0.5-1": 15,
+      "1-2": 18,
+      "16-32": 34,
+      "2-4": 22,
+      "32-64": 34,
+      "4-8": 26,
+      "64-96": 19,
+      "8-16": 32
+    },
+    "n_images": 3200,
+    "sha256": "bb4991dce691a7a41e71514ecf7bc6b5441254afe785b7b90693c6f5180d4be4",
+    "sigma_max": 96.0,
+    "sigma_min": 0.5,
+    "spread": 1.004351
+  },
+  "lsun_church_W2": {
+    "K": 200,
+    "created": "2026-09-22T18:40:44+00:00",
+    "fitted_on": "lsun_church/train",
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
+    "kind": "matched",
+    "levels_per_octave": {
+      "0.5-1": 19,
+      "1-2": 21,
+      "16-32": 31,
+      "2-4": 23,
+      "32-64": 33,
+      "4-8": 26,
+      "64-96": 19,
+      "8-16": 28
+    },
+    "n_images": 3200,
+    "sha256": "fa28a66e71c6d8b721c8c3204314ef4d626451d46bfa2d25282fb2fcb33ddc44",
+    "sigma_max": 96.0,
+    "sigma_min": 0.5,
+    "spread": 1.004444
+  },
+  "oasis1_W8": {
+    "K": 200,
+    "created": "2026-09-22T18:41:26+00:00",
+    "fitted_on": "oasis1/train",
+    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "images_sha256": "4392a77136ca80d08cb9a4c910876a8b26b7c3b7d69dfe53ebe5710ba655a680",
+    "kind": "matched",
+    "levels_per_octave": {
+      "0.5-1": 25,
+      "1-2": 37,
+      "16-32": 15,
+      "2-4": 45,
+      "32-64": 0,
+      "4-8": 45,
+      "64-96": 0,
+      "8-16": 33
+    },
+    "n_images": 3200,
+    "sha256": "96e6676b1d665e28d68b7d9319caceacb34c15e1ac12de39a6c1479e8c09f153",
+    "sigma_max": 24.0,
+    "sigma_min": 0.5,
+    "spread": 1.003183
+  }
+}
