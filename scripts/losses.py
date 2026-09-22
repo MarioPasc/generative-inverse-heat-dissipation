@@ -54,14 +54,19 @@ def optimization_manager(config):
     return optimize_fn
 
 
-def get_label_sampling_function(K):
-    return lambda batch_size, device: torch.randint(1, K, (batch_size,), device=device)
+def get_label_sampling_function(K, train_level_max_inclusive=False):
+    # Hook point (04-run-artifacts.md §5, decision D3): the released code drew levels from
+    # [1, K), never training level K, although the sampler starts there. The default keeps
+    # the released behaviour; the arm configs set the flag.
+    high = K + 1 if train_level_max_inclusive else K
+    return lambda batch_size, device: torch.randint(1, high, (batch_size,), device=device)
 
 
 def get_inverse_heat_loss_fn(config, train, scales, device, heat_forward_module):
 
     sigma = config.model.sigma
-    label_sampling_fn = get_label_sampling_function(config.model.K)
+    label_sampling_fn = get_label_sampling_function(
+        config.model.K, config.model.get("train_level_max_inclusive", False))
 
     def loss_fn(model, batch):
         model_fn = mutils.get_model_fn(
