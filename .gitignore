@@ -1,0 +1,11 @@
+runs/
+data/
+*.pt
+*.pth
+*.npy
+!schedules/*.npy
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.ipynb_checkpoints/

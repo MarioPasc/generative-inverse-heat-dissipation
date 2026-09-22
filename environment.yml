@@ -1,0 +1,40 @@
+# Conda environment for the spectral-allocation IHDM experiment (docs/SPECIFICATIONS/).
+# Create with: conda env create -f environment.yml
+# Update with: conda env update -f environment.yml --prune
+name: ihdm
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - torch>=2.4
+      - torchvision
+      - numpy>=1.26,<3
+      - scipy
+      - pandas
+      - SimpleITK>=2.3
+      - nibabel
+      - Pillow
+      - scikit-image
+      - matplotlib
+      - ml-collections
+      - absl-py
+      - tensorboard
+      - tqdm
+      - pyarrow
+      - huggingface_hub
+      - clean-fid
+      - prdc
+      - pytest
+      - ruff
+      # Not in the ticket's package list but required by the released code we run
+      # unmodified: scripts/datasets.py imports `blobfile` at module level;
+      # scripts/utils.py imports `cv2` at module level and is imported by train.py
+      # (`from scripts import utils`). See docs/AGENT-LOGS/M0-scaffolding/
+      # T0.1-scaffolding-and-data-format.md §2/§6 for the rationale. The headless
+      # opencv wheel is used since no GUI/X11 functionality is needed.
+      - blobfile
+      - opencv-python-headless
+      # Explicitly NOT included: mpi4py (scripts/datasets.py's import is made lazy
+      # with an ImportError fallback, per the ticket).
