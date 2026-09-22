@@ -54,8 +54,8 @@ described").
 | W1 | T1.1 ‖ T1.2 | opus5-xhigh ‖ opus5-high | `1c7e2c5` | T1.2 ACCEPT; T1.1 ACCEPT (IXI 539/581 pass, 400 used, 70 min; OASIS-1 405/416 pass, 400 used, 50 min; both cohorts validated, QC sheets eyeballed by the orchestrator: template outline on every brain, A top / L left; IXI200 excluded by hand after a metric-gate miss, `fov_fraction_window` noted as the better gross-failure detector) | T1.2 `c5ca1ad`; T1.1 `1c7a678` |
 | W2 | T2.1 (started early: contracts only, no M1 data needed) | opus5-xhigh | `9f61ba7` | ACCEPT (154 tests; found the `lsun_church` routing bug, the float64-lr resume bug, the 61 M-param memory wall) | `1382a77` |
 | W3 | T2.2 (slot 2 while T1.1 runs) | opus5-high | `a0bc936` | ACCEPT (257 tests; 18 s per 200-step chain per image on the 3060 at batch 20; samples reproducible only at a fixed batch) | `214b419` |
-| W4 | T1.3 | opus5-xhigh | `1c7a678` | running | |
-| W5 | T3.1 (clone/env/data now; import check after T1.3 lands) | opus5-high | `214b419` | running | |
+| W4 | T1.3 | opus5-xhigh | `1c7a678` | ACCEPT (310 tests; 7 frozen schedules; checklist 4/5 PASS, item ii FAIL on IXI: coarse share 3.96% > 3%, 84% of it in the (1,0) mode = a between-subject A–P intensity ramp; registration collapsed the log spread from 51×/94× to 8.7×/15.1× while the ordering and the crossover survived; N4 question sent to the reviewer) | `32df895` |
+| W5 | T3.1 (clone/env/data now; import check after T1.3 lands) ‖ T2.3 (3060 pilot) | opus5-high ‖ opus5-high | `214b419` ‖ `32df895` | running | |
 
 (Updated as waves complete; each wave's detail is `M<k>-<slug>/WAVE-<id>.md`.)
 
