@@ -138,11 +138,13 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("cohort %s: %d subjects to register", args.cohort, len(refs))
 
     t_register = time.time()
-    _register_cohort(refs, paths, cfg, workers=args.workers, force=args.force)
+    _register_cohort(
+        refs, paths, cfg, geometry, workers=args.workers, force=args.force
+    )
     register_seconds = time.time() - t_register
 
     records = _read_records(refs, paths)
-    gate = qc.apply_gate(records)
+    gate = qc.apply_gate(records, exclude=args.exclude)
     selected = _select_subjects(gate.passing, args.n_subjects)
     if len(selected) < args.n_subjects:
         logger.warning(
@@ -166,8 +168,14 @@ def main(argv: list[str] | None = None) -> int:
 
     qc_paths = _write_qc(
         paths, cfg, geometry, template, records, gate, refs, selected, images, index,
-        {"registration wall time (s)": f"{register_seconds:.0f}",
-         "subjects used": len(selected)},
+        {
+            "registration wall time (s)": f"{register_seconds:.0f}",
+            "subjects used": len(selected),
+            "exactly-zero pixels (`padding_fraction`)": f"{float((images == 0).mean()):.2%}",
+            "outside the acquisition field of view": (
+                f"{_fov_padding_fraction(records, selected):.2%}"
+            ),
+        },
     )
 
     padding = float((images == 0).mean())
@@ -206,6 +214,10 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--template-dir", type=Path, default=None)
     parser.add_argument("--n-subjects", type=int, default=N_SUBJECTS_TARGET)
     parser.add_argument("--image-size", type=int, default=IMAGE_SIZE)
+    parser.add_argument(
+        "--exclude", nargs="*", default=[], metavar="SUBJECT",
+        help="subject ids to exclude after visual inspection of qc/registration_sheet.png",
+    )
     return parser.parse_args(argv)
 
 
@@ -222,13 +234,16 @@ def _cohort_paths(args: argparse.Namespace) -> CohortPaths:
     )
 
 
-def _init_worker(template_path: Path, cfg: RegistrationConfig) -> None:
+def _init_worker(
+    template_path: Path, cfg: RegistrationConfig, geometry: TemplateGeometry
+) -> None:
     """Load the template once per worker process and pin SimpleITK to one thread."""
     sitk.ProcessObject_SetGlobalDefaultNumberOfThreads(1)
     for variable in ("OMP_NUM_THREADS", "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"):
         os.environ[variable] = "1"
     _WORKER["template"] = registration_mod.load_template(template_path, cfg)
     _WORKER["cfg"] = cfg
+    _WORKER["geometry"] = geometry
 
 
 def _register_one(task: tuple[RawVolumeRef, Path]) -> tuple[str, str]:
@@ -236,14 +251,22 @@ def _register_one(task: tuple[RawVolumeRef, Path]) -> tuple[str, str]:
     ref, destination = task
     template = _WORKER["template"]
     cfg = _WORKER["cfg"]
+    geometry = _WORKER["geometry"]
     try:
         moving = load_sitk(ref)
         result = registration_mod.register(moving, template.image, template.dilated_mask, cfg)
         resampled = registration_mod.resample_to_template(
             moving, template.image, result.transform, cfg
         )
+        fov = registration_mod.field_of_view_mask(moving, template.image, result.transform)
+        fov_window = float(
+            extract_slices(
+                sitk.GetArrayFromImage(fov).transpose(2, 1, 0).astype(np.float32), geometry
+            ).mean()
+        )
         registration_mod.write_registered(
-            destination, resampled, result, cfg, ref.subject, ref.source
+            destination, resampled, result, cfg, ref.subject, ref.source,
+            extra={"fov_fraction_window": fov_window},
         )
     except (PreprocessError, RuntimeError, MemoryError) as exc:
         return ref.subject, f"{type(exc).__name__}: {exc}"
@@ -254,6 +277,7 @@ def _register_cohort(
     refs: list[RawVolumeRef],
     paths: CohortPaths,
     cfg: RegistrationConfig,
+    geometry: TemplateGeometry,
     workers: int,
     force: bool,
 ) -> None:
@@ -280,7 +304,9 @@ def _register_cohort(
     started = time.time()
     context = mp.get_context("spawn")
     with context.Pool(
-        processes=max(1, workers), initializer=_init_worker, initargs=(template_path, cfg)
+        processes=max(1, workers),
+        initializer=_init_worker,
+        initargs=(template_path, cfg, geometry),
     ) as pool:
         for subject, error in pool.imap_unordered(_register_one, tasks, chunksize=1):
             done += 1
@@ -316,6 +342,7 @@ def _read_records(refs: list[RawVolumeRef], paths: CohortPaths) -> list[qc.Subje
                 iterations=int(sidecar["iterations"]),
                 stop_condition=str(sidecar["stop_condition"]),
                 hit_max_iterations=bool(sidecar["hit_max_iterations"]),
+                fov_fraction=float(sidecar.get("fov_fraction_window", 1.0)),
             )
         )
     return records
@@ -440,6 +467,7 @@ def _build_meta(
         ),
         "split_rule": f"split_by_subject(rng_seed={RNG_SEED}, train_frac=0.8, n_seed=40)",
         "cache_root": str(paths.cache),
+        "excluded_by_eye": list(args.exclude),
         "cli": " ".join(sys.argv),
     }
     counts: dict[str, object] = {
@@ -447,8 +475,10 @@ def _build_meta(
         "subjects_passed_registration": len(gate.passing),
         "subjects_used": len(selected),
         "subjects_failed_registration": len(gate.failed),
+        "subjects_hit_max_iterations": len(gate.capped),
         "slices_per_subject": len(geometry.z_indices),
         "padding_fraction": float((images == 0).mean()),
+        "fov_padding_fraction": _fov_padding_fraction(records, selected),
         "saturated_fraction": float((images == 255).mean()),
         "mean_intensity": float(images.mean()),
     }
@@ -465,6 +495,30 @@ def _build_meta(
         parameters=parameters,
         counts=counts,
     )
+
+
+def _fov_padding_fraction(records: list[qc.SubjectRecord], selected: list[str]) -> float:
+    """Mean fraction of the stored window that falls outside the acquisition.
+
+    This is the true left-right padding of the sagittal acquisitions, as opposed to
+    ``padding_fraction``, which counts every exactly-zero pixel and therefore also counts
+    the background noise that the uint8 quantisation rounds down to zero.
+
+    Parameters
+    ----------
+    records : list[qc.SubjectRecord]
+        Registration records of the whole cohort.
+    selected : list[str]
+        Subjects that entered the dataset.
+
+    Returns
+    -------
+    float
+        Mean of ``1 - fov_fraction`` over the selected subjects.
+    """
+    chosen = set(selected)
+    values = [1.0 - r.fov_fraction for r in records if r.subject in chosen]
+    return float(np.mean(values)) if values else 0.0
 
 
 def _git_sha() -> str:

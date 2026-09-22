@@ -63,6 +63,9 @@ class SubjectRecord:
         The optimiser's stop-condition description.
     hit_max_iterations : bool
         Whether the finest level exhausted the iteration cap.
+    fov_fraction : float
+        Fraction of the stored window that falls inside the acquisition's field of view;
+        ``1 - fov_fraction`` is the true left-right padding of the sagittal acquisition.
     """
 
     subject: str
@@ -71,6 +74,7 @@ class SubjectRecord:
     iterations: int
     stop_condition: str
     hit_max_iterations: bool
+    fov_fraction: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -91,10 +95,15 @@ class GateResult:
         Subjects that passed, sorted.
     failed_metric : tuple[str, ...]
         Subjects failed for a metric above ``threshold``, sorted.
-    failed_iterations : tuple[str, ...]
-        Subjects failed for exhausting the iteration cap, sorted.
     n_failed_scaled : int
         How many subjects the scaled-MAD threshold would have failed on the metric.
+    capped : tuple[str, ...]
+        Subjects whose finest resolution level exhausted the iteration cap. Recorded, not
+        excluded: measured on this data, reaching the cap does not indicate a bad
+        registration (see the ticket log §2). Contract amended by the orchestrator on
+        2026-09-22.
+    excluded_by_eye : tuple[str, ...]
+        Subjects excluded after visual inspection of the registration sheet.
     """
 
     median: float
@@ -103,19 +112,20 @@ class GateResult:
     threshold_scaled: float
     passing: tuple[str, ...]
     failed_metric: tuple[str, ...]
-    failed_iterations: tuple[str, ...]
     n_failed_scaled: int
+    capped: tuple[str, ...] = ()
+    excluded_by_eye: tuple[str, ...] = ()
 
     @property
     def failed(self) -> tuple[str, ...]:
-        """Return every failing subject, sorted.
+        """Return every excluded subject, sorted.
 
         Returns
         -------
         tuple[str, ...]
-            Union of the metric and iteration failures.
+            The metric failures plus any subject excluded by visual inspection.
         """
-        return tuple(sorted(set(self.failed_metric) | set(self.failed_iterations)))
+        return tuple(sorted(set(self.failed_metric) | set(self.excluded_by_eye)))
 
     def to_json(self) -> dict[str, object]:
         """Return the JSON-serialisable summary stored in ``meta.json``.
@@ -123,12 +133,17 @@ class GateResult:
         Returns
         -------
         dict[str, object]
-            Gate statistics and failure lists.
+            Gate statistics, the failure lists and the iteration-cap diagnostics.
         """
+        n = len(self.passing) + len(self.failed)
         return {
             "rule": (
-                "FAIL if final_metric > median + 3 * MAD (raw median absolute deviation) "
-                "or the finest resolution level exhausted max_iterations"
+                "FAIL if final_metric > median + 3 * MAD (raw median absolute deviation), "
+                "or if the subject was excluded after visual inspection of "
+                "qc/registration_sheet.png. Exhausting max_iterations at the finest "
+                "resolution level is recorded but is NOT a failure: measured on this data "
+                "the metric is already converged when the cap is reached (contract "
+                "amended by the orchestrator, 2026-09-22)"
             ),
             "metric_median": self.median,
             "metric_mad": self.mad,
@@ -136,35 +151,48 @@ class GateResult:
             "metric_threshold_scaled_mad": self.threshold_scaled,
             "n_failed_scaled_mad": self.n_failed_scaled,
             "failed_metric": list(self.failed_metric),
-            "failed_iterations": list(self.failed_iterations),
+            "excluded_by_eye": list(self.excluded_by_eye),
+            "n_hit_max_iterations": len(self.capped),
+            "hit_max_iterations_rate": (len(self.capped) / n) if n else 0.0,
+            "hit_max_iterations": list(self.capped),
         }
 
 
-def apply_gate(records: Sequence[SubjectRecord]) -> GateResult:
+def apply_gate(
+    records: Sequence[SubjectRecord], exclude: Sequence[str] = ()
+) -> GateResult:
     """Apply the registration quality gate to a cohort.
 
     A subject fails when its final metric is worse (larger, since SimpleITK minimises the
-    negative mutual information) than ``median + 3 * MAD``, or when the finest resolution
-    level exhausted the iteration cap. ``MAD`` is the raw median absolute deviation; the
-    consistency-scaled threshold is computed as well and reported, never applied.
+    negative mutual information) than ``median + 3 * MAD``, or when it appears in
+    ``exclude`` after visual inspection of the registration sheet. ``MAD`` is the raw
+    median absolute deviation; the consistency-scaled threshold is computed as well and
+    reported, never applied. Subjects whose finest level exhausted the iteration cap are
+    recorded in ``capped`` but are not excluded.
 
     Parameters
     ----------
     records : Sequence[SubjectRecord]
         One record per registered subject.
+    exclude : Sequence[str]
+        Subjects to exclude after visual inspection.
 
     Returns
     -------
     GateResult
-        Thresholds, passing subjects and the two failure lists.
+        Thresholds, passing subjects, the failure list and the cap diagnostics.
 
     Raises
     ------
     PreprocessError
-        If ``records`` is empty.
+        If ``records`` is empty, or ``exclude`` names an unknown subject.
     """
     if not records:
         raise PreprocessError("the quality gate needs at least one registered subject")
+    known = {r.subject for r in records}
+    unknown = sorted(set(exclude) - known)
+    if unknown:
+        raise PreprocessError(f"--exclude names subjects not in the cohort: {unknown}")
 
     metrics = np.array([r.final_metric for r in records], dtype=float)
     median = float(np.median(metrics))
@@ -173,14 +201,14 @@ def apply_gate(records: Sequence[SubjectRecord]) -> GateResult:
     threshold_scaled = median + 3.0 * 1.4826 * mad
 
     failed_metric = sorted(r.subject for r in records if r.final_metric > threshold)
-    failed_iterations = sorted(r.subject for r in records if r.hit_max_iterations)
-    failed = set(failed_metric) | set(failed_iterations)
+    failed = set(failed_metric) | set(exclude)
     passing = sorted(r.subject for r in records if r.subject not in failed)
-    n_failed_scaled = int((metrics > threshold_scaled).sum())
+    capped = sorted(r.subject for r in records if r.hit_max_iterations)
 
     logger.info(
-        "gate: median %.4f MAD %.4f threshold %.4f -> %d pass, %d fail",
-        median, mad, threshold, len(passing), len(failed),
+        "gate: median %.4f MAD %.4f threshold %.4f -> %d pass, %d fail (%d reached the "
+        "iteration cap, recorded not excluded)",
+        median, mad, threshold, len(passing), len(failed), len(capped),
     )
     return GateResult(
         median=median,
@@ -189,8 +217,9 @@ def apply_gate(records: Sequence[SubjectRecord]) -> GateResult:
         threshold_scaled=threshold_scaled,
         passing=tuple(passing),
         failed_metric=tuple(failed_metric),
-        failed_iterations=tuple(failed_iterations),
-        n_failed_scaled=n_failed_scaled,
+        n_failed_scaled=int((metrics > threshold_scaled).sum()),
+        capped=tuple(capped),
+        excluded_by_eye=tuple(sorted(exclude)),
     )
 
 
@@ -297,14 +326,20 @@ def metric_distribution(path: Path, records: Sequence[SubjectRecord], gate: Gate
     left.set_ylabel("subjects")
     left.legend(fontsize=6.5)
 
-    right.scatter(iterations, metrics, s=6, color="0.3")
+    capped = np.array([r.hit_max_iterations for r in records], dtype=bool)
+    right.scatter(iterations[~capped], metrics[~capped], s=6, color="0.3", label="converged")
+    right.scatter(
+        iterations[capped], metrics[capped], s=6, color="tab:orange", label="reached the cap"
+    )
     right.axhline(gate.threshold, color="tab:red", lw=1.0)
     right.set_xlabel("optimiser iterations at the finest level")
     right.set_ylabel("final metric")
+    right.legend(fontsize=6.5)
 
     figure.suptitle(
-        f"Registration quality: {len(records)} subjects, "
-        f"{len(gate.failed)} failed ({len(gate.failed) / len(records):.1%})",
+        f"Registration quality: {len(records)} subjects, {len(gate.failed)} failed "
+        f"({len(gate.failed) / len(records):.1%}); {len(gate.capped)} reached the "
+        f"iteration cap ({len(gate.capped) / len(records):.1%}, recorded not excluded)",
         fontsize=9,
     )
     return _save(figure, path)
@@ -349,7 +384,9 @@ def registration_report(
         f"| passed the gate | {len(gate.passing)} |",
         f"| failed the gate | {len(failed)} ({len(failed) / len(records):.2%}) |",
         f"| failed on the metric | {len(gate.failed_metric)} |",
-        f"| failed on max iterations | {len(gate.failed_iterations)} |",
+        f"| excluded after visual inspection | {len(gate.excluded_by_eye)} |",
+        f"| reached the iteration cap (recorded, NOT a failure) | {len(gate.capped)} "
+        f"({len(gate.capped) / len(records):.2%}) |",
         f"| metric median | {gate.median:.6f} |",
         f"| metric MAD (raw) | {gate.mad:.6f} |",
         f"| FAIL threshold, median + 3 MAD | {gate.threshold:.6f} |",
@@ -378,9 +415,9 @@ def registration_report(
                 continue
             reasons = []
             if record.subject in gate.failed_metric:
-                reasons.append("metric")
-            if record.subject in gate.failed_iterations:
-                reasons.append("max iterations")
+                reasons.append("metric above threshold")
+            if record.subject in gate.excluded_by_eye:
+                reasons.append("visual inspection")
             lines.append(
                 f"| {record.subject} | {record.final_metric:.6f} | {record.iterations} | "
                 f"{record.stop_condition} | {', '.join(reasons)} |"
@@ -390,14 +427,18 @@ def registration_report(
 
     lines += [
         "", "## All subjects", "",
-        "| subject | metric | iterations | gate | stop condition |",
-        "|---|---|---|---|---|",
+        "`cap` marks the subjects whose finest resolution level used every one of the "
+        "allowed iterations; it is a diagnostic, not a verdict.",
+        "",
+        "| subject | metric | iterations | cap | field of view | gate |",
+        "|---|---|---|---|---|---|",
     ]
     for record in sorted(records, key=lambda r: r.subject):
         verdict = "FAIL" if record.subject in failed else "pass"
         lines.append(
             f"| {record.subject} | {record.final_metric:.6f} | {record.iterations} | "
-            f"{verdict} | {record.stop_condition} |"
+            f"{'yes' if record.hit_max_iterations else ''} | {record.fov_fraction:.3f} | "
+            f"{verdict} |"
         )
 
     path = Path(path)

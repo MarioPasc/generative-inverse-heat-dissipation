@@ -31,6 +31,7 @@ __all__ = [
     "RegistrationResult",
     "Template",
     "dilate_mask_mm",
+    "field_of_view_mask",
     "load_template",
     "register",
     "resample_to_template",
@@ -65,12 +66,13 @@ class RegistrationConfig:
         ``SetOptimizerScalesFromPhysicalShift`` the step is a physical displacement, so
         1.0 means one millimetre.
     min_step : float
-        Step below which the optimiser declares convergence, in millimetres. Measured on
-        six IXI subjects: at 1e-2 every subject converges inside ``max_iterations`` and
-        reaches the same metric as 1e-4 to four decimal places, whereas 1e-4 leaves three
-        of six at the cap (which the quality gate would then fail) and 5e-2 stops short
-        (metric -0.1868 against -0.2042 on IXI012). One hundredth of a millimetre is a
-        hundredth of a template voxel.
+        Step below which the optimiser declares convergence, in millimetres. 1e-4 keeps the
+        step-halving margin that the accuracy test needs: on the synthetic phantom, stopping
+        at 1e-2 leaves 6.03 degrees of rotation and a metric of -0.881 against -0.990,
+        because a noisy Mattes gradient collapses the step before the optimum is reached.
+        The cost is that on real heads, where the metric is flat near the optimum, roughly
+        half the subjects reach ``max_iterations`` at the finest level with the metric
+        already converged (IXI002: -0.15442 at both 1e-4 and 1e-2).
     max_iterations : int
         Iteration cap per resolution level.
     relaxation_factor : float
@@ -402,6 +404,38 @@ def resample_to_template(
     return resampled
 
 
+def field_of_view_mask(
+    moving: sitk.Image, template: sitk.Image, transform: sitk.Transform
+) -> sitk.Image:
+    """Return the part of the template grid covered by the moving image's acquisition.
+
+    Both cohorts are sagittal acquisitions whose left-right field of view (IXI 180 mm,
+    OASIS-1 160 mm) is shorter than the 192 mm window, so the window is padded there. That
+    padding is a property of the acquisitions, not of the crop, and it has to be told
+    apart from the background noise that the uint8 quantisation rounds down to zero. This
+    resamples a constant image, never the data, so the "one interpolation per volume" rule
+    is untouched.
+
+    Parameters
+    ----------
+    moving : sitk.Image
+        The subject volume on its native grid; only its geometry is used.
+    template : sitk.Image
+        Defines the output grid.
+    transform : sitk.Transform
+        Maps template points to subject points.
+
+    Returns
+    -------
+    sitk.Image
+        ``uint8`` mask, 1 where the template grid falls inside the acquisition.
+    """
+    ones = sitk.Image(moving.GetSize(), sitk.sitkUInt8)
+    ones.CopyInformation(moving)
+    ones = sitk.Add(ones, 1)
+    return sitk.Resample(ones, template, transform, sitk.sitkNearestNeighbor, 0, sitk.sitkUInt8)
+
+
 def write_registered(
     path: Path,
     image: sitk.Image,
@@ -409,6 +443,7 @@ def write_registered(
     cfg: RegistrationConfig,
     subject: str,
     source: str,
+    extra: dict[str, object] | None = None,
 ) -> None:
     """Write a registered volume and its sidecar JSON to the cache.
 
@@ -426,6 +461,8 @@ def write_registered(
         Subject identifier.
     source : str
         Raw file path relative to the cohort's raw root.
+    extra : dict[str, object] | None
+        Extra diagnostics merged into the sidecar (e.g. the field-of-view fraction).
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -442,6 +479,7 @@ def write_registered(
         "transform_parameters": result.parameters(),
         "transform_fixed_parameters": result.fixed_parameters(),
         "config": cfg.to_json(),
+        **(extra or {}),
     }
     sidecar_path(path).write_text(json.dumps(sidecar, indent=2))
 

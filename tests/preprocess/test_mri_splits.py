@@ -42,18 +42,45 @@ def test_gate_fails_only_the_metric_outliers() -> None:
     assert gate.mad == pytest.approx(0.005)
     assert gate.threshold == pytest.approx(-0.185)
     assert gate.failed_metric == ("S006",)
-    assert gate.failed_iterations == ()
+    assert gate.failed == ("S006",)
     assert "S006" not in gate.passing
     assert len(gate.passing) == 6
 
 
-def test_gate_fails_subjects_that_exhausted_the_iteration_cap() -> None:
-    """The second failure criterion is independent of the metric."""
+def test_gate_records_the_iteration_cap_without_excluding() -> None:
+    """Reaching the iteration cap is a recorded diagnostic, not a failure.
+
+    Contract amended by the orchestrator on 2026-09-22: measured on this data the metric
+    is already converged when the finest level exhausts its iterations, so excluding those
+    subjects would discard good registrations (ticket log §2).
+    """
     metrics = [-0.20] * 6 + [-0.21]
     gate = apply_gate(make_records(metrics, hit_max={"S002"}))
-    assert gate.failed_iterations == ("S002",)
-    assert gate.failed == ("S002",)
-    assert "S002" not in gate.passing
+
+    assert gate.capped == ("S002",)
+    assert gate.failed == ()
+    assert "S002" in gate.passing
+    payload = gate.to_json()
+    assert payload["n_hit_max_iterations"] == 1
+    assert payload["hit_max_iterations_rate"] == pytest.approx(1 / 7)
+    assert "NOT a failure" in str(payload["rule"])
+
+
+def test_gate_excludes_subjects_flagged_by_eye() -> None:
+    """Visual inspection of the registration sheet can exclude a subject explicitly."""
+    metrics = [-0.20] * 7
+    gate = apply_gate(make_records(metrics), exclude=["S003"])
+
+    assert gate.excluded_by_eye == ("S003",)
+    assert gate.failed == ("S003",)
+    assert "S003" not in gate.passing
+    assert len(gate.passing) == 6
+
+
+def test_gate_rejects_an_unknown_exclusion() -> None:
+    """A typo in ``--exclude`` fails loudly instead of silently excluding nothing."""
+    with pytest.raises(PreprocessError):
+        apply_gate(make_records([-0.20] * 3), exclude=["NOT_A_SUBJECT"])
 
 
 def test_gate_reports_the_scaled_mad_threshold_without_applying_it() -> None:
