@@ -108,6 +108,12 @@ and s/chain at large sampling batches (64–128) first; cut LSD to 4 checkpoints
 with 500 samples each and share one 2k final set for LSD, FID/KID and $M$; keep the 40 × 50
 diversity set; then the pre-registered drop order (tier-3 seeds → A2 → iterations 40k → 30k).
 
+T3.1 interim (pushed `7f34030` on its branch): Picasso jobs 2402054 `create_env` COMPLETED (5 m 44 s);
+2403074 `gpu_probe` and 2403829 `import_check` PENDING (Reason=Priority) at the reboot. After the
+reboot: `ssh picasso 'sacct -j 2403074,2403829'`, read `~/execs/ihdm/logs/{gpu_probe,import_check}_<id>.out`,
+confirm the A100 driver accepts torch 2.14.0+cu130 (else rebuild the env with a cu12x index), then
+fill `docs/RESULTS/picasso_setup.md` §4/§6 and the log's pending rows.
+
 Next steps, in order: (1) verify/merge T3.1 and T2.3; (2) spawn **T1.4** (N4; ticket written,
 D15) — it rebuilds `ixi`/`oasis1`, refits `schedules/`, updates `data_profile.md`; then re-sync the
 two MRI datasets to Picasso (hashes change); (3) T3.2 probe (batch 16 vs 24, 3 epochs, resume,
