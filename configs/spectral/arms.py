@@ -271,8 +271,8 @@ def _build_config(spec: ArmSpec) -> ml_collections.ConfigDict:
 
     # training
     config.training = training = ml_collections.ConfigDict()
-    training.batch_size = 64  # set by the Picasso probe (D4')
-    training.n_iters = 20000
+    training.batch_size = 16  # D4": 61 M-param U-Net at 192^2 needs ~1.75 GB per sample; probe may raise to 24
+    training.n_iters = 40000  # D4"": 640k samples seen at batch 16 (27500 if batch 24)
     training.ckpt_every = 2500
     training.resume_every = 500
     training.log_every = 50

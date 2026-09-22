@@ -111,6 +111,15 @@ objections, if any, are recorded as addenda below.
 | D12 | The A3 and A2 arrays are built by running the variance matching with the endpoint set to $W/8$ or $W/2$ (bisection on the registered IXI training split), never by truncating or rescaling another array; the schedule array and its SHA-256 are stored in every run manifest and inside every checkpoint | Reviewer §7a, §7c |
 | D13 | LSD, $T_\tau$, $M$, diversity, the inherited band and the PCA figure are defined in `05-metrics.md` in the theory's units (cycles per image, the octave bins of the tables) | Reviewer §6b |
 
+### Addendum 2026-09-22 (evening) — after T2.1 measured the memory of the CIFAR-scale U-Net at $192^2$
+
+| id | change | source |
+|---|---|---|
+| D4″ | The recipe's U-Net has **61.1 M parameters** and needs ≈ 1.75 GB of activations per sample at $192^2$ with AMP (measured on the RTX 3060: 4.7 GB peak at batch 2, OOM at batch 8 on 11.6 GB), so batch 64 and batch 32 do not fit an A100 40 GB (≈ 29 GB at batch 16, ≈ 57 GB at batch 32). **Batch = 16**, raised to 24 only if the Picasso probe measures ≤ 30 GB peak at 24. The model is not changed (the released `use_checkpoint` flag of the ResBlocks is left off: gradient checkpointing would buy batch at the cost of throughput, and samples per GPU-hour is what the budget is about). **[ask Mario]** | T2.1 log §6 |
+| D4‴ | **Iterations = 40,000** at batch 16 (640k samples seen, the sample budget the reviewer asked for; ≈ 200 epochs of 3200 images), pre-registered; the plateau gate of D10 still applies (extension to 60k by resume). At batch 24 the count is 27,500 (11 × 2,500). lr stays $2\times10^{-4}$ unless the local pilot (T2.3) shows instability at batch 16 over 1k iterations, in which case $10^{-4}$ is used everywhere; T2.3 runs both for 1k iterations and reports the loss curves | Reviewer §4; T2.1 |
+| D5″ | Checkpoint cadence stays 2,500 → 16 EMA checkpoints per run at 233 MB each (measured) ≈ 3.7 GB per run, ≈ 112 GB for the array plus ≈ 21 GB of `full_final.pt`; Picasso FSCRATCH has ≈ 0.9 TB free (read live before the array). LSD uses 1k samples at intermediate checkpoints and 2k at the final one | T2.1; H-PICASSO §1 |
+| D14 | `scripts/datasets.get_dataset` routes the standard-format ids before the released torchvision branches (T2.1 found that `lsun_church` matched the released LMDB branch first); the released `optimization_manager` stores a `numpy.float64` lr that torch ≥ 2.6 `weights_only` loading rejects, handled in `ihdm/train/checkpoints.py`; `metrics.jsonl` never contains `NaN` tokens (`null`) | T2.1 log §6 |
+
 ## 5. Acceptance criteria of the orchestration (what "done" means for this planning session)
 
 1. Levels 1 (specification, milestones, tickets) and 2 (engineering practices) written under

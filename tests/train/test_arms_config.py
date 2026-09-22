@@ -107,8 +107,8 @@ def test_both_paper_versus_code_fixes_are_on(schedules_dir):
 
 def test_frozen_recipe_values(schedules_dir):
     config = get_config("ixi,A3")
-    assert config.training.batch_size == 64
-    assert config.training.n_iters == 20000
+    assert config.training.batch_size == 16
+    assert config.training.n_iters == 40000
     assert config.training.ckpt_every == 2500
     assert config.training.resume_every == 500
     assert config.training.log_every == 50

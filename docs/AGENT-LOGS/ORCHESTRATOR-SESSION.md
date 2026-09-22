@@ -51,7 +51,9 @@ described").
 | wave | tickets | agents | base | verdicts | merged |
 |---|---|---|---|---|---|
 | W0 | T0.1 | sonnet5-xhigh | `c23fbff` | ACCEPT | `1c7e2c5` |
-| W1 | T1.1 ‖ T1.2 | opus5-xhigh ‖ opus5-high | `1c7e2c5` | | |
+| W1 | T1.1 ‖ T1.2 | opus5-xhigh ‖ opus5-high | `1c7e2c5` | T1.2 ACCEPT; T1.1 running (resumed after the 19:20 rate-limit cutoff) | T1.2 `c5ca1ad` |
+| W2 | T2.1 (started early: contracts only, no M1 data needed) | opus5-xhigh | `9f61ba7` | ACCEPT (154 tests; found the `lsun_church` routing bug, the float64-lr resume bug, the 61 M-param memory wall) | `1382a77` |
+| W3 | T2.2 (slot 2 while T1.1 runs) | opus5-high | see below | | |
 
 (Updated as waves complete; each wave's detail is `M<k>-<slug>/WAVE-<id>.md`.)
 
