@@ -138,11 +138,12 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("cohort %s: %d subjects to register", args.cohort, len(refs))
 
     t_register = time.time()
-    _register_cohort(
+    unreadable = _register_cohort(
         refs, paths, cfg, geometry, workers=args.workers, force=args.force
     )
     register_seconds = time.time() - t_register
 
+    refs = [ref for ref in refs if ref.subject not in set(unreadable)]
     records = _read_records(refs, paths)
     gate = qc.apply_gate(records, exclude=args.exclude)
     selected = _select_subjects(gate.passing, args.n_subjects)
@@ -160,7 +161,8 @@ def main(argv: list[str] | None = None) -> int:
     splits = split_by_subject([row["subject"] for row in index_rows], rng_seed=RNG_SEED)
     index = _build_index(index_rows, splits)
     meta = _build_meta(
-        args, paths, cfg, geometry, gate, records, selected, images, diagnostics, template
+        args, paths, cfg, geometry, gate, records, selected, images, diagnostics, template,
+        unreadable,
     )
 
     write_dataset(paths.dataset, images, index, splits, meta)
@@ -280,13 +282,20 @@ def _register_cohort(
     geometry: TemplateGeometry,
     workers: int,
     force: bool,
-) -> None:
+) -> list[str]:
     """Register every subject that is not already cached, in a process pool.
+
+    Returns
+    -------
+    list[str]
+        Subjects whose raw volume could not be registered; they are dropped from the
+        cohort and recorded in ``meta.json``.
 
     Raises
     ------
     PreprocessError
-        If any subject fails to register (the message lists the first few).
+        If more than 5 % (and more than five) of the subjects fail, which is a bug rather
+        than a handful of unreadable acquisitions.
     """
     paths.cache.mkdir(parents=True, exist_ok=True)
     tasks = [
@@ -296,7 +305,7 @@ def _register_cohort(
     ]
     logger.info("%d of %d subjects need registration", len(tasks), len(refs))
     if not tasks:
-        return
+        return []
 
     template_path = paths.templates
     errors: list[tuple[str, str]] = []
@@ -321,7 +330,12 @@ def _register_cohort(
                 )
     if errors:
         head = ", ".join(f"{s} ({e})" for s, e in errors[:5])
-        raise PreprocessError(f"{len(errors)} subject(s) failed to register: {head}")
+        # A single unreadable acquisition must not throw away an hour of work on the other
+        # 580; the subject is dropped and recorded. A large fraction failing is a bug.
+        if len(errors) > max(5, int(0.05 * len(tasks))):
+            raise PreprocessError(f"{len(errors)} subject(s) failed to register: {head}")
+        logger.error("%d subject(s) failed to register and are dropped: %s", len(errors), head)
+    return [subject for subject, _ in errors]
 
 
 def _cached(path: Path) -> bool:
@@ -441,6 +455,7 @@ def _build_meta(
     images: np.ndarray,
     diagnostics: dict[str, float],
     template: registration_mod.Template,
+    unreadable: list[str],
 ) -> DatasetMeta:
     """Assemble ``meta.json`` with every pipeline value and every count."""
     parameters: dict[str, object] = {
@@ -468,10 +483,12 @@ def _build_meta(
         "split_rule": f"split_by_subject(rng_seed={RNG_SEED}, train_frac=0.8, n_seed=40)",
         "cache_root": str(paths.cache),
         "excluded_by_eye": list(args.exclude),
+        "unreadable_subjects": list(unreadable),
         "cli": " ".join(sys.argv),
     }
     counts: dict[str, object] = {
-        "subjects_total": len(records),
+        "subjects_total": len(records) + len(unreadable),
+        "subjects_unreadable": len(unreadable),
         "subjects_passed_registration": len(gate.passing),
         "subjects_used": len(selected),
         "subjects_failed_registration": len(gate.failed),
