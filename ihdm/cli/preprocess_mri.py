@@ -42,6 +42,7 @@ from ihdm.preprocess.mri import (
     PIPELINE_VERSION,
     SLICE_Z_INDICES,
     TemplateGeometry,
+    assert_grid_matches_affine,
     extract_slices,
     scale_intensity,
     slices_to_uint8,
@@ -150,6 +151,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     template = registration_mod.load_template(paths.templates, cfg)
+    assert_grid_matches_affine(template.image, geometry)
     images, index_rows, diagnostics = _build_images(
         selected, refs, paths, template.foreground, geometry
     )
@@ -347,7 +349,7 @@ def _build_images(
     clip_high: list[float] = []
 
     for subject in selected:
-        volume = _load_registered(paths.registered(subject))
+        volume = _load_registered(paths.registered(subject), geometry)
         scaled, info = scale_intensity(volume, foreground)
         stack = slices_to_uint8(extract_slices(scaled, geometry))
         stacks.append(stack)
@@ -374,9 +376,11 @@ def _build_images(
     return images, rows, diagnostics
 
 
-def _load_registered(path: Path) -> np.ndarray:
-    """Read a cached registered volume as an ``(i, j, k)`` array."""
+def _load_registered(path: Path, geometry: TemplateGeometry | None = None) -> np.ndarray:
+    """Read a cached registered volume as an ``(i, j, k)`` array on the template grid."""
     image = sitk.ReadImage(str(path), sitk.sitkFloat32)
+    if geometry is not None:
+        assert_grid_matches_affine(image, geometry)
     return sitk.GetArrayFromImage(image).transpose(2, 1, 0)
 
 

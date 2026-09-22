@@ -205,7 +205,12 @@ def _imshow(axis: plt.Axes, image: np.ndarray, title: str = "", cmap: str = "gra
 
 def _label_axes(axis: plt.Axes, top: str, bottom: str, left: str, right: str) -> None:
     """Write the four anatomical direction labels around a tile."""
-    style = {"color": "yellow", "fontsize": 7, "fontweight": "bold"}
+    style = {
+        "color": "yellow",
+        "fontsize": 11,
+        "fontweight": "bold",
+        "bbox": {"facecolor": "black", "alpha": 0.45, "pad": 1.0, "edgecolor": "none"},
+    }
     axis.text(0.5, 0.985, top, ha="center", va="top", transform=axis.transAxes, **style)
     axis.text(0.5, 0.015, bottom, ha="center", va="bottom", transform=axis.transAxes, **style)
     axis.text(0.015, 0.5, left, ha="left", va="center", transform=axis.transAxes, **style)

@@ -27,6 +27,7 @@ from ihdm.preprocess.errors import PreprocessError
 
 __all__ = [
     "COHORTS",
+    "cohort_raw_root",
     "RawVolumeRef",
     "list_subjects",
     "load_sitk",

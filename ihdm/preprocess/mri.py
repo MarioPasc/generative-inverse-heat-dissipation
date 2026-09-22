@@ -25,6 +25,8 @@ from ihdm.preprocess.errors import PreprocessError
 
 __all__ = [
     "IMAGE_SIZE",
+    "affine_from_sitk",
+    "assert_grid_matches_affine",
     "ORIENTATION",
     "PIPELINE_VERSION",
     "SLICE_Z_INDICES",
@@ -217,6 +219,64 @@ def geometry_from_affine(
         y_slice=y_slice,
         size=size,
     )
+
+
+def affine_from_sitk(image: object) -> np.ndarray:
+    """Return the voxel-to-RAS affine of a SimpleITK image.
+
+    SimpleITK works in LPS, nibabel in RAS, and the two libraries index a NIfTI array in
+    the same order, so the affine is ``diag(-1, -1, 1)`` applied to the LPS mapping.
+
+    Parameters
+    ----------
+    image : sitk.Image
+        Any three-dimensional SimpleITK image.
+
+    Returns
+    -------
+    np.ndarray
+        The 4x4 voxel-to-RAS affine.
+    """
+    direction = np.array(image.GetDirection(), dtype=float).reshape(3, 3)
+    spacing = np.array(image.GetSpacing(), dtype=float)
+    lps_to_ras = np.diag([-1.0, -1.0, 1.0])
+    affine = np.eye(4)
+    affine[:3, :3] = lps_to_ras @ direction @ np.diag(spacing)
+    affine[:3, 3] = lps_to_ras @ np.array(image.GetOrigin(), dtype=float)
+    return affine
+
+
+def assert_grid_matches_affine(image: object, geometry: TemplateGeometry) -> None:
+    """Check that a SimpleITK image sits on exactly the grid the geometry was derived from.
+
+    The whole orientation contract rests on SimpleITK and nibabel indexing the template
+    array identically. This turns that assumption into a checked precondition, so a future
+    template with a different storage order fails loudly instead of producing mirrored
+    slices.
+
+    Parameters
+    ----------
+    image : sitk.Image
+        The image to check (the template, or a volume resampled onto it).
+    geometry : TemplateGeometry
+        The geometry derived from the template's nibabel affine.
+
+    Raises
+    ------
+    PreprocessError
+        If the size or the affine differ.
+    """
+    size = tuple(int(s) for s in image.GetSize())
+    if size != geometry.shape:
+        raise PreprocessError(
+            f"image size {size} does not match the template geometry {geometry.shape}"
+        )
+    actual = affine_from_sitk(image)
+    if not np.allclose(actual, geometry.affine, atol=1e-4):
+        raise PreprocessError(
+            "the SimpleITK grid and the nibabel affine disagree; the stored orientation "
+            f"cannot be trusted.\nSimpleITK:\n{actual}\nnibabel:\n{geometry.affine}"
+        )
 
 
 def scale_intensity(
