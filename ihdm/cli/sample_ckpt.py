@@ -128,6 +128,35 @@ def _write_preview(path: Path, seeds_u8: np.ndarray, samples: np.ndarray) -> Pat
     return path
 
 
+def _seed_multiplicity(seed_idx: np.ndarray) -> dict[str, Any]:
+    """Describe how often each dataset index was used as a seed.
+
+    The memorisation endpoint of ``05-metrics.md`` §4 draws 5 000 training seeds from a 3 200
+    image split, so indices repeat by design; its ``seed_nn_fraction`` needs to know which
+    positions share a seed.
+
+    Parameters
+    ----------
+    seed_idx : np.ndarray
+        The dataset indices of the seeds, one per row of ``seeds.npy``.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``n_seeds``, ``n_unique``, ``max_count``, ``drawn_with_replacement`` and the counts of
+        the repeated indices.
+    """
+    values, counts = np.unique(np.asarray(seed_idx, dtype=np.int64), return_counts=True)
+    repeated = {int(v): int(c) for v, c in zip(values, counts, strict=True) if c > 1}
+    return {
+        "n_seeds": int(seed_idx.shape[0]),
+        "n_unique": int(values.size),
+        "max_count": int(counts.max()) if counts.size else 0,
+        "drawn_with_replacement": bool(values.size < seed_idx.shape[0]),
+        "repeated_idx_counts": repeated,
+    }
+
+
 def _request_record(
     args: argparse.Namespace,
     config: Any,
@@ -137,6 +166,7 @@ def _request_record(
     ckpt_path: Path,
     device: torch.device,
     seeds_u8: np.ndarray,
+    seed_idx: np.ndarray,
     samples: np.ndarray,
     elapsed: float,
 ) -> dict[str, Any]:
@@ -182,6 +212,7 @@ def _request_record(
             "samples": list(samples.shape),
             "n_samples": n_samples,
         },
+        "seeds": _seed_multiplicity(seed_idx),
         "env": {
             "git_sha": _git_sha(repo_root()),
             "device": str(device),
@@ -246,7 +277,8 @@ def main(argv: list[str] | None = None) -> int:
     np.save(out_dir / "seeds.npy", seeds_u8.astype(np.uint8))
     np.save(out_dir / "seed_idx.npy", np.asarray(seed_idx, dtype=np.int64))
     record = _request_record(
-        args, config, request, resolved, payload, ckpt_path, device, seeds_u8, samples, elapsed
+        args, config, request, resolved, payload, ckpt_path, device, seeds_u8, seed_idx,
+        samples, elapsed,
     )
     (out_dir / "request.json").write_text(json.dumps(record, indent=2, sort_keys=True))
     _write_preview(out_dir / "preview.png", seeds_u8, samples)

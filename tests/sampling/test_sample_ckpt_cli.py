@@ -36,6 +36,7 @@ def _assert_artifacts(out_dir: Path, n_seeds: int, n_per_seed: int, size: int) -
     assert seed_idx.shape == (n_seeds,)
     assert (out_dir / "preview.png").stat().st_size > 0
     assert len(record["checkpoint"]["sha256"]) == 64
+    assert record["seeds"]["n_seeds"] == n_seeds
     assert record["env"]["git_sha"]
     assert record["timing"]["wall_s"] > 0
     assert record["timing"]["samples_per_s"] > 0
@@ -82,6 +83,29 @@ def test_cli_train_source_and_start_level(tiny_run, tmp_path):
     dataset_root = Path(splits["data"]["root"]) / splits["data"]["dataset"]
     train_split = json.loads((dataset_root / "splits.json").read_text())["train"]
     assert set(np.load(out_dir / "seed_idx.npy").tolist()) <= set(train_split)
+
+
+def test_cli_records_seed_multiplicity(tiny_run, tmp_path):
+    """Repeated training seeds are recorded so the memorisation check can use them."""
+    workdir, ckpt = tiny_run
+    out_dir = tmp_path / "out_many"
+
+    main(
+        [
+            "--run", str(workdir), "--ckpt", ckpt.name, "--source", "train",
+            "--n-seeds", "60", "--n-per-seed", "1", "--delta", "0.0",
+            "--batch", "32", "--device", "cpu", "--out", str(out_dir),
+        ]
+    )
+
+    record = json.loads((out_dir / "request.json").read_text())["seeds"]
+    seed_idx = np.load(out_dir / "seed_idx.npy")
+
+    assert record["n_seeds"] == 60
+    assert record["drawn_with_replacement"] is True
+    assert record["n_unique"] == len(set(seed_idx.tolist()))
+    assert record["max_count"] >= 2
+    assert all(int(k) in set(seed_idx.tolist()) for k in record["repeated_idx_counts"])
 
 
 def test_cli_file_source(tiny_run, tmp_path):
