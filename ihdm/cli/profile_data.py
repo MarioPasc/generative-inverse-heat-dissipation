@@ -244,7 +244,8 @@ def _crossover_table(tables: ProfileTables) -> list[str]:
     """Markdown: the per-level target spread of each dataset under three schedules."""
     lines = [
         "| dataset | log ($W/2$) | IXI-matched ($W/2$) | own matched ($W/2$) | "
-        "own vs IXI's, max / median of $|s_{\\text{own}}/s_{\\text{IXI}} - 1|$ | "
+        "own vs IXI's, max / median of "
+        "$\\lvert s_{\\text{own}}/s_{\\text{IXI}} - 1 \\rvert$ | "
         "archived log / IXI |",
         "|---|---|---|---|---|---|",
     ]

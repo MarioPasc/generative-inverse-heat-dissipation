@@ -1,6 +1,6 @@
 # Spectral profile of the four training splits, and the frozen schedules
 
-Produced by `python -m ihdm.cli.profile_data` at `17bc88066cd5` on 2026-09-22. Ticket T1.3; contracts `04-run-artifacts.md` §1 and `05-metrics.md` §1.
+Produced by `python -m ihdm.cli.profile_data` at `e9a9fb070923` on 2026-09-22. Ticket T1.3; contracts `04-run-artifacts.md` §1 and `05-metrics.md` §1.
 
 Every curve and every table below is measured on the **training** split of each dataset (3200 registered images of $192^2$, values in $[0, 1]$); the `ref` split (800 images) is profiled beside it as a consistency check. The per-mode variance is mean-centred across images, in the orthonormal DCT-II basis, with the DC mode excluded; a mode of radial index $n$ carries $n/2$ cycles per image and modes above 96 cycles per image are excluded from the octave shares.
 
@@ -56,7 +56,7 @@ $\sum_i P_i e^{-2\lambda_i t}/\sum_i P_i$ with $t = \sigma_{B,\max}^2/2$: the fr
 
 Spread = $\max_k R_k / \min_k R_k$ over levels $2 \dots K$, with $R_k = \sum_i (d_{k-1,i} - d_{k,i})^2 P_i$ the data-dependent part of the IHDM regression target. A schedule matched to a dataset has spread 1 on it by construction; the interesting numbers are off the diagonal.
 
-| dataset | log ($W/2$) | IXI-matched ($W/2$) | own matched ($W/2$) | own vs IXI's, max / median of $|s_{\text{own}}/s_{\text{IXI}} - 1|$ | archived log / IXI |
+| dataset | log ($W/2$) | IXI-matched ($W/2$) | own matched ($W/2$) | own vs IXI's, max / median of $\lvert s_{\text{own}}/s_{\text{IXI}} - 1 \rvert$ | archived log / IXI |
 |---|---|---|---|---|---|
 | IXI T1 | 8.7x | 1.0x | 1.002x | 0% / 0% | 50.8x / 1.0x |
 | OASIS-1 T1 | 15.1x | 3.1x | 1.001x | 33% / 11% | 93.5x / 3.3x |
