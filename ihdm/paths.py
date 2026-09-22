@@ -79,9 +79,14 @@ def template_dir() -> Path:
 def schedules_dir() -> Path:
     """Return the directory holding the frozen blur-schedule arrays.
 
+    Overridable with the ``IHDM_SCHEDULES_DIR`` environment variable, so tests and
+    probe runs can point the arm factory at temporary arrays without touching the
+    committed ones.
+
     Returns
     -------
     Path
-        ``<repo_root>/schedules``.
+        The schedule directory, from the environment or ``<repo_root>/schedules``.
     """
-    return repo_root() / "schedules"
+    default = str(repo_root() / "schedules")
+    return Path(os.environ.get("IHDM_SCHEDULES_DIR", default))
