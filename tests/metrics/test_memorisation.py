@@ -24,7 +24,9 @@ from ihdm.spectral.power import radial_index
 TEST_SIGMA_LP: float = 2.0
 
 
-def random_field(rng: np.random.Generator, n: int, side: int = 32, alpha: float = 2.0) -> np.ndarray:
+def random_field(
+    rng: np.random.Generator, n: int, side: int = 32, alpha: float = 2.0
+) -> np.ndarray:
     """Draw ``n`` random images with a ``P(n) ~ n^-alpha`` radial spectrum, scaled to ``[0, 1]``.
 
     Parameters
