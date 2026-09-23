@@ -27,9 +27,9 @@ export IHDM_RUN_ROOT="${IHDM_RUN_ROOT:-${USER_ROOT}/fscratch/runs/ihdm}"
 export IHDM_CELLS="${IHDM_CELLS:-${IHDM_REPO_DIR}/slurm/array/cells.csv}"
 
 # D16 (T3.2, job 2405546): 1.71 it/s at batch 16 -> 6.84 h per 40k run; 1.5x rounded up = 11 h.
-# QOS `medium` (3-day wall); `short` caps at 2 h and would TIMEOUT every task.
+# QOS `medium_uma` (3-day wall); `short` caps at 2 h and would TIMEOUT every task.
 N_ITERS="${N_ITERS:-40000}"
-QOS="${QOS:-medium}"
+QOS="${QOS:-medium_uma}"
 TIME_LIMIT="${TIME_LIMIT:-11:00:00}"
 CPUS="${CPUS:-8}"
 MEM="${MEM:-32G}"

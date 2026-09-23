@@ -42,10 +42,10 @@ Index 0 is `ixi_A0_s1` and index 3 is `lsun_church_A0_s1`: the two runs D10 need
 |---|---|---|
 | `--constraint=a100 --gres=gpu:1` | one A100 | `exa[01-04]` advertise an **untyped** `gpu:8` with the feature `a100`; `--gres=gpu:A100:1` matches no node and a bare `--constraint=dgx` would also match the B200 nodes |
 | `--time=11:00:00` | 11 h | 1.5 × the measured 6.84 h for 40k iterations at 1.71 it/s |
-| `--qos=medium` | 3-day wall | the probe's `short` caps at 2 h and would TIMEOUT every task |
+| `--qos=medium_uma` | 3-day wall | the probe's `short` caps at 2 h and would TIMEOUT every task |
 | `--cpus-per-task=8` | 8 | data loading; `OMP_NUM_THREADS`/`MKL_NUM_THREADS` follow `SLURM_CPUS_PER_TASK` |
 | `--mem=32G` | host RAM | probe MaxRSS 18.4 GB |
-| `--array=0-29%8` | 8 concurrent | QOS `medium` allows gpu=23 per user; 8 is one node's worth and leaves the cluster usable |
+| `--array=0-29%8` | 8 concurrent | QOS `medium_uma` allows gpu=23 per user; 8 is one node's worth and leaves the cluster usable |
 
 Nothing else is overridden: batch 16, lr 2e-4, `ckpt_every=2500` are frozen in
 `configs/spectral/arms.py` (D4″, D4‴, D5″). The only run-varying flags are `--config.seed`,
@@ -146,7 +146,7 @@ All optional; the defaults are the Picasso paths.
 | `N_ITERS` | `40000` |
 | `ARRAY_SPEC` | `0-29%8` (derived from `cells.csv`) |
 | `MAX_CONCURRENT` | `8` |
-| `QOS` / `TIME_LIMIT` / `CPUS` / `MEM` | `medium` / `11:00:00` / `8` / `32G` |
+| `QOS` / `TIME_LIMIT` / `CPUS` / `MEM` | `medium_uma` / `11:00:00` / `8` / `32G` |
 | `IHDM_REPO_DIR` | `…/fscratch/repos/generative-inverse-heat-dissipation` |
 | `IHDM_ENV_PREFIX` | `…/fscratch/conda_envs/ihdm` |
 | `IHDM_DATA_ROOT` | `…/fscratch/datasets/spectral_allocation_heat_diffusion_project` |

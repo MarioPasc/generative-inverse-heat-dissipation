@@ -6,7 +6,7 @@
 #
 # Sizing comes from the T3.2 probe (D16, job 2405546, A100-SXM4-40GB): batch 16 peaks at 28.5 GB
 # of VRAM and runs at 1.71 it/s, so 40,000 iterations take 6.84 h.  `--time=11:00:00` is 1.5x that;
-# `--mem=32G` is host RAM, against the probe's 18.4 GB MaxRSS.  QOS `medium` (3-day wall) is
+# `--mem=32G` is host RAM, against the probe's 18.4 GB MaxRSS.  QOS `medium_uma` (3-day wall) is
 # required: the probe's `short` caps at 2 h and would TIMEOUT every task.
 #
 # A100 selection is `--constraint=a100` plus an UNTYPED `--gres=gpu:1`: exa[01-04] advertise
@@ -29,7 +29,7 @@
 #
 #SBATCH -J ihdm-train
 #SBATCH --time=11:00:00
-#SBATCH --qos=medium
+#SBATCH --qos=medium_uma
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
