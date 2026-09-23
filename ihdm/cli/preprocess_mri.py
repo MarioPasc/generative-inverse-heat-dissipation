@@ -3,14 +3,19 @@
 Usage
 -----
 ``python -m ihdm.cli.preprocess_mri --cohort ixi|oasis1 [--workers 20] [--limit N]
-[--force] [--out $IHDM_DATA_ROOT]``
+[--force] [--no-n4] [--sensitivity-copy NAME] [--out $IHDM_DATA_ROOT]``
 
 Stages, in order: list the subjects, register every one of them onto the MNI152 template
 (in parallel, cached on disk), apply the quality gate, draw 400 passing subjects with
-``np.random.default_rng(2026)``, cut the ten windowed axial slices of each, split by
-subject, write the dataset through :func:`ihdm.data.format.write_dataset`, validate it and
-draw the quality-control sheets. Every stage except the registration is cheap, so a rerun
+``np.random.default_rng(2026)``, correct the bias field of those 400 with N4 (in parallel,
+cached on disk; decision D15), cut the ten windowed axial slices of each, split by subject,
+write the dataset through :func:`ihdm.data.format.write_dataset`, validate it and draw the
+quality-control sheets. Every stage except the registration and N4 is cheap, so a rerun
 after a cache hit takes a couple of minutes.
+
+The N4 stage sits **before** the foreground-p99 intensity scaling: the percentile is taken
+on the corrected volume, so a subject whose coil profile brightened its anterior half is not
+also rescaled by that brightening.
 """
 
 from __future__ import annotations
@@ -20,9 +25,11 @@ import json
 import logging
 import multiprocessing as mp
 import os
+import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,8 +40,10 @@ import SimpleITK as sitk
 
 from ihdm.data.format import DatasetMeta, split_by_subject, validate_dataset, write_dataset
 from ihdm.paths import data_root, raw_root, template_dir
+from ihdm.preprocess import bias as bias_mod
 from ihdm.preprocess import qc
 from ihdm.preprocess import registration as registration_mod
+from ihdm.preprocess.bias import N4Config
 from ihdm.preprocess.errors import PreprocessError
 from ihdm.preprocess.mri import (
     IMAGE_SIZE,
@@ -45,6 +54,7 @@ from ihdm.preprocess.mri import (
     assert_grid_matches_affine,
     extract_slices,
     scale_intensity,
+    site_from_source,
     slices_to_uint8,
     template_geometry,
 )
@@ -63,6 +73,10 @@ N_SUBJECTS_TARGET = 400
 RNG_SEED = 2026
 N_QC_REGISTRATION_TILES = 10
 N_QC_ORIENTATION_ROWS = 4
+N_QC_N4_ROWS = 6
+
+#: Where the uncorrected datasets are kept once the N4 rebuild replaces them.
+SENSITIVITY_DIR = "_sensitivity"
 
 _WORKER: dict[str, object] = {}
 
@@ -79,17 +93,23 @@ class CohortPaths:
         Output dataset directory.
     cache : Path
         Directory of the cached registered volumes.
+    cache_n4 : Path
+        Directory of the cached N4-corrected volumes.
     raw : Path
         Root of the unprocessed data tree.
     templates : Path
         Directory of the MNI152 template files.
+    sensitivity : Path
+        Directory the uncorrected dataset is moved to before the N4 rebuild.
     """
 
     cohort: str
     dataset: Path
     cache: Path
+    cache_n4: Path
     raw: Path
     templates: Path
+    sensitivity: Path
 
     def registered(self, subject: str) -> Path:
         """Return the cache path of one subject's registered volume.
@@ -105,6 +125,21 @@ class CohortPaths:
             ``<cache>/<subject>.nii.gz``.
         """
         return self.cache / f"{subject}.nii.gz"
+
+    def corrected(self, subject: str) -> Path:
+        """Return the cache path of one subject's N4-corrected volume.
+
+        Parameters
+        ----------
+        subject : str
+            Subject identifier.
+
+        Returns
+        -------
+        Path
+            ``<cache_n4>/<subject>.nii.gz``.
+        """
+        return self.cache_n4 / f"{subject}.nii.gz"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -127,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.time()
 
     cfg = RegistrationConfig()
+    n4_cfg = N4Config(shrink_factor=args.n4_shrink_factor)
     paths = _cohort_paths(args)
     geometry = template_geometry(
         paths.templates / f"{registration_mod.TEMPLATE_STEM}_T1w.nii.gz",
@@ -152,16 +188,40 @@ def main(argv: list[str] | None = None) -> int:
             len(selected), args.n_subjects, args.cohort,
         )
 
+    sites = {
+        ref.subject: site_from_source(args.cohort, ref.source)
+        for ref in refs
+        if ref.subject in set(selected)
+    }
+
     template = registration_mod.load_template(paths.templates, cfg)
     assert_grid_matches_affine(template.image, geometry)
+
+    t_n4 = time.time()
+    n4_summary = (
+        _correct_cohort(
+            selected, refs, sites, paths, cfg, n4_cfg, geometry,
+            workers=args.workers, force=args.force,
+        )
+        if args.n4
+        else {"applied": False}
+    )
+    n4_seconds = time.time() - t_n4
+    volume_path: Callable[[str], Path] = paths.corrected if args.n4 else paths.registered
+
     images, index_rows, diagnostics = _build_images(
-        selected, refs, paths, template.foreground, geometry
+        selected, refs, paths, template.foreground, geometry, volume_path
     )
     splits = split_by_subject([row["subject"] for row in index_rows], rng_seed=RNG_SEED)
     index = _build_index(index_rows, splits)
+
+    moved = move_to_sensitivity(paths.dataset, paths.sensitivity) if args.sensitivity_copy else None
+    reference_subjects = _sensitivity_subjects(paths.sensitivity)
+    _assert_same_subjects(selected, reference_subjects, paths.sensitivity)
+
     meta = _build_meta(
-        args, paths, cfg, geometry, gate, records, selected, images, diagnostics, template,
-        unreadable,
+        args, paths, cfg, n4_cfg, geometry, gate, records, selected, images, diagnostics,
+        template, unreadable, sites, n4_summary, reference_subjects,
     )
 
     write_dataset(paths.dataset, images, index, splits, meta)
@@ -171,6 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         paths, cfg, geometry, template, records, gate, refs, selected, images, index,
         {
             "registration wall time (s)": f"{register_seconds:.0f}",
+            "N4 wall time (s)": f"{n4_seconds:.0f}" if args.n4 else "not applied",
             "subjects used": len(selected),
             "exactly-zero pixels (`padding_fraction`)": f"{float((images == 0).mean()):.2%}",
             "outside the acquisition field of view": (
@@ -178,6 +239,8 @@ def main(argv: list[str] | None = None) -> int:
             ),
         },
     )
+    if args.n4:
+        qc_paths.append(_n4_sheet(paths, selected, geometry, template, n4_cfg))
 
     padding = float((images == 0).mean())
     elapsed = time.time() - started
@@ -185,8 +248,11 @@ def main(argv: list[str] | None = None) -> int:
         f"{args.cohort}: registered {len(records)}, passed {len(gate.passing)}, "
         f"used {len(selected)} ({images.shape[0]} images), "
         f"metric median {gate.median:.4f} MAD {gate.mad:.4f}, "
-        f"padding {padding:.2%}, wall {elapsed / 60:.1f} min -> {paths.dataset}"
+        f"padding {padding:.2%}, n4 {'on' if args.n4 else 'off'}, "
+        f"wall {elapsed / 60:.1f} min -> {paths.dataset}"
     )
+    if moved is not None:
+        print(f"{args.cohort}: uncorrected dataset kept at {moved}")
     if violations:
         for violation in violations[:20]:
             logger.error("validate_dataset: %s", violation)
@@ -219,6 +285,20 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--exclude", nargs="*", default=[], metavar="SUBJECT",
         help="subject ids to exclude after visual inspection of qc/registration_sheet.png",
     )
+    parser.add_argument(
+        "--n4", action=argparse.BooleanOptionalAction, default=True,
+        help="apply N4 bias-field correction before the intensity scaling (decision D15)",
+    )
+    parser.add_argument(
+        "--n4-shrink-factor", type=int, default=N4Config().shrink_factor,
+        help="downsampling factor of the N4 field estimate; the field is always applied at "
+             "full resolution",
+    )
+    parser.add_argument(
+        "--sensitivity-copy", action="store_true",
+        help="before writing, move an existing uncorrected dataset to "
+             "<out>/_sensitivity/<cohort>_no_n4 (idempotent: skipped if it is already there)",
+    )
     return parser.parse_args(argv)
 
 
@@ -230,8 +310,10 @@ def _cohort_paths(args: argparse.Namespace) -> CohortPaths:
         cohort=args.cohort,
         dataset=out / args.cohort,
         cache=cache_root / "registered" / args.cohort,
+        cache_n4=cache_root / "registered_n4" / args.cohort,
         raw=Path(args.raw_root) if args.raw_root is not None else raw_root(),
         templates=Path(args.template_dir) if args.template_dir is not None else template_dir(),
+        sensitivity=out / SENSITIVITY_DIR / f"{args.cohort}_no_n4",
     )
 
 
@@ -342,6 +424,243 @@ def _cached(path: Path) -> bool:
     return path.is_file() and registration_mod.sidecar_path(path).is_file()
 
 
+def _cached_n4(path: Path) -> bool:
+    """Return whether a corrected volume and its sidecar are both on disk."""
+    return path.is_file() and bias_mod.sidecar_path(path).is_file()
+
+
+def _init_n4_worker(
+    template_path: Path, cfg: RegistrationConfig, n4_cfg: N4Config, geometry: TemplateGeometry
+) -> None:
+    """Load the template mask once per worker process and pin SimpleITK to one thread."""
+    sitk.ProcessObject_SetGlobalDefaultNumberOfThreads(1)
+    for variable in ("OMP_NUM_THREADS", "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"):
+        os.environ[variable] = "1"
+    _WORKER["template"] = registration_mod.load_template(template_path, cfg)
+    _WORKER["n4_cfg"] = n4_cfg
+    _WORKER["geometry"] = geometry
+
+
+def _correct_one(task: tuple[str, str, str, Path, Path]) -> tuple[str, str, dict[str, float]]:
+    """Correct one cached registered volume; return ``(subject, error, diagnostics)``."""
+    subject, source, site, registered, destination = task
+    template = _WORKER["template"]
+    n4_cfg = _WORKER["n4_cfg"]
+    geometry = _WORKER["geometry"]
+    try:
+        volume = sitk.ReadImage(str(registered), sitk.sitkFloat32)
+        assert_grid_matches_affine(volume, geometry)
+        result = bias_mod.n4_correct(volume, template.dilated_mask, n4_cfg)
+        bias_mod.write_corrected(
+            destination, result, n4_cfg, subject, source,
+            extra={"site": site, "registered": str(registered)},
+        )
+    except (PreprocessError, RuntimeError, MemoryError) as exc:
+        return subject, f"{type(exc).__name__}: {exc}", {}
+    return subject, "", result.diagnostics
+
+
+def _correct_cohort(
+    selected: list[str],
+    refs: list[RawVolumeRef],
+    sites: dict[str, str],
+    paths: CohortPaths,
+    cfg: RegistrationConfig,
+    n4_cfg: N4Config,
+    geometry: TemplateGeometry,
+    workers: int,
+    force: bool,
+) -> dict[str, object]:
+    """Run N4 on every selected subject that is not already cached, in a process pool.
+
+    Only the subjects that enter the dataset are corrected: the quality gate and the seeded
+    draw read the *registration* sidecars, so N4 cannot change which subjects are selected,
+    and correcting the rest would cost wall time and cache for nothing.
+
+    Parameters
+    ----------
+    selected : list[str]
+        The subjects that enter the dataset.
+    refs : list[RawVolumeRef]
+        Raw references of the whole cohort, for the ``source`` of each subject.
+    sites : dict[str, str]
+        Acquisition site per selected subject.
+    paths : CohortPaths
+        Cache and template locations.
+    cfg : RegistrationConfig
+        Supplies the mask dilation of the foreground mask.
+    n4_cfg : N4Config
+        N4 parameters.
+    geometry : TemplateGeometry
+        Checked against every volume read back from the registered cache.
+    workers : int
+        Process-pool size.
+    force : bool
+        Re-correct subjects that are already cached.
+
+    Returns
+    -------
+    dict[str, object]
+        The parameters used and the aggregated log-field diagnostics, for ``meta.json``.
+
+    Raises
+    ------
+    PreprocessError
+        If any selected subject fails: unlike a registration failure, a dropped subject here
+        would change the frozen subject list.
+    """
+    paths.cache_n4.mkdir(parents=True, exist_ok=True)
+    by_subject = {ref.subject: ref for ref in refs}
+    tasks = [
+        (
+            subject,
+            by_subject[subject].source,
+            sites[subject],
+            paths.registered(subject),
+            paths.corrected(subject),
+        )
+        for subject in selected
+        if force or not _cached_n4(paths.corrected(subject))
+    ]
+    logger.info("%d of %d selected subjects need N4", len(tasks), len(selected))
+
+    errors: list[tuple[str, str]] = []
+    done = 0
+    started = time.time()
+    if tasks:
+        context = mp.get_context("spawn")
+        with context.Pool(
+            processes=max(1, workers),
+            initializer=_init_n4_worker,
+            initargs=(paths.templates, cfg, n4_cfg, geometry),
+        ) as pool:
+            for subject, error, _ in pool.imap_unordered(_correct_one, tasks, chunksize=1):
+                done += 1
+                if error:
+                    errors.append((subject, error))
+                    logger.error("N4 failed for %s: %s", subject, error)
+                if done % 25 == 0 or done == len(tasks):
+                    rate = (time.time() - started) / done
+                    logger.info(
+                        "corrected %d/%d (%.1f s/subject, eta %.1f min)",
+                        done, len(tasks), rate, rate * (len(tasks) - done) / 60.0,
+                    )
+    if errors:
+        head = ", ".join(f"{s} ({e})" for s, e in errors[:5])
+        raise PreprocessError(f"{len(errors)} subject(s) failed N4: {head}")
+
+    return _n4_summary(selected, paths, n4_cfg, time.time() - started)
+
+
+def _n4_summary(
+    selected: list[str], paths: CohortPaths, n4_cfg: N4Config, seconds: float
+) -> dict[str, object]:
+    """Aggregate the per-subject N4 sidecars into the block stored in ``meta.json``."""
+    keys = (
+        "log_field_min", "log_field_max", "log_field_mean", "log_field_std",
+        "field_ratio_max_over_min", "mask_zero_fraction", "seconds",
+    )
+    values: dict[str, list[float]] = {k: [] for k in keys}
+    for subject in selected:
+        sidecar = bias_mod.read_n4_sidecar(paths.corrected(subject))
+        for key in keys:
+            values[key].append(float(sidecar[key]))
+    summary: dict[str, object] = {
+        "applied": True,
+        **n4_cfg.to_json(),
+        "cache_root": str(paths.cache_n4),
+        "subjects_corrected": len(selected),
+        "wall_seconds": round(float(seconds), 1),
+    }
+    for key in keys:
+        array = np.asarray(values[key], dtype=float)
+        summary[f"{key}_median"] = float(np.median(array))
+        summary[f"{key}_min"] = float(array.min())
+        summary[f"{key}_max"] = float(array.max())
+    return summary
+
+
+def move_to_sensitivity(dataset: Path, sensitivity: Path) -> Path | None:
+    """Move an existing dataset directory aside so a rebuild can replace it.
+
+    Idempotent in both directions: the move is skipped when the destination already holds a
+    dataset (a second run must not overwrite the archived uncorrected copy with the
+    corrected one), and when there is nothing to move.
+
+    Parameters
+    ----------
+    dataset : Path
+        The dataset directory that is about to be rewritten.
+    sensitivity : Path
+        Where the current contents are kept.
+
+    Returns
+    -------
+    Path | None
+        The destination when a move happened, ``None`` when it was skipped.
+
+    Raises
+    ------
+    PreprocessError
+        If the destination exists but is not a directory.
+    """
+    dataset, sensitivity = Path(dataset), Path(sensitivity)
+    if sensitivity.exists() and not sensitivity.is_dir():
+        raise PreprocessError(f"{sensitivity} exists and is not a directory")
+    if sensitivity.is_dir() and any(sensitivity.iterdir()):
+        logger.info("sensitivity copy already present at %s; not moving %s", sensitivity, dataset)
+        return None
+    if not dataset.is_dir():
+        logger.info("no dataset at %s to keep as a sensitivity copy", dataset)
+        return None
+    sensitivity.parent.mkdir(parents=True, exist_ok=True)
+    if sensitivity.is_dir():
+        sensitivity.rmdir()
+    shutil.move(str(dataset), str(sensitivity))
+    logger.info("moved %s to %s", dataset, sensitivity)
+    return sensitivity
+
+
+def _sensitivity_subjects(sensitivity: Path) -> list[str] | None:
+    """Return the subject list of the archived uncorrected dataset, if there is one."""
+    index_path = Path(sensitivity) / "index.csv"
+    if not index_path.is_file():
+        return None
+    return sorted(pd.read_csv(index_path)["subject"].astype(str).unique().tolist())
+
+
+def _assert_same_subjects(
+    selected: list[str], reference: list[str] | None, sensitivity: Path
+) -> None:
+    """Fail loudly if the rebuild would not use the archived dataset's subjects.
+
+    Parameters
+    ----------
+    selected : list[str]
+        The subjects this run is about to write.
+    reference : list[str] | None
+        The archived dataset's subjects, or ``None`` when there is no archive.
+    sensitivity : Path
+        Where the archive lives, for the error message.
+
+    Raises
+    ------
+    PreprocessError
+        If the two lists differ.
+    """
+    if reference is None:
+        logger.info("no sensitivity copy at %s; subject list not cross-checked", sensitivity)
+        return
+    if sorted(selected) != reference:
+        missing = sorted(set(reference) - set(selected))
+        extra = sorted(set(selected) - set(reference))
+        raise PreprocessError(
+            f"the rebuilt subject list differs from {sensitivity}: "
+            f"{len(missing)} missing {missing[:5]}, {len(extra)} new {extra[:5]}"
+        )
+    logger.info("subject list identical to %s (%d subjects)", sensitivity, len(reference))
+
+
 def _read_records(refs: list[RawVolumeRef], paths: CohortPaths) -> list[qc.SubjectRecord]:
     """Read every cached sidecar into a :class:`~ihdm.preprocess.qc.SubjectRecord`."""
     records: list[qc.SubjectRecord] = []
@@ -374,14 +693,32 @@ def _build_images(
     paths: CohortPaths,
     foreground: np.ndarray,
     geometry: TemplateGeometry,
+    volume_path: Callable[[str], Path] | None = None,
 ) -> tuple[np.ndarray, list[dict[str, object]], dict[str, float]]:
     """Cut, scale and quantise the slices of every selected subject.
+
+    Parameters
+    ----------
+    selected : list[str]
+        Subjects to slice, in the order they enter ``images.npy``.
+    refs : list[RawVolumeRef]
+        Raw references, for the ``source`` column.
+    paths : CohortPaths
+        Cache locations.
+    foreground : np.ndarray
+        Boolean foreground of the intensity rule.
+    geometry : TemplateGeometry
+        Window and planes.
+    volume_path : Callable[[str], Path] | None
+        Which cached volume to read per subject; ``paths.corrected`` after N4 and
+        ``paths.registered`` without it (the default).
 
     Returns
     -------
     tuple[np.ndarray, list[dict[str, object]], dict[str, float]]
         The ``uint8`` stack, the index rows and the averaged intensity diagnostics.
     """
+    volume_path = volume_path or paths.registered
     by_subject = {ref.subject: ref for ref in refs}
     stacks: list[np.ndarray] = []
     rows: list[dict[str, object]] = []
@@ -389,7 +726,7 @@ def _build_images(
     clip_high: list[float] = []
 
     for subject in selected:
-        volume = _load_registered(paths.registered(subject), geometry)
+        volume = _load_registered(volume_path(subject), geometry)
         scaled, info = scale_intensity(volume, foreground)
         stack = slices_to_uint8(extract_slices(scaled, geometry))
         stacks.append(stack)
@@ -447,6 +784,7 @@ def _build_meta(
     args: argparse.Namespace,
     paths: CohortPaths,
     cfg: RegistrationConfig,
+    n4_cfg: N4Config,
     geometry: TemplateGeometry,
     gate: qc.GateResult,
     records: list[qc.SubjectRecord],
@@ -455,8 +793,14 @@ def _build_meta(
     diagnostics: dict[str, float],
     template: registration_mod.Template,
     unreadable: list[str],
+    sites: dict[str, str],
+    n4_summary: dict[str, object],
+    reference_subjects: list[str] | None,
 ) -> DatasetMeta:
     """Assemble ``meta.json`` with every pipeline value and every count."""
+    n4_prefix = "per registered volume: "
+    if args.n4:
+        n4_prefix += "N4 bias-field correction, then "
     parameters: dict[str, object] = {
         "orientation": ORIENTATION,
         "registration": cfg.to_json(),
@@ -467,8 +811,14 @@ def _build_meta(
         "registration_transform": "Euler3D (6 dof, rigid)",
         "registration_resamplings": 1,
         "geometry": geometry.to_json(),
+        "n4": n4_summary,
+        "sites": dict(sorted(sites.items())),
+        "site_rule": (
+            "IXI: the site token of the raw file name (IXI012-HH-1211-T1.nii.gz -> HH); "
+            "OASIS-1: a single scanner, every subject WashU"
+        ),
         "intensity_rule": (
-            "per registered volume: foreground = template brain mask dilated "
+            f"{n4_prefix}foreground = template brain mask dilated "
             f"{cfg.mask_dilation_mm:g} mm; p99 of the foreground; clip(v / p99, 0, 1); no low "
             "clip, so the acquisition background noise is kept; round(x * 255) to uint8"
         ),
@@ -483,9 +833,16 @@ def _build_meta(
         "cache_root": str(paths.cache),
         "excluded_by_eye": list(args.exclude),
         "unreadable_subjects": list(unreadable),
+        "sensitivity_copy": str(paths.sensitivity) if reference_subjects is not None else None,
         "cli": " ".join(sys.argv),
     }
+    # `n4_cfg` is already inside `n4_summary`; keep the reference so a future reader sees the
+    # object the run was configured with even when N4 was switched off.
+    parameters["n4_config"] = n4_cfg.to_json()
     counts: dict[str, object] = {
+        "subjects_match_sensitivity": (
+            None if reference_subjects is None else sorted(selected) == reference_subjects
+        ),
         "subjects_total": len(records) + len(unreadable),
         "subjects_unreadable": len(unreadable),
         "subjects_passed_registration": len(gate.passing),
@@ -666,7 +1023,91 @@ def _orientation_sheet(
     return qc.orientation_sheet(qc_dir / "orientation_sheet.png", rows, geometry)
 
 
-__all__ = ["main"]
+def _n4_sheet(
+    paths: CohortPaths,
+    selected: list[str],
+    geometry: TemplateGeometry,
+    template: registration_mod.Template,
+    n4_cfg: N4Config,
+) -> Path:
+    """Draw the before/after N4 contact sheet: six subjects x (before, after, bias field).
+
+    Each image column is scaled by its own foreground p99, which is exactly what the
+    intensity rule does, so the two panels show the two versions of the slice that would
+    enter ``images.npy``. N4's log field carries an arbitrary additive constant (a global
+    gain, which the p99 scaling removes), so the third column plots the field divided by its
+    own median inside the mask: what is left is the *shape* of the field, on a diverging
+    scale centred on 1.
+
+    Parameters
+    ----------
+    paths : CohortPaths
+        Cache and dataset locations.
+    selected : list[str]
+        The subjects of the dataset; the first :data:`N_QC_N4_ROWS` are drawn.
+    geometry : TemplateGeometry
+        Window and planes; the middle plane is shown.
+    template : registration_mod.Template
+        Supplies the foreground used for the display scale.
+    n4_cfg : N4Config
+        Printed in the sheet's title.
+
+    Returns
+    -------
+    Path
+        The written PNG.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plane = len(geometry.z_indices) // 2
+    subjects = selected[:N_QC_N4_ROWS]
+    figure, axes = plt.subplots(
+        len(subjects), 3, figsize=(7.5, 2.5 * len(subjects)), squeeze=False
+    )
+    for row, subject in enumerate(subjects):
+        before = _load_registered(paths.registered(subject), geometry)
+        after = _load_registered(paths.corrected(subject), geometry)
+        field = np.divide(before, after, out=np.ones_like(before), where=after > 1e-6)
+        field /= max(float(np.median(field[template.foreground])), 1e-6)
+        sidecar = bias_mod.read_n4_sidecar(paths.corrected(subject))
+        panels = (
+            (_normalise_for_display(before, template.foreground), f"{subject} before",
+             "gray", (0.0, 1.0)),
+            (_normalise_for_display(after, template.foreground), f"{subject} after N4",
+             "gray", (0.0, 1.0)),
+            (field, "bias field / its median", "RdBu_r", (0.8, 1.25)),
+        )
+        for column, (volume, title, cmap, limits) in enumerate(panels):
+            ax = axes[row][column]
+            image = extract_slices(volume.astype(np.float32), geometry)[plane]
+            handle = ax.imshow(image, cmap=cmap, vmin=limits[0], vmax=limits[1])
+            ax.set_title(title, fontsize=8)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            if column == 2:
+                figure.colorbar(handle, ax=ax, fraction=0.046, pad=0.04)
+        axes[row][2].set_xlabel(
+            f"log field in mask [{sidecar['log_field_min']:.3f}, {sidecar['log_field_max']:.3f}]",
+            fontsize=7,
+        )
+    figure.suptitle(
+        f"{paths.cohort}: N4 bias-field correction, MNI z = {geometry.z_mm[plane]:.0f} mm "
+        f"(shrink {n4_cfg.shrink_factor}, iterations {list(n4_cfg.max_iterations)})",
+        fontsize=10,
+    )
+    out = paths.dataset / "qc" / "n4_before_after.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    figure.tight_layout(rect=(0, 0, 1, 0.97))
+    figure.savefig(out, dpi=110)
+    plt.close(figure)
+    logger.info("wrote %s", out)
+    return out
+
+
+__all__ = ["main", "move_to_sensitivity"]
 
 if __name__ == "__main__":
     raise SystemExit(main())

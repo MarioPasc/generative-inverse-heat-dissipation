@@ -15,6 +15,7 @@ subject's left, the neurological convention).
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from ihdm.preprocess.errors import PreprocessError
 
 __all__ = [
     "IMAGE_SIZE",
+    "IXI_SITES",
+    "OASIS1_SITE",
     "affine_from_sitk",
     "assert_grid_matches_affine",
     "ORIENTATION",
@@ -33,6 +36,7 @@ __all__ = [
     "TemplateGeometry",
     "extract_slices",
     "scale_intensity",
+    "site_from_source",
     "slices_to_uint8",
     "template_geometry",
     "to_display_orientation",
@@ -40,8 +44,18 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-PIPELINE_VERSION = "1.0"
+#: ``1.1`` adds the N4 bias-field stage of decision D15; ``1.0`` is T1.1's pipeline.
+PIPELINE_VERSION = "1.1"
 IMAGE_SIZE = 192
+
+#: The three IXI acquisition sites; Guys and IOP are 1.5 T, HH is 3 T.
+IXI_SITES: tuple[str, ...] = ("Guys", "HH", "IOP")
+
+#: OASIS-1 is a single-scanner cohort (Washington University, 1.5 T Vision).
+OASIS1_SITE = "WashU"
+
+# `IXI012-HH-1211-T1.nii.gz`: subject, site, scan number, modality.
+_IXI_SITE_RE = re.compile(r"^IXI\d+-(?P<site>[A-Za-z]+)-")
 
 #: Template voxel z indices of the ten axial planes (decision D1' of 00-overview.md).
 SLICE_Z_INDICES: tuple[int, ...] = (55, 63, 71, 79, 87, 96, 104, 112, 120, 128)
@@ -219,6 +233,46 @@ def geometry_from_affine(
         y_slice=y_slice,
         size=size,
     )
+
+
+def site_from_source(cohort: str, source: str) -> str:
+    """Return the acquisition site of one subject from its raw file path.
+
+    IXI mixes three sites and two field strengths, which is the reason T1.3's coarse-bin
+    variance is dominated by a between-subject intensity ramp; the label is carried into
+    ``meta.json.parameters.sites`` so the profile can report the coarse share per site
+    before and after N4. The file name is the only place the site is recorded
+    (``IXI012-HH-1211-T1.nii.gz``). OASIS-1 is a single scanner, so every subject gets the
+    same label.
+
+    Parameters
+    ----------
+    cohort : str
+        ``"ixi"`` or ``"oasis1"``.
+    source : str
+        The raw path stored in ``index.csv``, relative to the cohort's raw root.
+
+    Returns
+    -------
+    str
+        One of :data:`IXI_SITES` for IXI, :data:`OASIS1_SITE` for OASIS-1.
+
+    Raises
+    ------
+    PreprocessError
+        If the cohort is unknown, or an IXI name carries no site or an unknown one.
+    """
+    if cohort == "oasis1":
+        return OASIS1_SITE
+    if cohort != "ixi":
+        raise PreprocessError(f"unknown cohort {cohort!r}; expected 'ixi' or 'oasis1'")
+    match = _IXI_SITE_RE.match(Path(source).name)
+    if match is None:
+        raise PreprocessError(f"cannot read an IXI site from {source!r}")
+    site = match.group("site")
+    if site not in IXI_SITES:
+        raise PreprocessError(f"unknown IXI site {site!r} in {source!r}; expected {IXI_SITES}")
+    return site
 
 
 def affine_from_sitk(image: object) -> np.ndarray:
