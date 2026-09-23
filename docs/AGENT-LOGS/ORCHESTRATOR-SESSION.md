@@ -59,7 +59,7 @@ described").
 | W6 (2026-09-23) | T1.4 (N4, local CPU) ‖ T3.2 (Picasso probe) | opus5-xhigh ‖ opus5-high | `cd29f59` | T1.4 ACCEPT (340 tests; both MRI sets rebuilt with N4, subject lists identical, schedules refit, 30 cells build; D15's premise only half right, see D15′) · T3.2 ACCEPT (job 2405546: batch 16 = 28.5 GB, 1.71 it/s, 6.84 h per 40k run; batch 24 OOM; sampler 3.2 s/chain; resume verified) | T1.4 `56b74f0`; T3.2 `96917bc` |
 | W7 | T3.3 (array scripts, `picasso-sbatch`; held for T1.5) ‖ T4.1 (spectral metrics) ‖ T1.5 (stratified IXI split, sonnet5-xhigh) | opus5-high ‖ opus5-xhigh ‖ sonnet5-xhigh | `3ec0d92` | T1.5 ACCEPT (site mix train/ref 51.2/35.9/12.8 vs 51.2/36.2/12.5; ixi_W2/W8 refit; re-synced); T3.3 ACCEPT for the scripts (QOS `medium_uma` found; `--test-only` accepted); submission released as T3.3b after the merge; T4.1 running | T1.5 + T3.3 `5bc28a6`; T4.1 `305d672` (ACCEPT: 396 tests; LSD bracket: noise floors ixi 0.047, oasis1 0.049, churches 0.023, bedrooms 0.037; pilot LSD 0.78) |
 | W8 | T3.3b (submission record) ‖ T4.2 (memorisation, diversity, PCA) | opus5-high ‖ opus5-xhigh | `5bc28a6` ‖ `305d672` | T3.3b ACCEPT (job 2408239 submitted, QOS medium_uma, cluster SHA 5bc28a6); T4.2 ACCEPT (467 tests; M calibrated at 1.00 on real held-out images; pilot M 1.75 = off-manifold at 750 iterations; found that T4.1s 64-seed draw held 18 indices outside `train` — cause undetermined, likely a race with T1.5s rebuild; hardened in T4.3: written seed lists + in-split assertion) | T3.3b `b0d2347`; T4.2 `8a3db69` |
-| W9 | T4.3 (evaluate_run, Inception, statistics, paired gate) | opus5-high | `8a3db69` | running | |
+| W9 | T4.3 (evaluate_run, Inception, statistics, paired gate) | opus5-high | `8a3db69` | ACCEPT (570 tests; pilot eval end to end: LSD 0.77, KID 0.43, FID 349 @ n_ref 800, M 1.75, gate CI [-0.05, +0.05] → no extension; FID licence ladder monotone; Inception weights at /tmp; reference-feature cache must be written once) | `a010e19` |
 
 Decision D4⁗ (2026-09-23, orchestrator): **lr = 2e-4** (pre-registered) for every cell. Evidence:
 T2.3's `ixi,A0` pilot at batch 4 ran 525 steps at 2e-4 with no non-finite loss, train loss
@@ -147,3 +147,29 @@ while the queue runs. Peers [Proposal-Specifier] and [Experiment-Reviewer] hold 
   artefacts go to `$LOCALSCRATCH` with one archive per run copied back.
 - Follow-up (T3.1): `environment.yml` pins only `torch>=2.4` (resolved to 2.14.0+cu130 on both machines); pin the exact torch/torchvision versions once the Picasso driver probe (job 2403074) answers, so the env is reproducible.
 - [ask Mario / Proposal-Specifier, not reachable after the reboot]: update the proposal Fig. 1 caption and Motivation numbers from `docs/RESULTS/data_profile.md` (N4 row): alpha 3.22/3.10 vs 2.28/2.58; coarse share 4.07%/2.02% vs 23.8%/23.1%; inherited W/8 8.4%/4.1% vs 29.1%; log spread 8.9x/18.7x vs 3.8x/8.0x; 3200 images per curve.
+
+## 7. State at the close of the orchestration session (2026-09-23, 15:30)
+
+- **Delivered**: specifications (levels 1–2), harnesses, ticket-log skill, 15 tickets executed and
+  merged (T0.1, T1.1–T1.5, T2.1–T2.3, T3.1–T3.3(b), T4.1–T4.3), 570 tests green on `main`
+  (`a010e19`), four datasets in the standard format (N4-corrected, site-stratified IXI), frozen
+  schedules, the profile with the known results, the Picasso environment/data/repo, the probe, and
+  the **training array 2408239 (30 runs) submitted** on `main` 5bc28a6 (the cluster tree is
+  byte-identical to `a010e19` for everything the worker reads; docs and metrics code differ only).
+- **Queued, not started**: all 30 tasks PENDING (Reason=Priority; the `--test-only` bound said
+  2026-10-01 worst case). Monitor: `ssh picasso 'squeue -j 2408239'`; first-task check per
+  `docs/RESULTS/submissions.md` §1 (the worker's `CELL index=… run_id=…` line and the first
+  `metrics.jsonl` rows).
+- **Next session (M5/M6)**: (1) when index 0 (`ixi_A0_s1`) and 3 (`lsun_church_A0_s1`) reach
+  40k, run the plateau gate (`evaluate_run --gate 35000,40000` per `docs/HARNESSES/picasso.md` §6);
+  extend all runs to 60k with `N_ITERS=60000 bash slurm/array/submit_array.sh` only if the CI is
+  above zero; (2) T5.1 evaluation array with the `picasso-sbatch` skill honouring the notes in
+  `docs/SPECIFICATIONS/M5-evaluation/README.md` (weights at `/tmp`, one writer of the reference
+  feature caches, `$LOCALSCRATCH`, ≈ 7 A100-h per run); (3) T5.2 collection; (4) T6.1/T6.2 tables
+  and figures. Pull the cluster checkout to `main` before T5.1 (it needs T4.x).
+- **[ask Mario]** (all in `00-overview.md`): 10 slices; batch 16 / 40k / lr 2e-4 (measured, not the
+  design file's 128 / 30k); checkpoint cadence 2.5k; both paper-vs-code fixes on; N4 with both rows
+  (D15′); the evaluation cut (D16) and common random numbers (D17); the site-stratified split (D18);
+  FSCRATCH file quota (his other projects hold 185k files: `isalhg*` envs 64k, `build_gedlib` 55k,
+  `results` 66k); the proposal caption numbers (Proposal-Specifier was not reachable after the
+  reboot).

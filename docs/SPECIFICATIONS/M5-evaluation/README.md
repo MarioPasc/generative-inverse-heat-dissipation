@@ -10,6 +10,17 @@ exists). Pre-download the Inception weights on the login node into the cache pat
 T4.3. Written with the `picasso-sbatch` skill. Budget note: if the evaluation exceeds the queue
 budget, intermediate checkpoints use 1k LSD samples (D5′).
 
+Facts from T4.3 that the T5.1 worker must honour: clean-fid hard-codes its weights at
+`/tmp/inception-2015-12-05.pt`, so the worker stages that file on every compute node before
+`evaluate_run` (copy from `$HOME` or the repo's cache dir); the reference Inception features are
+cached per dataset at `<dataset>/_features_inception_ref.npy` and the torchscript Inception is not
+bitwise deterministic across calls, so ONE job (a dependency step, or the first task with a lock)
+writes the four caches and the 30 tasks only read them; samples and metrics go to `$LOCALSCRATCH`
+and come back as one `tar` per run (FSCRATCH file quota); the per-run cost is ≈ 7.1 A100-h at
+3.2 s per chain (T3.2's A100 measurement, no AMP) — verify with one `evaluate_run --ckpts final
+--n-lsd 500` job before sizing the array; the plateau gate is `evaluate_run --gate 35000,40000`
+on the first finished A0 runs of `ixi` and `lsun_church`.
+
 ## T5.2 — Collect results
 
 `python -m ihdm.cli.collect_results --runs $IHDM_RUN_ROOT --out results/` gathering every

@@ -139,13 +139,15 @@ list per dataset (500 distinct training indices drawn once with `rng 2026` and w
 `$IHDM_DATA_ROOT/<id>/eval_seeds_500.npy` by `evaluate_run` on first use), reused at every
 checkpoint of every run of that dataset; the sampling noise uses the same `rng_seed = 2026` and
 the same sampling batch (32) everywhere, so noise streams are identical across checkpoints and
-arms. Consequences: (a) the plateau gate is a **paired** test: the per-sample log-spectral
-distance (each sample's 48-bin radial log profile against the reference profile, RMS over bins)
-is computed for the same 500 seeds at 35k and 40k, and the run is extended only if the bootstrap
-95% CI over seeds of the paired improvement $\mathrm{LSD}_{35k} - \mathrm{LSD}_{40k}$ excludes
-zero; (b) $T_\tau$ and the A3-versus-A0 LSD contrast are paired at the sample level as well as at
-the training-seed level. The 2k final set keeps "with replacement over the training split" with
-`rng_seed 0`.
+arms. Consequences: (a) the plateau gate is a **paired bootstrap at the seed level**
+(`ihdm.stats.paired_lsd_gate`, T4.3; a per-sample LSD is not definable because $P$ is a variance
+across a stack): the 500 seed indices are resampled with replacement, the set-level LSD is
+computed on the SAME resampled subset at 35k and at 40k, and the run is extended only if the 95%
+CI of $\mathrm{LSD}_{35k} - \mathrm{LSD}_{40k}$ over 1,000 resamples lies above zero;
+(b) $T_\tau$ and the A3-versus-A0 LSD contrast are paired at the seed level. The 2k final set
+keeps "with replacement over the training split" with `rng_seed 0`. Seed lists are written once
+per dataset (`eval_seeds_500.npy`, `eval_seeds_final_2000.npy` + sidecars) and every sampling call
+asserts its indices lie in the declared split.
 
 ## 9. Result files
 
