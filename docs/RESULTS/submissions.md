@@ -4,6 +4,11 @@ Record of every submission of the training array of `00-overview.md` §1. Script
 `slurm/array/` (`cells.csv`, `train_array.sbatch`, `submit_array.sh`, `README.md`); ticket
 T3.3; harness `docs/HARNESSES/picasso.md` §5–§6.
 
+**Status (2026-09-23):** array **2408239** is queued — 30 tasks, `--array=0-29%8`, all `PENDING`
+with `Reason=Priority`. Nothing has started yet and nothing is blocking. Next action: watch for
+the first `RUNNING` task (§1, "First task to run"), then evaluate the plateau gate on the first
+A0 runs (§3).
+
 ---
 
 ## 1. Array 1 — 30 runs at 40,000 iterations
@@ -11,7 +16,7 @@ T3.3; harness `docs/HARNESSES/picasso.md` §5–§6.
 | field | value |
 |---|---|
 | date | 2026-09-23 |
-| job id | **not submitted** — held by `main` on 2026-09-23 pending a site-balance check of the IXI train/ref split; submit with `bash slurm/array/submit_array.sh` and fill this row in |
+| job id | **2408239** (submitted 2026-09-23 ≈12:26 local, after `main` gave GO on the site-stratified IXI split) |
 | array spec | `0-29%8` |
 | `N_ITERS` | 40000 |
 | batch size | 16 (frozen in `configs/spectral/arms.py`, D4″) |
@@ -22,31 +27,56 @@ T3.3; harness `docs/HARNESSES/picasso.md` §5–§6.
 | resources | `--constraint=a100 --gres=gpu:1 --ntasks=1 --cpus-per-task=8 --mem=32G --account=tic_163_uma` |
 | logs | `~/execs/ihdm/logs/train_%A_%a.out` / `.err` |
 | run root | `/mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm` |
-| repo SHA on the cluster | `a84b56c9add752a06b16555140066c63427b5c34` (`ticket/T3.3-full-array-submission`) |
+| repo SHA on the cluster | **`5bc28a640ad5369c553014dcb8976d06bd3985c8`** on `main` (verified `git status` clean at submission). `origin/main` is one commit further at `f16f925` (`docs: W7 verdicts…`), but `git diff 5bc28a6 f16f925` is **empty** — that commit changes no file, so the cluster tree is byte-identical to `origin/main` |
+| data on the cluster | `ixi/images.npy` sha256 `b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b` (T1.5 site-stratified re-sync) |
+| schedules on the cluster | `schedules/ixi_W8.npy` sha256 `8bfe56bd759253d5b873ea6cd2080351b2051709719edd53337d3c930a7b916b`; `schedules/ixi_W2.npy` sha256 `9c80d11c614197750f62b2c8dcc760e6c1df416b0a85248a25d784d15e94dfc3` (both refit on the stratified split, T1.5) |
 
 ### The `sbatch` line
+
+Exactly as the launcher built and ran it (`$U` = `/mnt/home/users/tic_163_uma/mpascual`,
+`$REPO` = `$U/fscratch/repos/generative-inverse-heat-dissipation`):
 
 ```
 sbatch --array=0-29%8 --job-name=ihdm-train --time=11:00:00 --qos=medium_uma \
   --ntasks=1 --cpus-per-task=8 --mem=32G --constraint=a100 --gres=gpu:1 \
   --account=tic_163_uma \
-  --output=/mnt/home/users/tic_163_uma/mpascual/execs/ihdm/logs/train_%A_%a.out \
-  --error=/mnt/home/users/tic_163_uma/mpascual/execs/ihdm/logs/train_%A_%a.err \
-  --export=ALL,IHDM_REPO_DIR=...,IHDM_ENV_PREFIX=...,IHDM_DATA_ROOT=...,IHDM_RUN_ROOT=...,IHDM_CELLS=...,N_ITERS=40000 \
-  .../slurm/array/train_array.sbatch
+  --output=$U/execs/ihdm/logs/train_%A_%a.out \
+  --error=$U/execs/ihdm/logs/train_%A_%a.err \
+  --export=ALL,IHDM_REPO_DIR=$REPO,IHDM_ENV_PREFIX=$U/fscratch/conda_envs/ihdm,IHDM_DATA_ROOT=$U/fscratch/datasets/spectral_allocation_heat_diffusion_project,IHDM_RUN_ROOT=$U/fscratch/runs/ihdm,IHDM_CELLS=$REPO/slurm/array/cells.csv,N_ITERS=40000 \
+  $REPO/slurm/array/train_array.sbatch
 ```
 
-### `sbatch --test-only` (2026-09-23, before any real submission)
+A100 selection is `--constraint=a100` with an **untyped** `--gres=gpu:1`: `exa[01-04]` advertise
+`gpu:8` with the feature `a100`, so `--gres=gpu:A100:1` matches no node and a bare
+`--constraint=dgx` would also match the B200 nodes.
+
+The command that produced it, on the login node:
+
+```bash
+cd /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-dissipation
+git checkout main && git pull        # 5bc28a6
+bash slurm/array/submit_array.sh     # prints quota, runs --test-only, submits
+```
+
+### `sbatch --test-only`
+
+Run twice: once before the hold (2026-09-23 ≈11:50, on `ticket/T3.3-full-array-submission`) and
+again by the launcher immediately before the real submission (≈12:26, on `main` at `5bc28a6`).
 
 ```
-$ bash slurm/array/submit_array.sh --test-only
+$ bash slurm/array/submit_array.sh --test-only          # first, before the hold
 sbatch.orig: Job 2408178 to start at 2026-09-30T16:44:17 a using 8 processors on nodes exa02 in partition gpu_partition
 [TEST-ONLY] nothing submitted
+
+---- sbatch --test-only ----                            # second, inside the real submission
+sbatch.orig: Job 2408238 to start at 2026-10-01T11:26:43 a using 8 processors on nodes exa01 in partition gpu_partition
 ```
 
-Accepted, routed to `gpu_partition` on `exa02` (an A100 node). The estimated start of
-2026-09-30 is the scheduler's worst case under the current queue (4,325 jobs, 53 users, 3,838
-running), not a reservation; tasks usually start earlier.
+Both probes were accepted and routed to `gpu_partition` on an A100 node (`exa02`, then
+`exa01`). The ids 2408178 and 2408238 belong to the probes; the array actually submitted is
+**2408239**. The dates the probes print are the scheduler's **worst-case** placement under the
+current queue (4,325 jobs, 53 users, 3,838 running), not reservations; tasks usually start
+earlier.
 
 The same check on `--array=6` alone was also accepted (job 2408179), so the single-index
 resubmission path in §4 is valid as written.
@@ -77,20 +107,20 @@ FATAL: --test-only rejected the request (exit 1); nothing submitted
 `medium_uma` gives the same 3-day wall and the same `gres/gpu=23` per-user cap, so `%8`
 concurrency is unchanged.
 
-### `quota` immediately before submission (2026-09-23)
+### `quota` immediately before submission (2026-09-23, printed by the launcher)
 
 ```
 			 HOME				       FSCRATCH
 		 Space	 Limits	 			 File	 Limits
 	 used	 quota	 limit	grace	  ║	 files	 quota	 limit	grace
 home	27.10GB	 0.28TB	 0.75TB	none	  ║	  21.0k	  35.0k	 150.0k	none
-fscratc	 0.47TB	 1.40TB	 1.68TB	none	  ║	 248.5k	 250.0k	 400.0k	none
+fscratc	 0.47TB	 1.40TB	 1.68TB	none	  ║	 248.6k	 250.0k	 400.0k	none
 ```
 
 Budget for the array: ≈ 40 files per run (16 EMA checkpoints, `full_final.pt`, the rolling
 checkpoint, 16 grids, `seeds.npy`, `metrics.jsonl`, `manifest.json`, `config.json`,
 tensorboard) × 30 runs ≈ 1.2k files, plus 60 log files in `$HOME`. That takes FSCRATCH from
-248.5k to ≈ 249.8k against a 250.0k soft limit (hard 400.0k), i.e. the last runs land on the
+248.6k to ≈ 249.8k against a 250.0k soft limit (hard 400.0k), i.e. the last runs land on the
 soft limit and start its 7-day grace. Writes are not blocked — the hard limit is 400k — but
 **nothing else may be written to FSCRATCH while the array runs**. T5.1's evaluation writes to
 `$LOCALSCRATCH` and returns one archive per run, as planned in D16.
@@ -100,12 +130,70 @@ against 0.93 TB free.
 
 ### `squeue` snapshot after submission
 
-_pending — filled when `main` gives GO._
+Immediately after `sbatch` (the launcher's own `squeue -j 2408239`):
+
+```
+JOBID      NAME             USER       STATUS      TIMELEFT     CPUS/NODES  REASON/NODES
+2408239    ihdm-train       mpascual   [PD]        11:00:00     8/1         None/
+2408239    ihdm-train       mpascual   [PD:29]     11:00:00     232         None/
+```
+
+A few minutes later the reason had resolved to the normal one:
+
+```
+2408239    ihdm-train       mpascual   [PD]        11:00:00     8/1         Priority/
+2408239    ihdm-train       mpascual   [PD:29]     11:00:00     232         Priority/
+```
+
+`Reason=Priority` is queue pressure, not an unsatisfiable request — the diagnosis to worry
+about would be `ReqNodeNotAvail` or `BadConstraints`, which never appeared. `sacct` reports the
+array as one pending record, `2408239_[0-29%8]|PENDING`.
+
+`scontrol show job 2408239` confirms the request that was accepted:
+
+```
+JobId=2408239 ArrayJobId=2408239 ArrayTaskId=0-29%8 ArrayTaskThrottle=8 JobName=ihdm-train
+   Priority=27450 Nice=0 Account=tic_163_uma QOS=medium_uma
+   JobState=PENDING Reason=Priority Dependency=(null)
+   StartTime=Unknown EndTime=Unknown Deadline=N/A
+   Partition=gpu_partition AllocNode:Sid=picasso3:15983
+   ReqTRES=cpu=8,mem=32G,node=1,billing=8,gres/gpu=1
+   AllocTRES=(null)
+```
+
+i.e. `QOS=medium_uma`, `ArrayTaskThrottle=8`, `gpu_partition`, one GPU, 8 cores, 32 GB — the
+request as specified.
+
+### Estimated start
+
+`squeue --start` is not useful here: **Picasso's Lua `squeue` wrapper ignores `--start`** and
+returns its ordinary listing, and `scontrol show job` reports `StartTime=Unknown` while
+`Reason=Priority`. The only figure available is the one `sbatch --test-only` printed for an
+identical request moments before submission:
+
+```
+Job 2408238 to start at 2026-10-01T11:26:43 using 8 processors on nodes exa01 in partition gpu_partition
+```
+
+That is a worst-case bound under a queue holding 4,325 jobs from 53 users, not a reservation.
+Treat it as "hours to days", and re-read it with
+`scontrol show job 2408239 | grep StartTime` once the scheduler commits to a slot.
 
 ### First task to run
 
-_pending — filled when a task reaches RUNNING; the first `metrics.jsonl` lines of that run go
-here._
+Not observed within this session: all 30 tasks were still `PENDING` with `Reason=Priority` when
+the record was written, and the queue may take hours. Nothing is blocking — the first task will
+start on its own. To capture the evidence when it does:
+
+```bash
+squeue -j 2408239 -o "%.14i %.12j %.8T %.10M %.6D %R"     # look for RUNNING
+tail -n 40 ~/execs/ihdm/logs/train_2408239_0.out          # header, CELL line, nvidia-smi
+head -n 5 $IHDM_RUN_ROOT/ixi_A0_s1/metrics.jsonl          # first metrics lines
+```
+
+The worker prints `CELL index=... run_id=... dataset=... arm=... seed=... tier=...` before it
+starts, which is the line to check first: it is the decoded tuple, and a wrong decode is the
+one failure here that would otherwise produce a complete, plausible, wrong result set.
 
 ---
 
@@ -191,7 +279,7 @@ ARRAY_SPEC='6' bash slurm/array/submit_array.sh
 ARRAY_SPEC='6,22,27' bash slurm/array/submit_array.sh
 
 # every task that did not COMPLETE:
-ARRAY_SPEC="$(sacct -j <id> -n -X -o JobID,State \
+ARRAY_SPEC="$(sacct -j 2408239 -n -X -o JobID,State \
     | awk '$2 != "COMPLETED" {split($1, a, "_"); print a[2]}' | paste -sd, -)%8" \
     bash slurm/array/submit_array.sh
 
@@ -199,7 +287,7 @@ ARRAY_SPEC="$(sacct -j <id> -n -X -o JobID,State \
 bash slurm/array/submit_array.sh
 ```
 
-Cancel with `scancel <id>`, one task with `scancel <id>_22`, tier 3 with `scancel <id>_[22-29]`.
+Cancel with `scancel 2408239`, one task with `scancel 2408239_22`, tier 3 with `scancel 2408239_[22-29]`.
 
 ---
 
@@ -225,10 +313,10 @@ Never dropped: tier 1 (indices 0–11), because it is the claim.
 
 ```bash
 squeue                                                    # Picasso's wrapper rejects `-u`
-squeue -j <id> -o "%.14i %.12j %.8T %.10M %.6D %R"
-squeue --start -j <id>
-sacct -j <id> --format=JobID,State,Elapsed,MaxRSS,NodeList | head -40
-sacct -j <id> -X -n -P -o State | sort | uniq -c
+squeue -j 2408239 -o "%.14i %.12j %.8T %.10M %.6D %R"
+squeue --start -j 2408239
+sacct -j 2408239 --format=JobID,State,Elapsed,MaxRSS,NodeList | head -40
+sacct -j 2408239 -X -n -P -o State | sort | uniq -c
 for r in $(cut -d, -f2 slurm/array/cells.csv | tail -n +2); do
     test -f "$IHDM_RUN_ROOT/$r/DONE" && echo "DONE $r" || echo "---- $r"
 done
