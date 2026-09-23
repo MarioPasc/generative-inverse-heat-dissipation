@@ -70,9 +70,13 @@ only.
 
 ## 5. Inherited band (mechanism check, eq. (13.3) of learning/03)
 
-For each seed $s$ with samples $y_{s,m}$: per-mode variance of the samples about their seed,
-$V_s(i,j) = \frac1{50}\sum_m (\hat y_{s,m}(i,j) - \hat x_s(i,j))^2$, averaged over seeds and
-normalised by the population per-mode variance $P_{\text{ref}}(i,j)$; plotted (radial profile)
+For each seed $s$ with samples $y_{s,m}$: per-mode variance of the samples **about their prior
+state** $d_K(i,j)\,\hat x_s(i,j)$ with $d_K = e^{-\lambda t_K}$ (the released `DCTBlur` kernel at
+$\sigma_{B,\max}$), $V_s(i,j) = \frac1{50}\sum_m (\hat y_{s,m}(i,j) - d_K(i,j)\hat x_s(i,j))^2$
+(*amended 2026-09-23, T4.1: the residual about the seed itself has expectation $2(1-d_K)P$ under
+the linear-Gaussian model, not $(1-d_K^2)P$, so it is inconsistent with the prediction line
+below*), averaged over seeds and normalised by the population per-mode variance
+$P_{\text{ref}}(i,j)$; plotted (radial profile)
 against the **linear-Gaussian prediction** $1 - d_K^2(n) = 1 - e^{-2\lambda_n t_K}$ with
 $\lambda_n$ the DCT Laplacian eigenvalue of the mode and $t_K = \sigma_{B,\max}^2/2$: the chain
 regenerates the removed part of each mode, whose variance is $(1 - d_K^2) P$, while the surviving
@@ -80,7 +84,11 @@ part $d_K x_{\text{seed}}$ is constant across the 50 samples and contributes no 
 $d_K = 0.5$ the prediction is $0.75$). The measured curve lying on the line means the model
 inherits exactly the modes the prior hands it; curvature is the finding. Report the inherited
 share: $\sum_{n} P_{\text{ref}}(n)\, e^{-2\lambda_n t_K} / \sum_n P_{\text{ref}}(n)$ (prediction)
-against the measured $1 - \sum V / \sum P_{\text{ref}}$ restricted to the low band.
+against the measured $1 - \sum V / \sum P_{\text{ref}}$, **both over all non-DC modes**; the
+low-band variant (modes with $\sigma_n = \sqrt{2/\lambda_n} \ge 8$ px, i.e. ≤ 5.4 cycles per
+image at $W = 192$) masks both sides and is reported beside it (T4.1). LSD note: of the 48
+log-spaced bins, five hold no mode of the $192^2$ grid; the LSD is the RMS over the 43 populated
+bins, a fixed functional of $W$ and the bin count.
 
 ## 6. PCA around the seed (figure only)
 
