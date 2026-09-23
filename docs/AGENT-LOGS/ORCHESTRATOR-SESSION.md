@@ -133,4 +133,13 @@ while the queue runs. Peers [Proposal-Specifier] and [Experiment-Reviewer] hold 
 - [ask Mario] items above.
 - Registration is the schedule risk: T1.1 is the longest CPU ticket (≈ 1 h per cohort).
 
+- 2026-09-23, W6: T3.2 found FSCRATCH at 254.9k files against the 250k soft quota (7-day grace
+  running). Breakdown (`find -type f` per top-level dir): `conda_envs` 96.4k (ihdm 32.6k, isalhg /
+  isalhg-tkde / isalhg-tkde-refill 64k), `results` 65.9k, `build_gedlib` 55.4k (Aug 2026 build
+  tree), `conda_pkgs` 15.1k, `datasets` 8.1k, `repos` 4.2k, `pip_cache` 0.5k. The orchestrator
+  removed the two caches (`conda_pkgs/*`, `pip_cache`; re-downloadable; the envs keep hardlinked
+  copies and `ihdm` still imports) → 247.5k, grace cleared. **[ask Mario]**: `build_gedlib`,
+  the three `isalhg*` envs and `results` are his other projects; clearing any of them is his call.
+  Consequence for T3.3/T5.1: the array budgets < 2k new files (checkpoints only); evaluation
+  artefacts go to `$LOCALSCRATCH` with one archive per run copied back.
 - Follow-up (T3.1): `environment.yml` pins only `torch>=2.4` (resolved to 2.14.0+cu130 on both machines); pin the exact torch/torchvision versions once the Picasso driver probe (job 2403074) answers, so the env is reproducible.
