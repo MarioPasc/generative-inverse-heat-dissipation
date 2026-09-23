@@ -86,9 +86,7 @@ def test_indices_are_dense_and_zero_based(rows: list[dict[str, str]]) -> None:
 def test_one_row_per_experiment_cell(rows: list[dict[str, str]]) -> None:
     """The table is a bijection with `EXPERIMENT_CELLS` expanded over its seeds."""
     expected = {
-        (dataset_id, arm, seed)
-        for dataset_id, arm, seeds in EXPERIMENT_CELLS
-        for seed in seeds
+        (dataset_id, arm, seed) for dataset_id, arm, seeds in EXPERIMENT_CELLS for seed in seeds
     }
     got = [(row["dataset_id"], row["arm"], int(row["seed"])) for row in rows]
     assert len(got) == len(set(got)), "a (dataset, arm, seed) triple is repeated"

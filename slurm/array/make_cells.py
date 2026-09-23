@@ -203,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if not target.is_file():
-        print(f"{target} is missing; run `python slurm/array/make_cells.py --write`", file=sys.stderr)
+        print(f"{target} is missing; run make_cells.py --write", file=sys.stderr)
         return 1
     if target.read_text(encoding="utf-8") != text:
         print(f"{target} is stale; run `python slurm/array/make_cells.py --write`", file=sys.stderr)
