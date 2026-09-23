@@ -150,3 +150,117 @@ pytest tests/metrics -q -m integration
 (`torch.OutOfMemoryError`, 8.9 GiB already in use, 2.11 GiB more requested, before the first
 chain); 20 is the largest value tried that fits beside a desktop session. The chain cost is flat
 in the batch on this GPU (19.3 s per chain at 32, 18.2 s at 20 per T2.2), so nothing is lost.
+
+## 5. T4.2 — memorisation, diversity and PCA on the pilot
+
+Same run and checkpoint as sections 1–4 (`pilot_ixi_A0_s1`, `ema_iter_000750.pt`, A0:
+$\sigma_{B,\max} = 96$, $K = 200$, `prior_noise=True`), same two sample folders, dataset `ixi`
+(N4-corrected). Corpus = the 3 200-image `train` split; held-out = the 400 rows with
+`index["split"] == "ref"`, i.e. the `ref` split minus the 40 seed subjects. Distances are
+Euclidean over the 36 864 pixels of a $192^2$ image in $[0, 1]$, per-image DC removed.
+
+**Only 46 of the 64 training-seeded pilot samples are used.** The other 18 have a `seed_idx`
+that is not a row of the current `splits["train"]` (6 of them are in `splits["seed"]`), so they
+are not training-seeded and $M$ is not defined on them; see
+`docs/AGENT-LOGS/M4-metrics/T4.2-memorisation-and-diversity.md` §6.
+
+### 5.1 The memorisation ratio
+
+| set as "samples" | $n$ | $M$ | $M_{lp}$ ($\sigma_B = 16$) | `seed_nn_fraction` |
+|---|---|---|---|---|
+| **pilot, training-seeded** | 46 | **1.752** | **8.722** | **0.000** |
+| pilot, all samples (seed provenance ignored) | 64 | 1.769 | 8.813 | n/a |
+| **control: 200 real `ref` images** | 200 | **1.001** | **0.992** | n/a |
+
+The control is the calibration of the metric: real held-out images give $M = 1$ to 0.1% and
+$M_{lp} = 1$ to 0.8%, which is the identity H-METRICS §1 asks for, measured here on the real
+data rather than on a synthetic field.
+
+Medians behind the ratios (pixel space): $d(\text{samples}) = 56.64$,
+$d(\text{held-out}) = 32.34$. In the low-pass band: $d(\text{samples}) = 34.52$,
+$d(\text{held-out}) = 3.96$.
+
+**What this says, and it is not what the ticket expected.** $M$ at 750 iterations is **above**
+one, not below: the samples are 1.75× *further* from the training set than a new real brain is,
+and 8.7× further once both sides are blurred to $\sigma_B = 16$ px. They are not copies of
+anything — the nearest training image is never the sample's own seed (0 of 46), and each sample
+sits 67.1 from its own seed, 1.18× further than from its nearest training image. The mechanism
+is visible in the spectrum: the samples carry 7% more non-DC pixel variance than the `ref`
+images (0.0919 vs 0.0855) but **57% more in the $\sigma_B = 16$ band** (0.0639 vs 0.0406), and
+real registered brains are nearly identical at that scale (their nearest-neighbour distance is
+3.96, an eighth of the pixel-space one), so an excess of coarse structure is punished hard.
+
+The reading for the report: **$M$ is not one-sided.** $M \ll 1$ is copying; $M \gg 1$ is a model
+that has not reached the data manifold at all, which is what an undertrained checkpoint looks
+like. $M$ is only interpretable as "copying or not" for a run whose LSD and KID say it fits;
+until then it is a distance-to-manifold diagnostic. Nothing here is evidence for or against H1,
+because 750 iterations is 1.9% of a run.
+
+### 5.2 Within-seed diversity (4 held-out seeds × 10 samples)
+
+| quantity | value | reference scale | share |
+|---|---|---|---|
+| $D_{\text{pix}}$ (mean over 4 seeds) | $3.996\times10^{-3}$ | non-DC pixel variance of the 400 `ref` images, $8.552\times10^{-2}$ | 4.67% |
+| $D_{\text{lp}}$ ($\sigma_B = 16$) | $1.464\times10^{-4}$ | the same after the low-pass, $4.064\times10^{-2}$ | 0.36% |
+
+Per seed: $D_{\text{pix}} = [3.2, 3.5, 3.7, 5.5]\times10^{-3}$,
+$D_{\text{lp}} = [0.89, 1.06, 1.28, 2.62]\times10^{-4}$. Units are squared $[0,1]$ intensity per
+pixel; the $1/M$ normalisation of `05-metrics.md` §3 makes these estimate $(1 - 1/10) = 0.9$
+times the true within-seed variance at this $M = 10$ (0.98 at the $M = 50$ of the real runs).
+
+Ten samples per seed and four seeds are a pilot, not a measurement: the number to quote is that
+the chain moves by 4.7% of the real pixel variance and by 0.36% of the real coarse variance when
+only the sampling noise changes. The coarse share being an order of magnitude below the pixel
+share is the signature the terminal-blur hypothesis predicts (the prior fixes the coarse modes
+and the chain regenerates only the fine ones), but at $\sigma_{B,\max} = 96$ and 750 iterations
+it cannot be separated from a model that has simply not learned to move.
+
+### 5.3 PCA around the seed (2 components, fitted on the 3 200 training images)
+
+Explained variance $[122.7, 98.8]$; training score standard deviation $[11.08, 9.94]$.
+
+| seed | seed score | sample centroid | arrow length | within-seed sample sd |
+|---|---|---|---|---|
+| 0 | $(-4.20, +22.60)$ | $(-4.03, -8.80)$ | 31.40 | $(0.61, 0.35)$ |
+| 1 | $(-7.92, +6.12)$ | $(+3.06, -15.32)$ | 24.09 | $(0.52, 0.56)$ |
+| 2 | $(-5.41, +8.30)$ | $(+1.27, -13.19)$ | 22.50 | $(0.35, 0.51)$ |
+| 3 | $(-4.28, +3.45)$ | $(-0.41, -11.96)$ | 15.88 | $(0.72, 0.73)$ |
+
+The four arrows all point the same way and land in the same place ($-4$ to $+3$ on PC1, $-15$ to
+$-9$ on PC2), 1.5 training standard deviations from where the seeds are, while the spread of the
+10 samples of one seed is 3–7% of the training standard deviation. At this checkpoint the model
+maps every seed onto one region of the training PCA plane: mode collapse plus a systematic
+offset, not a copy of the seed. The panel is the figure `05-metrics.md` §6 asks for; it will be
+worth reading at 40k iterations.
+
+### 5.4 Cost and peak memory of the nearest-neighbour path
+
+Measured on this machine (RTX 3060 12 GB, 31 GB RAM, `chunk = 256`, fresh process per row;
+"host RSS" is the process high-water mark, of which 0.70–0.72 GiB is the `uint8` input itself).
+
+| call | device | wall | CUDA allocated / reserved | host RSS |
+|---|---|---|---|---|
+| `nn_distances(2000, 3200)` at $192^2$ | cuda | 0.68 s | 0.960 / 1.393 GiB | 1.84 GiB |
+| `nn_distances(2000, 3200)` at $192^2$ | cpu | 1.57 s | — | 1.95 GiB |
+| `memorisation_ratio(2000, 3200, 400)` at $192^2$ (both ratios) | cuda | 6.6 s | 0.960 / 1.428 GiB | 3.53 GiB |
+| `memorisation_ratio(2000, 3200, 400)` at $192^2$ (both ratios) | cpu | 8.5 s | — | 3.52 GiB |
+| `memorisation_ratio(46, 3200, 400)`, the pilot call above | cuda | 3.8 s | 0.960 GiB | 2.93 GiB |
+| `pca_around_seed` on the 3 200 × 36 864 training split | cuda | 0.48 s | — | — |
+
+Both device paths return the same nearest neighbours and the same median distance to four
+decimals at this scale. The CUDA figure is dominated by the resident corpus (3 200 × 36 864
+`float32` = 0.44 GiB) plus one query chunk; the whole array's evaluation therefore fits with
+10 GB to spare, and the CPU fallback fits with 27 GB to spare.
+
+### 5.5 Reproducing section 5
+
+```bash
+export IHDM_DATA_ROOT=/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project
+export IHDM_RUN_ROOT=$IHDM_DATA_ROOT/_runs_local
+pytest tests/metrics/test_memorisation.py tests/metrics/test_diversity.py -q -m integration
+```
+
+The tables above come from two scratchpad scripts (not committed, listed verbatim in the T4.2
+log §4) that call `memorisation_ratio`, `within_seed_diversity` and `pca_around_seed` on the
+same paths the integration tests use; the integration tests assert the shapes, the finiteness
+and the ranges, not the values, because the values belong to one pilot checkpoint.
