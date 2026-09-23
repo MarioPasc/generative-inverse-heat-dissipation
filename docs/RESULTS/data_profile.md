@@ -1,6 +1,6 @@
 # Spectral profile of the four training splits, and the frozen schedules
 
-Produced by `python -m ihdm.cli.profile_data` at `0eb8982f37c8` on 2026-09-23. Tickets T1.3 and T1.4; contracts `04-run-artifacts.md` §1 and `05-metrics.md` §1.
+Produced by `python -m ihdm.cli.profile_data` at `31c590e17bef` on 2026-09-23. Tickets T1.3 and T1.4; contracts `04-run-artifacts.md` §1 and `05-metrics.md` §1.
 
 Every curve and every table below is measured on the **training** split of each dataset (3200 images of $192^2$, values in $[0, 1]$); the `ref` split (800 images) is profiled beside it as a consistency check. The per-mode variance is mean-centred across images, in the orthonormal DCT-II basis, with the DC mode excluded; a mode of radial index $n$ carries $n/2$ cycles per image and modes above 96 cycles per image are excluded from the octave shares.
 
@@ -14,7 +14,7 @@ $\alpha$ is fitted by least squares of $\log \bar P$ on $\log n$ over the intege
 
 | dataset | $\alpha$ (train) | $\alpha$ (ref) | $\alpha$ (train, 1–48 c/img window) | **no N4** (train) | archived, unregistered |
 |---|---|---|---|---|---|
-| IXI T1 | **3.22** | 3.22 | 2.14 | 3.22 | 3.47 |
+| IXI T1 | **3.22** | 3.22 | 2.14 | 3.21 | 3.47 |
 | OASIS-1 T1 | **3.10** | 3.08 | 2.09 | 3.11 | 3.16 |
 | LSUN Churches | **2.28** | 2.28 | 2.27 | &mdash; | 2.27 |
 | LSUN Bedrooms | **2.58** | 2.59 | 2.50 | &mdash; | 2.62 |
@@ -25,8 +25,8 @@ Bins in cycles per image; the last bin is closed at 96 (the archived rows close 
 
 | dataset | 0.5-1 | 1-2 | 2-4 | 4-8 | 8-16 | 16-32 | 32-64 | 64-96 |
 |---|---|---|---|---|---|---|---|---|
-| IXI T1 | 4.1% | 11.2% | 10.9% | 16.8% | 29.8% | 18.3% | 7.8% | 1.0% |
-| IXI T1, **no N4** | 4.0% | 14.8% | 10.4% | 16.6% | 28.3% | 17.5% | 7.4% | 1.0% |
+| IXI T1 | 4.1% | 11.3% | 11.0% | 16.8% | 29.8% | 18.3% | 7.8% | 1.0% |
+| IXI T1, **no N4** | 4.0% | 14.9% | 10.5% | 16.6% | 28.2% | 17.5% | 7.4% | 1.0% |
 | IXI T1, archived | 0.8% | 9.8% | 7.4% | 14.8% | 36.1% | 22.3% | 8.0% | 0.7% |
 | OASIS-1 T1 | 2.0% | 5.4% | 9.1% | 23.2% | 29.7% | 20.3% | 8.3% | 2.1% |
 | OASIS-1 T1, **no N4** | 2.4% | 6.7% | 9.4% | 22.9% | 28.9% | 19.7% | 8.0% | 2.0% |
@@ -40,8 +40,8 @@ The coarsest bin is exactly three modes, and item (ii) of the checklist below re
 
 | dataset | $(0,1)$ left–right ramp | $(1,0)$ anterior–posterior ramp | $(1,1)$ diagonal | bin total | $(1,0)$ share of the bin |
 |---|---|---|---|---|---|
-| IXI T1 | 0.50% | 3.46% | 0.11% | 4.07% | 85% |
-| IXI T1, **no N4** | 0.52% | 3.31% | 0.12% | 3.96% | 84% |
+| IXI T1 | 0.43% | 3.54% | 0.11% | 4.08% | 87% |
+| IXI T1, **no N4** | 0.44% | 3.43% | 0.12% | 3.99% | 86% |
 | OASIS-1 T1 | 0.22% | 1.75% | 0.06% | 2.02% | 86% |
 | OASIS-1 T1, **no N4** | 0.23% | 2.14% | 0.07% | 2.44% | 88% |
 | LSUN Churches | 5.27% | 16.09% | 2.44% | 23.80% | 68% |
@@ -53,10 +53,35 @@ IXI mixes three sites and two field strengths (Guys 1.5 T, HH 3 T, IOP 1.5 T); O
 
 | dataset | site | subjects | images | coarse share, N4 | coarse share, no N4 | $(1,0)$ share of the bin, N4 | no N4 |
 |---|---|---|---|---|---|---|---|
-| IXI T1 | Guys | 159 | 1590 | **3.11%** | 3.51% | **89%** | 89% |
-| IXI T1 | HH | 120 | 1200 | **2.90%** | 4.12% | **70%** | 76% |
-| IXI T1 | IOP | 41 | 410 | **2.62%** | 3.21% | **73%** | 78% |
+| IXI T1 | Guys | 164 | 1640 | **3.25%** | 3.60% | **89%** | 89% |
+| IXI T1 | HH | 115 | 1150 | **2.78%** | 4.19% | **75%** | 81% |
+| IXI T1 | IOP | 41 | 410 | **2.50%** | 2.97% | **68%** | 73% |
 | OASIS-1 T1 | WashU | 320 | 3200 | **2.02%** | 2.44% | **86%** | 88% |
+
+### 2.2 IXI site mix per split (T1.5)
+
+Appended by hand from `$IHDM_DATA_ROOT/ixi/splits.json: strata_mix` (this table is not produced by
+`profile_data.py`, which T1.5 does not own). The seeded random split (T1.1–T1.4) put a materially
+different site mix in `train` than in `ref`; `split_by_subject(..., strata=sites)` draws the 80/20
+partition and the 40 seed subjects independently within each site (largest-remainder
+apportionment), so every split now matches the cohort's own site mix (Guys/HH/IOP 51.2/36.0/12.8%
+of 400 subjects) to within one subject.
+
+| split | subjects | Guys | HH | IOP |
+|---|---|---|---|---|
+| train, **stratified (T1.5)** | 320 | 164 (51.2%) | 115 (35.9%) | 41 (12.8%) |
+| train, unstratified (T1.1–T1.4) | 320 | 159 (49.7%) | 120 (37.5%) | 41 (12.8%) |
+| ref, **stratified (T1.5)** | 80 | 41 (51.2%) | 29 (36.2%) | 10 (12.5%) |
+| ref, unstratified (T1.1–T1.4) | 80 | 46 (57.5%) | 24 (30.0%) | 10 (12.5%) |
+| seed, **stratified (T1.5)** | 40 | 21 (52.5%) | 14 (35.0%) | 5 (12.5%) |
+| seed, unstratified (T1.1–T1.4) | 40 | 22 (55.0%) | 13 (32.5%) | 5 (12.5%) |
+| all 400 subjects (unchanged by T1.5) | 400 | 205 (51.2%) | 144 (36.0%) | 51 (12.8%) |
+
+The largest train/ref gap for one site shrinks from 7.8 points (Guys: 49.7% train vs 57.5% ref,
+unstratified) to 0.3 points (Guys: 51.2% train vs 51.2% ref, stratified); every split now differs
+from the cohort's own 51.2/36.0/12.8% mix by at most 0.5 points. The 400 subjects and their
+train/ref/seed *sizes* (320/80/40) are unchanged; only which subjects land in which split moved
+(`_sensitivity/ixi_no_n4/splits.json` is identical).
 
 ## 3. Inherited share at the three terminal blurs
 
@@ -64,7 +89,7 @@ $\sum_i P_i e^{-2\lambda_i t}/\sum_i P_i$ with $t = \sigma_{B,\max}^2/2$: the fr
 
 | dataset | $W/8$ (24 px) | $W/4$ (48 px) | $W/2$ (96 px) | **no N4** $W/8$ / $W/4$ / $W/2$ | archived (unregistered) |
 |---|---|---|---|---|---|
-| IXI T1 | 8.4% | 2.7% | 0.3% | 10.3% / 3.0% / 0.3% | 5.5% / 1.0% / 0.1% |
+| IXI T1 | 8.5% | 2.7% | 0.3% | 10.4% / 3.0% / 0.3% | 5.5% / 1.0% / 0.1% |
 | OASIS-1 T1 | 4.1% | 1.3% | 0.2% | 5.1% / 1.6% / 0.2% | 2.8% / 0.5% / 0.0% |
 | LSUN Churches | 29.1% | 13.2% | 1.8% | &mdash; | 30.1% / 13.9% / 1.9% |
 | LSUN Bedrooms | 29.3% | 12.6% | 1.7% | &mdash; | 29.2% / 12.4% / 1.6% |
@@ -75,10 +100,10 @@ Spread = $\max_k R_k / \min_k R_k$ over levels $2 \dots K$, with $R_k = \sum_i (
 
 | dataset | log ($W/2$) | IXI-matched ($W/2$) | own matched ($W/2$) | own vs IXI's, max / median of $\lvert s_{\text{own}}/s_{\text{IXI}} - 1 \rvert$ | **no N4**: log / IXI-matched / max dev | archived log / IXI |
 |---|---|---|---|---|---|---|
-| IXI T1 | 8.9x | 1.0x | 1.002x | 0% / 0% | 8.7x / 1.0x / 0% | 50.8x / 1.0x |
-| OASIS-1 T1 | 18.7x | 2.8x | 1.001x | 31% / 10% | 15.1x / 3.1x / 33% | 93.5x / 3.3x |
-| LSUN Churches | 3.8x | 15.6x | 1.004x | 123% / 67% | 3.8x / 15.1x / 106% | 3.9x / 90.6x |
-| LSUN Bedrooms | 8.0x | 17.0x | 1.004x | 145% / 86% | 8.0x / 16.4x / 129% | 8.9x / 92.8x |
+| IXI T1 | 8.9x | 1.0x | 1.002x | 0% / 0% | 8.6x / 1.0x / 0% | 50.8x / 1.0x |
+| OASIS-1 T1 | 18.7x | 2.8x | 1.001x | 31% / 11% | 15.1x / 3.1x / 33% | 93.5x / 3.3x |
+| LSUN Churches | 3.8x | 15.5x | 1.004x | 123% / 66% | 3.8x / 15.0x / 106% | 3.9x / 90.6x |
+| LSUN Bedrooms | 8.0x | 16.9x | 1.004x | 145% / 85% | 8.0x / 16.3x / 128% | 8.9x / 92.8x |
 
 ## 5. Levels per $\sigma_B$ octave
 
@@ -89,13 +114,13 @@ Where each schedule spends its 200 levels. `oasis1_W2` is fitted by `profile_dat
 | `log_W2` | 27 | 26 | 26 | 26 | 27 | 26 | 26 | 16 | 200 |
 | `log_W8` | 36 | 36 | 35 | 36 | 36 | 21 | 0 | 0 | 200 |
 | `ixi_W2` | 19 | 30 | 38 | 35 | 26 | 23 | 20 | 9 | 200 |
-| `ixi_W8` | 24 | 37 | 47 | 42 | 32 | 18 | 0 | 0 | 200 |
+| `ixi_W8` | 24 | 37 | 46 | 43 | 32 | 18 | 0 | 0 | 200 |
 | `lsun_church_W2` | 19 | 21 | 23 | 26 | 28 | 31 | 33 | 19 | 200 |
 | `oasis1_W8` | 25 | 37 | 46 | 45 | 33 | 14 | 0 | 0 | 200 |
 | `lsun_bedroom_W2` | 15 | 18 | 22 | 26 | 32 | 34 | 34 | 19 | 200 |
 | `oasis1_W2` (not frozen) | 22 | 32 | 39 | 39 | 29 | 18 | 14 | 7 | 200 |
 | `ixi_W2` **no N4** | 19 | 29 | 37 | 33 | 26 | 24 | 23 | 9 | 200 |
-| `ixi_W8` **no N4** | 24 | 36 | 47 | 43 | 32 | 18 | 0 | 0 | 200 |
+| `ixi_W8` **no N4** | 24 | 36 | 47 | 42 | 33 | 18 | 0 | 0 | 200 |
 | `oasis1_W2` **no N4** | 21 | 31 | 39 | 38 | 29 | 19 | 16 | 7 | 200 |
 | `oasis1_W8` **no N4** | 25 | 37 | 45 | 45 | 33 | 15 | 0 | 0 | 200 |
 
@@ -105,20 +130,20 @@ The claim is the `N4` column. The `no N4` column is the same five items evaluate
 
 | # | expected | outcome (N4) | outcome (no N4) | measured on the N4 data | measured without N4 |
 |---|---|---|---|---|---|
-| (i) | MRI alpha exceeds photograph alpha by at least 0.5 | **PASS** | PASS | min MRI alpha 3.10 - max photograph alpha 2.58 = +0.52; per dataset IXI T1 3.22, OASIS-1 T1 3.10, LSUN Churches 2.28, LSUN Bedrooms 2.58 | min MRI alpha 3.11 - max photograph alpha 2.58 = +0.53; per dataset IXI T1 3.22, OASIS-1 T1 3.11, LSUN Churches 2.28, LSUN Bedrooms 2.58 |
-| (ii) | the 0.5-1 c/img share is below 3% on both MRI sets and above 15% on both photograph sets | **FAIL** | FAIL | IXI T1 4.07%, OASIS-1 T1 2.02%, LSUN Churches 23.80%, LSUN Bedrooms 23.11% | IXI T1 3.96%, OASIS-1 T1 2.44%, LSUN Churches 23.80%, LSUN Bedrooms 23.11% |
-| (iii) | the log-schedule spread is larger on MRI than on photographs | **PASS** | PASS | min MRI 8.9x vs max photograph 8.0x; per dataset IXI T1 8.9x, OASIS-1 T1 18.7x, LSUN Churches 3.8x, LSUN Bedrooms 8.0x | min MRI 8.7x vs max photograph 8.0x; per dataset IXI T1 8.7x, OASIS-1 T1 15.1x, LSUN Churches 3.8x, LSUN Bedrooms 8.0x |
-| (iv) | the IXI schedule reduces OASIS-1's spread and increases Churches' | **PASS** | PASS | OASIS-1 18.7x -> 2.8x, Churches 3.8x -> 15.6x (log -> IXI-matched) | OASIS-1 15.1x -> 3.1x, Churches 3.8x -> 15.1x (log -> IXI-matched) |
-| (v) | the two brain schedules agree within 35% (max) and the photograph schedule differs from IXI's by more than 50% | **PASS** | PASS | max abs(s_own / s_ixi - 1): OASIS-1 T1 31%, LSUN Churches 123%, LSUN Bedrooms 145% | max abs(s_own / s_ixi - 1): OASIS-1 T1 33%, LSUN Churches 106%, LSUN Bedrooms 129% |
+| (i) | MRI alpha exceeds photograph alpha by at least 0.5 | **PASS** | PASS | min MRI alpha 3.10 - max photograph alpha 2.58 = +0.52; per dataset IXI T1 3.22, OASIS-1 T1 3.10, LSUN Churches 2.28, LSUN Bedrooms 2.58 | min MRI alpha 3.11 - max photograph alpha 2.58 = +0.53; per dataset IXI T1 3.21, OASIS-1 T1 3.11, LSUN Churches 2.28, LSUN Bedrooms 2.58 |
+| (ii) | the 0.5-1 c/img share is below 3% on both MRI sets and above 15% on both photograph sets | **FAIL** | FAIL | IXI T1 4.08%, OASIS-1 T1 2.02%, LSUN Churches 23.80%, LSUN Bedrooms 23.11% | IXI T1 3.99%, OASIS-1 T1 2.44%, LSUN Churches 23.80%, LSUN Bedrooms 23.11% |
+| (iii) | the log-schedule spread is larger on MRI than on photographs | **PASS** | PASS | min MRI 8.9x vs max photograph 8.0x; per dataset IXI T1 8.9x, OASIS-1 T1 18.7x, LSUN Churches 3.8x, LSUN Bedrooms 8.0x | min MRI 8.6x vs max photograph 8.0x; per dataset IXI T1 8.6x, OASIS-1 T1 15.1x, LSUN Churches 3.8x, LSUN Bedrooms 8.0x |
+| (iv) | the IXI schedule reduces OASIS-1's spread and increases Churches' | **PASS** | PASS | OASIS-1 18.7x -> 2.8x, Churches 3.8x -> 15.5x (log -> IXI-matched) | OASIS-1 15.1x -> 3.1x, Churches 3.8x -> 15.0x (log -> IXI-matched) |
+| (v) | the two brain schedules agree within 35% (max) and the photograph schedule differs from IXI's by more than 50% | **PASS** | PASS | max abs(s_own / s_ixi - 1): OASIS-1 T1 31%, LSUN Churches 123%, LSUN Bedrooms 145% | max abs(s_own / s_ixi - 1): OASIS-1 T1 33%, LSUN Churches 106%, LSUN Bedrooms 128% |
 
 **4 of 5 items pass on the N4 data.** Failing: ii. Without N4: 4 of 5, failing ii.
 
 **Notes on the measured numbers** (facts from the tables above; no threshold was moved, no N4 parameter was chosen by looking at a spectral number, and no schedule was refitted to make an item pass).
 
-- **N4 moved the coarse bin of the MRI sets** from 3.96% to 4.07% on IXI and from 2.44% to 2.02% on OASIS-1, and the share of that bin carried by the single anterior–posterior ramp mode $(1,0)$ from 84% to 85% on IXI. The photograph sets are byte-identical in both branches: N4 corrects an MRI acquisition artefact and nothing was applied to them.
-- Registration raised the coarse-octave variance of both MRI sets well above the archived pre-registration values (0.8% → 4.07% on IXI, 0.4% → 2.02% on OASIS-1) and left the photograph sets unchanged. The ordering the design rests on is intact: the photograph sets hold 6× the MRI sets' coarse share.
+- **N4 moved the coarse bin of the MRI sets** from 3.99% to 4.08% on IXI and from 2.44% to 2.02% on OASIS-1, and the share of that bin carried by the single anterior–posterior ramp mode $(1,0)$ from 86% to 87% on IXI. The photograph sets are byte-identical in both branches: N4 corrects an MRI acquisition artefact and nothing was applied to them.
+- Registration raised the coarse-octave variance of both MRI sets well above the archived pre-registration values (0.8% → 4.08% on IXI, 0.4% → 2.02% on OASIS-1) and left the photograph sets unchanged. The ordering the design rests on is intact: the photograph sets hold 6× the MRI sets' coarse share.
 - The log-schedule spread is far below the archived values on both MRI sets (IXI 51× → 8.9×, OASIS-1 94× → 18.7×) while the photograph sets moved little. Item (iii) therefore holds by a margin of 1.12× instead of the archived ~6×, and the design's contrast between the MRI and photograph arms is correspondingly weaker on the processed data than the proposal's numbers suggest.
-- Failing item(s): (ii) IXI T1 4.07%, OASIS-1 T1 2.02%, LSUN Churches 23.80%, LSUN Bedrooms 23.11%.
+- Failing item(s): (ii) IXI T1 4.08%, OASIS-1 T1 2.02%, LSUN Churches 23.80%, LSUN Bedrooms 23.11%.
 
 ## 7. Numbers for the figure caption
 
