@@ -1,9 +1,9 @@
 {
   "ixi_W2": {
     "K": 200,
-    "created": "2026-09-23T08:03:57+00:00",
+    "created": "2026-09-23T10:15:05+00:00",
     "fitted_on": "ixi/train",
-    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
+    "git_sha": "31c590e17befb247724a5621f18c26c186dbfa12",
     "images_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
     "kind": "matched",
     "levels_per_octave": {
@@ -17,33 +17,33 @@
       "8-16": 26
     },
     "n_images": 3200,
-    "sha256": "025f8c05f32b17582ae735724cd4d3f6541dae4455d4b1685ebcc0d60b7f0b39",
+    "sha256": "9c80d11c614197750f62b2c8dcc760e6c1df416b0a85248a25d784d15e94dfc3",
     "sigma_max": 96.0,
     "sigma_min": 0.5,
-    "spread": 1.001874
+    "spread": 1.001876
   },
   "ixi_W8": {
     "K": 200,
-    "created": "2026-09-23T08:04:40+00:00",
+    "created": "2026-09-23T10:15:47+00:00",
     "fitted_on": "ixi/train",
-    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
+    "git_sha": "31c590e17befb247724a5621f18c26c186dbfa12",
     "images_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
     "kind": "matched",
     "levels_per_octave": {
       "0.5-1": 24,
       "1-2": 37,
       "16-32": 18,
-      "2-4": 47,
+      "2-4": 46,
       "32-64": 0,
-      "4-8": 42,
+      "4-8": 43,
       "64-96": 0,
       "8-16": 32
     },
     "n_images": 3200,
-    "sha256": "25d208effd7e1b6b6d44e1c636a78d9c635a15009e8c385f0314fa30f1a0652f",
+    "sha256": "8bfe56bd759253d5b873ea6cd2080351b2051709719edd53337d3c930a7b916b",
     "sigma_max": 24.0,
     "sigma_min": 0.5,
-    "spread": 1.004165
+    "spread": 1.004175
   },
   "log_W2": {
     "K": 200,

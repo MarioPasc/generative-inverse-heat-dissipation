@@ -157,12 +157,23 @@ def split_by_subject(
     rng_seed: int = 2026,
     train_frac: float = 0.8,
     n_seed: int = 40,
+    strata: dict[str, str] | None = None,
+    strata_name: str = "site",
 ) -> dict[str, Any]:
     """Partition images into train/ref/seed splits by subject.
 
     Every image of a subject inherits that subject's split (a subject never
     straddles ``train`` and ``ref``). For photographs, each image is its own
     subject, so this reduces to a per-image split.
+
+    Without ``strata``, the 80/20 partition and the seed draw are taken over
+    all subjects at once. With ``strata``, they are taken independently within
+    each stratum (e.g. acquisition site) so that every split keeps the
+    strata's overall proportions, then unioned; this branch shares its
+    ``np.random.default_rng(rng_seed)`` instance with the unstratified one but
+    otherwise produces a different (proportional-by-stratum) partition, so
+    ``strata=None`` is required to reproduce a dataset built before
+    stratification existed.
 
     Parameters
     ----------
@@ -174,49 +185,199 @@ def split_by_subject(
         and the seed-subject draw, so the result is reproducible from the
         subject list alone.
     train_frac : float
-        Fraction of unique subjects assigned to ``train``.
+        Fraction of unique subjects assigned to ``train`` (per stratum, when
+        ``strata`` is given).
     n_seed : int
         Number of ``ref`` subjects drawn as ``seed`` subjects (clipped to the
-        number of ``ref`` subjects if fewer are available).
+        number of ``ref`` subjects if fewer are available; allocated
+        proportionally to each stratum's ``ref`` count when ``strata`` is
+        given).
+    strata : dict[str, str] | None
+        Subject id to stratum label (e.g. acquisition site). When given,
+        every subject in ``subjects`` must have an entry. ``None`` (the
+        default) reproduces the original, unstratified partition exactly.
+    strata_name : str
+        Human-readable name of the stratification variable, used only in the
+        returned ``rule`` string.
 
     Returns
     -------
     dict[str, Any]
         The ``splits.json``-shaped dict: ``train``, ``ref``, ``seed`` (sorted
         image-index lists), ``train_subjects``, ``ref_subjects``, ``seed_subjects``
-        (sorted subject-id lists), ``rule`` and ``rng_seed``.
+        (sorted subject-id lists), ``rule`` and ``rng_seed``. When ``strata`` is
+        given, also ``strata`` (``{subject: label}``, restricted to the
+        subjects present) and ``strata_mix`` (``{split: {label: n_subjects}}``).
+
+    Raises
+    ------
+    DataFormatError
+        If ``strata`` is given but does not cover every subject in ``subjects``.
     """
     unique_subjects = sorted(set(subjects))
     n_subjects = len(unique_subjects)
     rng = np.random.default_rng(rng_seed)
-    permuted = rng.permutation(unique_subjects)
 
-    n_train = round(n_subjects * train_frac)
-    train_subjects = set(permuted[:n_train].tolist())
-    ref_subjects_list = permuted[n_train:].tolist()
-    ref_subjects = set(ref_subjects_list)
+    if strata is None:
+        permuted = rng.permutation(unique_subjects)
 
-    n_seed_eff = min(n_seed, len(ref_subjects_list))
-    seed_draw = rng.choice(len(ref_subjects_list), size=n_seed_eff, replace=False)
-    seed_subjects = {ref_subjects_list[i] for i in seed_draw.tolist()}
+        n_train = round(n_subjects * train_frac)
+        train_subjects = set(permuted[:n_train].tolist())
+        ref_subjects_list = permuted[n_train:].tolist()
+        ref_subjects = set(ref_subjects_list)
+
+        n_seed_eff = min(n_seed, len(ref_subjects_list))
+        seed_draw = rng.choice(len(ref_subjects_list), size=n_seed_eff, replace=False)
+        seed_subjects = {ref_subjects_list[i] for i in seed_draw.tolist()}
+
+        rule = (
+            f"{train_frac * 100:.0f}/{(1 - train_frac) * 100:.0f} by subject, "
+            f"seed = {n_seed} subjects drawn from ref with rng seed {rng_seed}"
+        )
+        strata_out: dict[str, str] | None = None
+        strata_mix: dict[str, dict[str, int]] | None = None
+    else:
+        missing = set(unique_subjects) - strata.keys()
+        if missing:
+            raise DataFormatError(
+                f"split_by_subject: strata has no label for subject(s) {sorted(missing)[:5]}"
+                f"{' ...' if len(missing) > 5 else ''}"
+            )
+
+        train_subjects, ref_subjects, seed_subjects = _stratified_partition(
+            unique_subjects, strata, rng, train_frac, n_seed
+        )
+        rule = (
+            f"{train_frac * 100:.0f}/{(1 - train_frac) * 100:.0f} by subject stratified by "
+            f"{strata_name}, seed = {n_seed} subjects drawn from ref proportionally per "
+            f"stratum, rng seed {rng_seed}"
+        )
+        strata_out = {s: strata[s] for s in unique_subjects}
+        strata_mix = {
+            "train": _counts_by_label(train_subjects, strata),
+            "ref": _counts_by_label(ref_subjects, strata),
+            "seed": _counts_by_label(seed_subjects, strata),
+        }
 
     train_idx = [i for i, s in enumerate(subjects) if s in train_subjects]
     ref_idx = [i for i, s in enumerate(subjects) if s in ref_subjects]
     seed_idx = [i for i, s in enumerate(subjects) if s in seed_subjects]
 
-    return {
+    result: dict[str, Any] = {
         "train": train_idx,
         "ref": ref_idx,
         "seed": seed_idx,
         "train_subjects": sorted(train_subjects),
         "ref_subjects": sorted(ref_subjects),
         "seed_subjects": sorted(seed_subjects),
-        "rule": (
-            f"{train_frac * 100:.0f}/{(1 - train_frac) * 100:.0f} by subject, "
-            f"seed = {n_seed} subjects drawn from ref with rng seed {rng_seed}"
-        ),
+        "rule": rule,
         "rng_seed": rng_seed,
     }
+    if strata is not None:
+        result["strata"] = strata_out
+        result["strata_mix"] = strata_mix
+    return result
+
+
+def _stratified_partition(
+    unique_subjects: list[str],
+    strata: dict[str, str],
+    rng: np.random.Generator,
+    train_frac: float,
+    n_seed: int,
+) -> tuple[set[str], set[str], set[str]]:
+    """Draw a train/ref/seed partition independently within each stratum.
+
+    Strata are processed in sorted label order, on the single ``rng`` passed
+    in, so the result is deterministic given ``rng_seed``. Train/ref counts
+    per stratum follow ``round(train_frac * n_s)`` corrected by largest
+    remainder so the total matches the unstratified ``round(train_frac * N)``;
+    the ``n_seed`` seed subjects are allocated across strata proportionally to
+    each stratum's ``ref`` count, by the same method.
+    """
+    by_label: dict[str, list[str]] = {}
+    for subject in unique_subjects:
+        by_label.setdefault(strata[subject], []).append(subject)
+    labels = sorted(by_label)
+    for label in labels:
+        by_label[label].sort()
+
+    n_by_label = {label: len(by_label[label]) for label in labels}
+    n_train_by_label = _apportion(n_by_label, round(len(unique_subjects) * train_frac), labels)
+
+    train_subjects: set[str] = set()
+    ref_by_label: dict[str, list[str]] = {}
+    for label in labels:
+        permuted = rng.permutation(by_label[label]).tolist()
+        n_train_s = n_train_by_label[label]
+        train_subjects.update(permuted[:n_train_s])
+        ref_by_label[label] = permuted[n_train_s:]
+
+    ref_subjects = {s for subs in ref_by_label.values() for s in subs}
+    ref_counts_by_label = {label: len(ref_by_label[label]) for label in labels}
+    n_seed_total = min(n_seed, len(ref_subjects))
+    n_seed_by_label = _apportion(ref_counts_by_label, n_seed_total, labels)
+
+    seed_subjects: set[str] = set()
+    for label in labels:
+        ref_label = ref_by_label[label]
+        n_seed_s = min(n_seed_by_label[label], len(ref_label))
+        if n_seed_s == 0:
+            continue
+        seed_draw = rng.choice(len(ref_label), size=n_seed_s, replace=False)
+        seed_subjects.update(ref_label[i] for i in seed_draw.tolist())
+
+    return train_subjects, ref_subjects, seed_subjects
+
+
+def _apportion(counts: dict[str, int], target: int, order: list[str]) -> dict[str, int]:
+    """Largest-remainder apportionment of ``target`` items across labels.
+
+    Each label's share of ``target`` is proportional to its entry in
+    ``counts``; ``sum(result.values()) == target`` (for ``0 <= target <=
+    sum(counts.values())``, which is every call site in this module). Ties in
+    the fractional remainder are broken by ``order`` (ascending), so the
+    result is deterministic given the inputs.
+
+    Parameters
+    ----------
+    counts : dict[str, int]
+        Non-negative weight per label.
+    target : int
+        Total number of items to distribute.
+    order : list[str]
+        Labels, defining both iteration and tie-break order.
+
+    Returns
+    -------
+    dict[str, int]
+        One non-negative integer per label in ``order``, summing to ``target``.
+    """
+    total = sum(counts.values())
+    if total == 0:
+        return dict.fromkeys(order, 0)
+
+    exact = {label: counts[label] * target / total for label in order}
+    floors = {label: int(exact[label]) for label in order}
+    remainder = target - sum(floors.values())
+    fracs = {label: exact[label] - floors[label] for label in order}
+    ranked = sorted(order, key=lambda label: (-fracs[label], label))
+
+    result = dict(floors)
+    for label in ranked[: max(remainder, 0)]:
+        result[label] += 1
+    for label in list(reversed(ranked))[: max(-remainder, 0)]:
+        result[label] -= 1
+    return result
+
+
+def _counts_by_label(subjects: set[str], strata: dict[str, str]) -> dict[str, int]:
+    """Number of ``subjects`` per stratum label, sorted by label."""
+    counts: dict[str, int] = {}
+    for subject in subjects:
+        label = strata[subject]
+        counts[label] = counts.get(label, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def write_dataset(

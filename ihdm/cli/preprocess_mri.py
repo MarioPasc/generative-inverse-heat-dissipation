@@ -212,8 +212,18 @@ def main(argv: list[str] | None = None) -> int:
     images, index_rows, diagnostics = _build_images(
         selected, refs, paths, template.foreground, geometry, volume_path
     )
-    splits = split_by_subject([row["subject"] for row in index_rows], rng_seed=RNG_SEED)
+    # T1.5: IXI's coarse-band variance is largely between-scanner, and a plain seeded split
+    # was unbalanced across sites (train/ref site mix could differ by >10 pp); OASIS-1 is a
+    # single scanner, so it stays on the unstratified partition.
+    strata = sites if args.cohort == "ixi" else None
+    splits = split_by_subject(
+        [row["subject"] for row in index_rows], rng_seed=RNG_SEED, strata=strata
+    )
     index = _build_index(index_rows, splits)
+    if strata is not None:
+        for split_name, mix in splits["strata_mix"].items():
+            logger.info("%s: split %s site mix %s", args.cohort, split_name, mix)
+            print(f"{args.cohort}: split {split_name} site mix {mix}")
 
     moved = move_to_sensitivity(paths.dataset, paths.sensitivity) if args.sensitivity_copy else None
     reference_subjects = _sensitivity_subjects(paths.sensitivity)
@@ -829,7 +839,11 @@ def _build_meta(
             f"the first {args.n_subjects} of np.random.default_rng({RNG_SEED})."
             "permutation(sorted(passing_subjects))"
         ),
-        "split_rule": f"split_by_subject(rng_seed={RNG_SEED}, train_frac=0.8, n_seed=40)",
+        "split_rule": (
+            f"split_by_subject(rng_seed={RNG_SEED}, train_frac=0.8, n_seed=40, strata='site')"
+            if args.cohort == "ixi"
+            else f"split_by_subject(rng_seed={RNG_SEED}, train_frac=0.8, n_seed=40)"
+        ),
         "cache_root": str(paths.cache),
         "excluded_by_eye": list(args.exclude),
         "unreadable_subjects": list(unreadable),

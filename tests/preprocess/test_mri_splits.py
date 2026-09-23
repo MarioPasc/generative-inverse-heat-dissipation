@@ -160,3 +160,36 @@ def test_index_labels_seed_subjects_separately() -> None:
     assert (index["idx"].to_numpy() == np.arange(len(index))).all()
     # Every row of a subject carries one and the same label.
     assert index.groupby("subject")["split"].nunique().max() == 1
+
+
+def test_index_labels_respect_a_stratified_split() -> None:
+    """T1.5: the index still carries the finest label when the split is stratified by site.
+
+    Mirrors the call ``ihdm.cli.preprocess_mri.main`` makes for cohort ``ixi``: build a
+    ``sites``-shaped ``{subject: label}`` map and pass it as ``strata`` to
+    ``split_by_subject``, then check ``_build_index`` labels every row correctly and that
+    every split's site mix sums back to its subject count.
+    """
+    sites = {
+        f"SUB{s:03d}": ("Guys" if s % 3 == 0 else "HH" if s % 3 == 1 else "IOP")
+        for s in range(N_SUBJECTS)
+    }
+    subjects = [f"SUB{s:03d}" for s in range(N_SUBJECTS) for _ in range(N_SLICES)]
+    slices = [position for _ in range(N_SUBJECTS) for position in range(N_SLICES)]
+    rows = [
+        {"subject": s, "slice": sl, "z_mm": float(sl), "source": f"raw/{s}.nii.gz"}
+        for s, sl in zip(subjects, slices, strict=True)
+    ]
+    splits = split_by_subject(subjects, rng_seed=2026, strata=sites)
+
+    index = _build_index(rows, splits)
+
+    assert list(index.columns) == ["idx", "subject", "slice", "z_mm", "source", "split"]
+    counts = index["split"].value_counts().to_dict()
+    assert counts == {"train": 3200, "ref": 400, "seed": 400}
+    assert index.groupby("subject")["split"].nunique().max() == 1
+
+    assert "strata_mix" in splits
+    expected_totals = {"train": 320, "ref": 80, "seed": 40}
+    for split_name, expected_total in expected_totals.items():
+        assert sum(splits["strata_mix"][split_name].values()) == expected_total
