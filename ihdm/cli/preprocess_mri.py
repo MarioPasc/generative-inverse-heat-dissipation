@@ -1030,11 +1030,13 @@ def _n4_sheet(
     template: registration_mod.Template,
     n4_cfg: N4Config,
 ) -> Path:
-    """Draw the before/after N4 contact sheet: six subjects x (before, after, log field).
+    """Draw the before/after N4 contact sheet: six subjects x (before, after, bias field).
 
-    The two image columns share one display scale per subject (the p99 of the *uncorrected*
-    volume's foreground), so a change in the sheet is a change in the data and not in the
-    window. The third column is the multiplicative field itself, on a symmetric diverging
+    Each image column is scaled by its own foreground p99, which is exactly what the
+    intensity rule does, so the two panels show the two versions of the slice that would
+    enter ``images.npy``. N4's log field carries an arbitrary additive constant (a global
+    gain, which the p99 scaling removes), so the third column plots the field divided by its
+    own median inside the mask: what is left is the *shape* of the field, on a diverging
     scale centred on 1.
 
     Parameters
@@ -1068,13 +1070,15 @@ def _n4_sheet(
     for row, subject in enumerate(subjects):
         before = _load_registered(paths.registered(subject), geometry)
         after = _load_registered(paths.corrected(subject), geometry)
-        cap = max(float(np.percentile(before[template.foreground], 99.0)), 1e-6)
         field = np.divide(before, after, out=np.ones_like(before), where=after > 1e-6)
+        field /= max(float(np.median(field[template.foreground])), 1e-6)
         sidecar = bias_mod.read_n4_sidecar(paths.corrected(subject))
         panels = (
-            (np.clip(before / cap, 0.0, 1.0), f"{subject} before", "gray", (0.0, 1.0)),
-            (np.clip(after / cap, 0.0, 1.0), f"{subject} after N4", "gray", (0.0, 1.0)),
-            (field, "bias field (before / after)", "RdBu_r", (0.8, 1.25)),
+            (_normalise_for_display(before, template.foreground), f"{subject} before",
+             "gray", (0.0, 1.0)),
+            (_normalise_for_display(after, template.foreground), f"{subject} after N4",
+             "gray", (0.0, 1.0)),
+            (field, "bias field / its median", "RdBu_r", (0.8, 1.25)),
         )
         for column, (volume, title, cmap, limits) in enumerate(panels):
             ax = axes[row][column]
