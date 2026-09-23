@@ -73,7 +73,15 @@ All four match. The script exits non-zero and names the dataset on any mismatch.
 
 ## 4. Import check (A100)
 
-`<pending: blocked on ticket T1.3's schedules/, which the 20-iteration run needs>`
+*Filled by the orchestrator on 2026-09-23 from the job logs (the T3.1 agent was cut off by the
+workstation reboot after submitting both jobs).*
+
+| job | id | node | elapsed | outcome |
+|---|---|---|---|---|
+| `gpu_probe.sbatch` | `2403074` | `exa04` | 10 s | driver **610.57.04** (CUDA UMD 13.3), `NVIDIA A100-SXM4-40GB`, 40960 MiB; torch `2.14.0+cu130`, `torch.version.cuda 13.0`, `cuda available True`, matmul on `cuda:0` OK → the cu130 wheels are accepted; no env rebuild |
+| `import_check.sbatch` | `2403829` | `exa04` | 4 m 18 s | `318 passed, 13 deselected in 165.77s`; `OK ixi: 4000 images, 3200/800/400`; `OK lsun_church: 4000 images, 3200/800/40`; the 20-iteration `ixi,A0` run (batch 4) wrote its `DONE` marker; log ends `IMPORT CHECK PASSED` |
+
+Logs: `~/execs/ihdm/logs/gpu_probe_2403074.out`, `~/execs/ihdm/logs/import_check_2403829.out`.
 
 ## 5. Quota
 
@@ -111,4 +119,5 @@ account state and other work moves it.
 | job | id | what | state |
 |---|---|---|---|
 | `create_env.sbatch` | `2402054` | build the `ihdm` conda environment | `COMPLETED` |
-| `import_check.sbatch` | `<pending>` | A100, tests, dataset validation, 20 iterations | `<pending>` |
+| `gpu_probe.sbatch` | `2403074` | driver / torch CUDA probe | `COMPLETED` |
+| `import_check.sbatch` | `2403829` | A100, tests, dataset validation, 20 iterations | `COMPLETED` (PASSED) |
