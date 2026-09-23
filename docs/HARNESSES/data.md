@@ -42,13 +42,13 @@ labelled `seed`, the other 40 ref subjects `ref`), subjects 320/80/40; photograp
 
 `docs/RESULTS/data_profile.md` checklist, all five items PASS:
 
-| item | expected |
-|---|---|
-| $\alpha$ | MRI ≈ 3.5–3.9 > photographs ≈ 2.3–3.2 by ≥ 0.5 |
-| 0.5–1 c/img share | MRI < 3%; photographs > 15% |
-| log-schedule spread | MRI ≫ photographs (previously 45× and 84× vs 14×) |
-| crossover | IXI schedule lowers OASIS-1's spread, raises Churches' |
-| schedule agreement | IXI vs OASIS-1 within 35% max; IXI vs Churches > 50% |
+| item | expected (written before registration) | measured on the final N4 data (T1.4, 2026-09-23) |
+|---|---|---|
+| $\alpha$ | MRI ≈ 3.5–3.9 > photographs ≈ 2.3–3.2 by ≥ 0.5 | 3.22 / 3.10 vs 2.28 / 2.58 — PASS |
+| 0.5–1 c/img share | MRI < 3%; photographs > 15% | IXI 4.07% (FAIL at the 3% line; the (1,0) between-scanner ramp), OASIS-1 2.02%; photographs 23.8% / 23.1% — the 6× ordering holds |
+| log-schedule spread | MRI ≫ photographs (previously 45× and 84× vs 14×) | 8.9× / 18.7× vs 3.8× / 8.0× — PASS (registration removed most of the unregistered inflation) |
+| crossover | IXI schedule lowers OASIS-1's spread, raises Churches' | PASS (recomputed after the N4 refit) |
+| schedule agreement | IXI vs OASIS-1 within 35% max; IXI vs Churches > 50% | PASS |
 
 If an item fails on the registered data, the number is reported and the orchestrator decides
 (registration changes the coarse variance; the ordering must survive, the magnitudes may move).

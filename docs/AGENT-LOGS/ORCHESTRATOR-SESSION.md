@@ -56,7 +56,7 @@ described").
 | W3 | T2.2 (slot 2 while T1.1 runs) | opus5-high | `a0bc936` | ACCEPT (257 tests; 18 s per 200-step chain per image on the 3060 at batch 20; samples reproducible only at a fixed batch) | `214b419` |
 | W4 | T1.3 | opus5-xhigh | `1c7a678` | ACCEPT (310 tests; 7 frozen schedules; checklist 4/5 PASS, item ii FAIL on IXI: coarse share 3.96% > 3%, 84% of it in the (1,0) mode = a between-subject A–P intensity ramp; registration collapsed the log spread from 51×/94× to 8.7×/15.1× while the ordering and the crossover survived; N4 question sent to the reviewer) | `32df895` |
 | W5 | T3.1 (clone/env/data now; import check after T1.3 lands) ‖ T2.3 (3060 pilot) | opus5-high ‖ opus5-high | `214b419` ‖ `32df895` | T3.1 ACCEPT after an orchestrator FIXUP of `picasso_setup.md` §4/§6 (driver 610.57 accepts cu130; import check PASSED: 318 tests, OK ixi/lsun_church, DONE); T2.3 partial ACCEPT (memory fit 1.705·B + 1.30 GB, lr 2e-4 stable to 525 steps; the lr 1e-4 comparison, A3/Churches pilots, resume and sampler checks were cut by the reboot and are folded into T3.2 or already evidenced by T2.1/T2.2) | `cd29f59` (both) |
-| W6 (2026-09-23) | T1.4 (N4, local CPU) ‖ T3.2 (Picasso probe) | opus5-xhigh ‖ opus5-high | `cd29f59` | running | |
+| W6 (2026-09-23) | T1.4 (N4, local CPU) ‖ T3.2 (Picasso probe) | opus5-xhigh ‖ opus5-high | `cd29f59` | T1.4 ACCEPT (340 tests; both MRI sets rebuilt with N4, subject lists identical, schedules refit, 30 cells build; D15's premise only half right, see D15′) · T3.2 running (job 2405546 queued) | T1.4 `56b74f0` |
 
 Decision D4⁗ (2026-09-23, orchestrator): **lr = 2e-4** (pre-registered) for every cell. Evidence:
 T2.3's `ixi,A0` pilot at batch 4 ran 525 steps at 2e-4 with no non-finite loss, train loss
@@ -143,3 +143,4 @@ while the queue runs. Peers [Proposal-Specifier] and [Experiment-Reviewer] hold 
   Consequence for T3.3/T5.1: the array budgets < 2k new files (checkpoints only); evaluation
   artefacts go to `$LOCALSCRATCH` with one archive per run copied back.
 - Follow-up (T3.1): `environment.yml` pins only `torch>=2.4` (resolved to 2.14.0+cu130 on both machines); pin the exact torch/torchvision versions once the Picasso driver probe (job 2403074) answers, so the env is reproducible.
+- [ask Mario / Proposal-Specifier, not reachable after the reboot]: update the proposal Fig. 1 caption and Motivation numbers from `docs/RESULTS/data_profile.md` (N4 row): alpha 3.22/3.10 vs 2.28/2.58; coarse share 4.07%/2.02% vs 23.8%/23.1%; inherited W/8 8.4%/4.1% vs 29.1%; log spread 8.9x/18.7x vs 3.8x/8.0x; 3200 images per curve.
