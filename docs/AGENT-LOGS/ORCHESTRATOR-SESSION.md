@@ -173,3 +173,116 @@ while the queue runs. Peers [Proposal-Specifier] and [Experiment-Reviewer] hold 
   FSCRATCH file quota (his other projects hold 185k files: `isalhg*` envs 64k, `build_gedlib` 55k,
   `results` 66k); the proposal caption numbers (Proposal-Specifier was not reachable after the
   reboot).
+
+## 8. Seed for the next orchestrator — how this was run, what to keep, what to change
+
+Read this before spawning anything. It is the thought process, not the rules; the rules are in
+`docs/SPECIFICATIONS/02-engineering-practices.md` §6 and the `parallel-agents` skill.
+
+### 8.1 The loop that worked
+
+Every wave followed the same eight moves, and every deviation from them cost time:
+
+1. **Preflight the base.** `git status` clean on `main`, record `BASE_SHA`, `git worktree add
+   ../wt/<ticket> -b ticket/<id>-<slug> <BASE_SHA>` for each agent. The fork is nested inside the
+   TFM repo and git-ignored there, so the harness's `isolation: worktree` cannot be used (it would
+   cut a worktree of the TFM repo, which does not contain the fork). Manual worktrees + the
+   "prefix every shell command with `cd <worktree> &&`" rule were enough; no agent ever escaped.
+2. **Write the ticket before the prompt.** The ticket file (`docs/SPECIFICATIONS/M<k>/T<k>.<n>-*.md`)
+   is the durable spec; the spawn prompt restates it plus everything the agent cannot see: the base
+   SHA, ownership set, frozen contracts with exact signatures, the environment commands, the
+   verification commands, the shared resources, the definition of done, the log obligation, the
+   peer roster, the final-message format. Agents have no conversation history; the prompt is their
+   whole world. Prompts of 150–250 lines were normal and paid for themselves. Each agent pastes
+   its prompt verbatim into §1 of its log, so the exact wording of every prompt is on disk.
+3. **Two agents, disjoint files, contracts frozen in writing.** The `‖` pairs in
+   `01-milestones.md` never shared a file except the two empty `__init__.py` and `errors.py`,
+   whose byte-exact contents I relayed between T1.1 and T1.2 (agents in this harness cannot
+   address each other by name; `main` relays). Zero merge conflicts in 15 merges.
+4. **Answer within minutes.** Agents message `main` with an assumption and keep going; a late
+   answer means rework. Every question they asked was a real contract gap (GroupNorm-32, the
+   released `lsun_church` branch order, the iteration-cap "failure", OASIS-1 arm rule, the `train`
+   rows vs dataset indices in `memorisation_ratio`), and each answer became a spec amendment the
+   same hour. Keep the spec current on `main` while agents run: docs are orchestrator-owned and
+   disjoint from every ticket, so committing them mid-wave is safe.
+5. **Verify, then merge.** For each finished branch: `git status --porcelain` empty, `git diff
+   --name-only <base>..HEAD` equals the log's file table, re-run the tests myself in the worktree,
+   eyeball any PNG the ticket produced (I looked at every QC sheet), then `git merge --no-ff` on
+   `main`, `pip install -e .` on `main` (see 8.3), full suite, `git push`, `git worktree remove`.
+   Verdicts were ACCEPT or ACCEPT-with-FIXUP; one FIXUP was mine (`picasso_setup.md` §4/§6 after
+   the reboot), one was a two-line recipe change with its test. Nothing was RETURNed or REDONE.
+6. **Record as you go.** The wave table (§3) and the interventions list (§5) were updated at every
+   merge; `docs/SPECIFICATIONS/00-overview.md` got a dated addendum row for every decision (D1–D18).
+   When the machine rebooted mid-wave, §5a was the handoff and it worked: the next session
+   resumed in three tool calls.
+7. **Consult the reviewer at decision points, not for approval.** [Experiment-Reviewer] was asked
+   four times, each with the measured numbers and a proposed decision, and each answer changed the
+   design (FID required; plateau gate; N4 with both rows; stratified split; common random numbers).
+   Ask with numbers and a default; never "is this OK?".
+8. **Keep the console quiet.** The user reads only the final message of a turn; status lines of
+   one or two sentences between agent reports were enough.
+
+### 8.2 What the measurements overturned (so the next orchestrator does not re-assume them)
+
+- The design file's recipe (batch 128, 30k) was impossible: the "CIFAR-scale" U-Net has 61 M
+  parameters and needs 1.7 GB of activations per $192^2$ sample; batch 16 is the A100 ceiling.
+  **Measure memory before budgeting** (T2.1 did it in a 60-iteration run on the 3060; the fit
+  predicted the A100 to 0.1 %).
+- The unregistered spectral numbers were mostly scalp position: registration collapsed the
+  log-schedule spread from 45×/84× to 9×/19×. Only the ordering survived, and that is what the
+  claim needs. N4 fixed within-site bias but not the between-scanner ramp; report both rows.
+- Sampling, not training, dominates the compute: 3.2 s per chain per image on the A100 means the
+  original evaluation plan cost 3× the training. Cut the plan (D16) before submitting anything
+  that depends on it.
+- The cluster's file quota, not space, was the binding constraint (250k soft, mostly Mario's other
+  projects). Read `quota` before every campaign and write per-run artefacts to `$LOCALSCRATCH`.
+
+### 8.3 Traps that bit and their fixes
+
+- `pip install -e .` from a worktree re-points the shared env's editable install (first wave).
+  Rule since W2: agents use `PYTHONPATH=<worktree>`; the orchestrator re-installs on `main`
+  after every merge.
+- Torch's default thread count collapses under a peer's 20-process registration: always
+  `OMP_NUM_THREADS=2..4` in test commands (T2.1 measured 600 s vs 4 s).
+- `create_model` wraps in `DataParallel(device_ids=None)`: CPU runs on a GPU host crash unless
+  `CUDA_VISIBLE_DEVICES=""` (tests use a subprocess); inference code instantiates `UNetModel`
+  directly.
+- The released `optimization_manager` stores a numpy float lr that `torch.load(weights_only=True)`
+  rejects on resume; handled in `ihdm/train/checkpoints.py`.
+- `sbatch --qos=medium` is rejected: the association has `medium_uma`. `squeue --start` is
+  ignored by the wrapper; `sbatch --parsable` prints a banner: parse the id with `grep -oE`.
+- loginexa's V100 (sm_70) cannot run the cu130 wheels: no queue-free smoke test exists with this
+  env; every GPU check is an A100 batch job (2 h queue on a normal day).
+- clean-fid stores its weights in `/tmp` and its Inception is not bitwise deterministic across
+  calls: one writer for the reference-feature cache, many readers.
+- A sample set drawn while a peer rebuilt the dataset held out-of-split seeds (T4.1/T1.5 race).
+  Never rebuild a dataset while another agent samples from it; seed lists are now files with
+  hashes and an in-split assertion.
+- The `rtk` shell hook rewrites `grep`/`git log` output in this environment: use `awk` for
+  signature scans and `git log --format=` for SHAs; never trust a garbled listing.
+- Session rate limits and a reboot each cut agents mid-flight. Tell agents to commit after every
+  verified step (from W3 on), and resume them with `SendMessage` (they keep their context) rather
+  than respawning; write the handoff (§5a) before a planned interruption.
+
+### 8.4 Model and effort choices, in hindsight
+
+Opus xhigh for tickets with real design content (registration, spectral port, trainer hooks,
+metrics), Opus high for well-specified cluster or CLI tickets, Sonnet xhigh for mechanical but
+careful work (scaffolding, the stratified split). Every Opus-xhigh agent found at least one defect
+in the frozen contract and argued it correctly (GroupNorm-32; the iteration cap; the inherited-band
+residual; the per-sample LSD that does not exist); that is the value bought. The Sonnet agents were
+exact and fast on bounded tasks. Two agents at once was the right ceiling: the orchestrator's
+attention, not the agents' speed, was the bottleneck.
+
+### 8.5 Where to start (M5/M6)
+
+1. `ssh picasso 'squeue -j 2408239'`; when indices 0 and 3 are `COMPLETED`, check the worker's
+   `CELL index=… run_id=…` line in `~/execs/ihdm/logs/train_2408239_{0,3}.out` (the decode is the
+   one failure that yields 30 plausible, wrong runs) and the first `metrics.jsonl` rows.
+2. Plateau gate: `evaluate_run --run <ixi_A0_s1> --gate 35000,40000` (and `lsun_church_A0_s1`) in
+   an A100 job; extend with `N_ITERS=60000 bash slurm/array/submit_array.sh` only if the CI lies
+   above zero. Record in `docs/RESULTS/submissions.md`.
+3. Pull the cluster checkout to `main` (it is at 5bc28a6, before T4.x), then T5.1 with the
+   `picasso-sbatch` skill and the notes in `docs/SPECIFICATIONS/M5-evaluation/README.md`.
+4. T5.2 collection to `~/execs/ihdm/results` and to this workstation; then T6.1/T6.2 in parallel.
+5. Before any of it, decide the FSCRATCH clean-up with Mario and pin torch in `environment.yml`.
