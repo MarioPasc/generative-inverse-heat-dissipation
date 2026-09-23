@@ -112,6 +112,20 @@ when $n \le 6$, else 10,000 random), two-sided $p$. A CI containing zero is repo
 detectable at this budget". Transfer: sign agreement of $\Delta^{(3)}$ between IXI and OASIS-1 and
 between Churches and Bedrooms, per metric.
 
+## 8a. Sampling budget (D16, 2026-09-23; supersedes the per-checkpoint counts above)
+
+Measured on the A100: 3.2 s per 200-step chain per image at sampling batch 32–64. Per run:
+
+| set | seeds | samples | chains | used for |
+|---|---|---|---|---|
+| intermediate LSD | training, 500 distinct, `rng_seed` = checkpoint step | 1 per seed | 8 × 500 = 4,000 | LSD at 5k, 10k, …, 40k; $T_\tau$ at 5k resolution; the plateau gate (35k vs 40k) |
+| final shared | training, 2,000 with replacement, `rng_seed` 0 | 1 per seed | 2,000 | final LSD, KID (headline) and FID, recall/coverage, $M$ and $M_{\text{lp}}$, `seed_nn_fraction` |
+| held-out | the 40 seed subjects (slice 5) | 50 per seed | 2,000 | within-seed diversity, inherited band, PCA figure |
+
+Total 8,000 chains ≈ 7.1 A100-hours per run (≈ 214 A100-h for 30 runs) against 669 A100-h for the
+plan as first written. Sampling batch 32 (18 GB) or 64 (36 GB); the batch is recorded in
+`request.json` and pinned per run because samples are reproducible only at a fixed batch.
+
 ## 9. Result files
 
 `<run_root>/<run_id>/metrics/ckpt_<step>.json` with keys `lsd`, `lsd_octaves`, `variance_ratio`,

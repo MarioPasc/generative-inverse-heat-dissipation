@@ -46,11 +46,13 @@ Expected over time: tasks move PENDING → RUNNING → COMPLETED; every finished
 
 ## 6. Plateau gate (D10)
 
-When the first A0 runs on `ixi` and `lsun_church` finish, run `evaluate_run --ckpts all --n-lsd 1000
---skip-inception` on them (T5.1 or by hand) and compare the LSD at 17,500 and 20,000: if the
-relative change exceeds 5% on either dataset, resubmit the whole array with `N_ITERS=30000`
+When the first A0 runs on `ixi` and `lsun_church` finish, run `evaluate_run --ckpts 35000,40000
+--n-lsd 500 --skip-inception` on them (T5.1 or by hand) and compare the LSD at 35,000 and 40,000:
+if the relative change exceeds 5% on either dataset, resubmit the whole array with `N_ITERS=60000`
 (the worker resumes every run from its rolling checkpoint). Record the decision in
-`docs/RESULTS/submissions.md`.
+`docs/RESULTS/submissions.md`. File-quota note (2026-09-23): FSCRATCH sits at ≈ 247.5k of 250k
+soft files after the caches were cleared; the array writes ≈ 40 files per run; evaluation
+artefacts go to `$LOCALSCRATCH` and come back as one archive per run.
 
 ## 7. loginexa (V100) is unusable with the `ihdm` env
 
