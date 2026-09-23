@@ -8,7 +8,7 @@ login node (10-min CPU kill).
 ```bash
 ssh picasso 'quota; squeue -u $USER; sacctmgr -nP show assoc user=$USER format=Account,QOS'
 ```
-Expected: FSCRATCH space and file quota with headroom for ≈ 30 runs × (8 EMA checkpoints × 160 MB
+Expected: FSCRATCH space and file quota with headroom for ≈ 30 runs × (16 EMA checkpoints × 233 MB (D5″)
 + full final ≈ 500 MB + samples ≈ 1 GB) ≈ 90 GB and ≈ 3k files; the QOS list includes `short` and
 `medium`.
 
