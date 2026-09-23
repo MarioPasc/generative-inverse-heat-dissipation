@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 from ihdm.data.format import read_dataset
+from ihdm.preprocess.mri import site_from_source
 from ihdm.spectral.errors import SpectralError
 from ihdm.spectral.power import (
     fit_alpha,
@@ -35,14 +36,21 @@ __all__ = [
     "DATASET_LABELS",
     "MRI_DATASETS",
     "PHOTO_DATASETS",
+    "SENSITIVITY_DIR",
+    "SENSITIVITY_IDS",
+    "SITE_ORDER",
     "ARCHIVED",
     "DatasetProfile",
     "ChecklistItem",
+    "SiteProfile",
+    "coarse_bin_breakdown",
     "split_power",
     "profile_split",
     "reference_example",
     "build_checklist",
     "make_figure",
+    "sensitivity_root",
+    "site_profiles",
 ]
 
 logger = logging.getLogger(__name__)
@@ -50,13 +58,26 @@ logger = logging.getLogger(__name__)
 DATASETS: tuple[str, ...] = ("ixi", "oasis1", "lsun_church", "lsun_bedroom")
 MRI_DATASETS: tuple[str, ...] = ("ixi", "oasis1")
 PHOTO_DATASETS: tuple[str, ...] = ("lsun_church", "lsun_bedroom")
+
+#: Where the uncorrected (pre-N4) MRI datasets are archived, and under which ids.
+SENSITIVITY_DIR: str = "_sensitivity"
+SENSITIVITY_IDS: dict[str, str] = {"ixi": "ixi_no_n4", "oasis1": "oasis1_no_n4"}
+
+#: Acquisition sites, in the order the per-site table prints them.
+SITE_ORDER: tuple[str, ...] = ("Guys", "HH", "IOP", "WashU")
+
 DATASET_LABELS: dict[str, str] = {
     "ixi": "IXI T1",
     "oasis1": "OASIS-1 T1",
     "lsun_church": "LSUN Churches",
     "lsun_bedroom": "LSUN Bedrooms",
+    "ixi_no_n4": "IXI T1 (no N4)",
+    "oasis1_no_n4": "OASIS-1 T1 (no N4)",
 }
 IMAGE_SIZE: int = 192
+
+#: The coarsest octave bin is exactly the three DCT modes (0,1), (1,0) and (1,1).
+COARSE_BIN: str = "0.5-1"
 
 # The alpha window the ticket's prose names (1 - 48 cycles per image), reported beside the
 # ported window of control_profile.fit_alpha; see the log, decision D-T1.3-1.
@@ -293,6 +314,124 @@ def reference_example(
         rows = rows[on_plane]
     pick = int(rng.choice(rows))
     return np.asarray(images[pick], dtype=np.float32) / 255.0, pick
+
+
+@dataclass(frozen=True)
+class SiteProfile:
+    """The coarse-bin numbers of one acquisition site of one dataset.
+
+    Parameters
+    ----------
+    dataset_id, site : str
+        Which site of which dataset.
+    n_subjects, n_images : int
+        Size of the site inside the split.
+    coarse_share : float
+        Share of the split's between-image variance in the 0.5-1 cycles-per-image bin,
+        measured on that site's images alone.
+    mode_10_share : float
+        Share of that bin carried by the anterior-posterior ramp mode ``(1, 0)``.
+    """
+
+    dataset_id: str
+    site: str
+    n_subjects: int
+    n_images: int
+    coarse_share: float
+    mode_10_share: float
+
+
+def coarse_bin_breakdown(power: np.ndarray) -> tuple[float, float]:
+    """Return the coarse-bin share and the ``(1, 0)`` mode's share inside that bin.
+
+    The 0.5-1 cycles-per-image bin is exactly the DCT modes ``(0, 1)`` (a left-right ramp),
+    ``(1, 0)`` (an anterior-posterior ramp on the MRI sets) and ``(1, 1)`` (a diagonal one),
+    so "how much of the coarse variance is one gradient" is a two-number statement.
+
+    Parameters
+    ----------
+    power : numpy.ndarray
+        Per-mode variance of shape ``(W, W)``.
+
+    Returns
+    -------
+    tuple[float, float]
+        ``(coarse share of the total, (1,0) share of the coarse bin)``.
+    """
+    values = np.array([power[0, 1], power[1, 0], power[1, 1]], dtype=float)
+    return float(octave_shares(power)[COARSE_BIN]), float(values[1] / values.sum())
+
+
+def sensitivity_root(root: Path) -> Path:
+    """Return the directory holding the archived uncorrected datasets.
+
+    Parameters
+    ----------
+    root : Path
+        The data root.
+
+    Returns
+    -------
+    Path
+        ``<root>/_sensitivity``.
+    """
+    return Path(root) / SENSITIVITY_DIR
+
+
+def _cohort_of(dataset_id: str) -> str:
+    """Return the raw cohort a dataset id belongs to (``ixi_no_n4`` -> ``ixi``)."""
+    return dataset_id.removesuffix("_no_n4")
+
+
+def site_profiles(root: Path, dataset_id: str, split: str = "train") -> list[SiteProfile]:
+    """Measure the coarse-bin numbers separately for each acquisition site.
+
+    The site is read from ``index.csv``'s ``source`` column rather than from
+    ``meta.json.parameters.sites``, so the same code path serves the corrected datasets and
+    the archived uncorrected ones, which were written by pipeline 1.0 and carry no site map.
+
+    Parameters
+    ----------
+    root : Path
+        The directory holding ``<dataset_id>/``.
+    dataset_id : str
+        An MRI dataset id, corrected (``ixi``) or archived (``ixi_no_n4``).
+    split : str
+        Which split to measure; the profile uses ``"train"``.
+
+    Returns
+    -------
+    list[SiteProfile]
+        One entry per site present, ordered by :data:`SITE_ORDER`.
+
+    Raises
+    ------
+    SpectralError
+        If the split is missing or empty.
+    """
+    images, index, splits, _ = read_dataset(Path(root) / dataset_id)
+    rows = _split_rows(index, splits, split)
+    cohort = _cohort_of(dataset_id)
+    sites = index.loc[rows, "source"].map(lambda s: site_from_source(cohort, str(s)))
+    out: list[SiteProfile] = []
+    for site in SITE_ORDER:
+        selected = rows[(sites == site).to_numpy()]
+        if selected.size == 0:
+            continue
+        stack = np.asarray(images[selected], dtype=np.float32) / 255.0
+        coarse, mode_10 = coarse_bin_breakdown(mode_power(stack))
+        out.append(
+            SiteProfile(
+                dataset_id=dataset_id,
+                site=site,
+                n_subjects=int(index.loc[selected, "subject"].nunique()),
+                n_images=int(selected.size),
+                coarse_share=coarse,
+                mode_10_share=mode_10,
+            )
+        )
+    logger.info("%s/%s: %d site(s)", dataset_id, split, len(out))
+    return out
 
 
 def _mri_vs_photo(values: dict[str, float]) -> tuple[float, float, float, float]:
