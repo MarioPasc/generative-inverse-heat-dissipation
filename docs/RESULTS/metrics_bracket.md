@@ -264,3 +264,195 @@ The tables above come from two scratchpad scripts (not committed, listed verbati
 log §4) that call `memorisation_ratio`, `within_seed_diversity` and `pca_around_seed` on the
 same paths the integration tests use; the integration tests assert the shapes, the finiteness
 and the ranges, not the values, because the values belong to one pilot checkpoint.
+
+## 6. T4.3 — the whole evaluation on the pilot, the Inception metrics and the plateau gate
+
+Same run and checkpoints as sections 1–5 (`pilot_ixi_A0_s1`, A0: $\sigma_{B,\max} = 96$,
+$K = 200$, `prior_noise=True`), dataset `ixi` (N4-corrected), but drawn by `evaluate_run` itself
+rather than by hand, so the seeds are the **frozen lists of D17** and not an ad-hoc draw. This is
+the first evaluation in which every sample's seed is provably a row of `splits["train"]`
+(`assert_in_split` on load), which is what T4.2 §6 asked for.
+
+```bash
+export IHDM_DATA_ROOT=/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project
+python -m ihdm.cli.evaluate_run --run $IHDM_DATA_ROOT/_runs_local/pilot_ixi_A0_s1 \
+  --ckpts 250,750 --n-lsd 32 --n-final 64 --n-seeds 4 --n-per-seed 10 \
+  --fid-batch 32 --sample-batch 20 --device cuda
+python -m ihdm.cli.evaluate_run --run $IHDM_DATA_ROOT/_runs_local/pilot_ixi_A0_s1 \
+  --ckpts 250,750 --n-lsd 32 --n-final 64 --n-seeds 4 --n-per-seed 10 --gate 250,750 --skip-inception
+```
+
+### 6.1 The frozen evaluation seed lists (D17)
+
+Written once per dataset by `ensure_seed_lists`, reused by every checkpoint and every arm.
+
+| list | file | n | distinct | rule | sha256 |
+|---|---|---|---|---|---|
+| intermediate | `ixi/eval_seeds_500.npy` | 500 | 500 | `splits['train']` without replacement, `default_rng(2026)` | `e51c999eb99c3308…` |
+| final | `ixi/eval_seeds_final_2000.npy` | 2000 | 1462 | `splits['train']` with replacement, `default_rng(0)` | `28ee6357f2bdd8c2…` |
+
+A run evaluated with fewer samples takes a **prefix** of the list, so its noise streams stay a
+subset of a full run's. Both digests are recorded in every `metrics/summary.json`.
+
+### 6.2 LSD at the two checkpoints (32 training-seeded samples each, 800-image `ref`)
+
+| step | LSD | variance ratio | $n$ |
+|---|---|---|---|
+| 250 | **0.7731** | 0.987 | 32 |
+| 750 | **0.7622** | 0.595 | 32 |
+| 750, the 64-sample final set | **0.7894** | 0.498 | 64 |
+
+The 64-sample final value (0.7894) sits within 1.5% of T4.1's independent 0.7775 on its own
+64-sample draw of the same checkpoint, which is the cross-check that the two sampling paths
+agree. The variance ratio falling from 0.99 to 0.59 between 250 and 750 while the LSD barely
+moves is the substance: the model is losing total variance without moving its *shape* closer to
+the reference.
+
+Octave profiles ($\log_{10}$ sample minus reference, positive = too much variance):
+
+| step | 0.5–1 | 1–2 | 2–4 | 4–8 | 8–16 | 16–32 | 32–64 | 64–96 |
+|---|---|---|---|---|---|---|---|---|
+| 250 | +0.764 | −0.482 | −0.452 | +0.106 | +0.120 | −0.603 | −0.851 | −1.544 |
+| 750 | +0.892 | −0.321 | −0.350 | −0.283 | −0.783 | −1.055 | −0.641 | −0.946 |
+
+Between 250 and 750 the model gives up the 8–32 cycles-per-image band (+0.12 → −0.78 and
+−0.60 → −1.06) and piles further variance into the coarsest octave. At 750 iterations that is
+a model still collapsing onto the low modes, not the terminal-blur effect the experiment is
+about.
+
+### 6.3 The final checkpoint: memorisation, diversity, inherited band
+
+| quantity | T4.3 (64 samples, frozen list) | T4.2 (46 samples, ad-hoc draw) |
+|---|---|---|
+| $M$ | **1.754** | 1.752 |
+| $M_{lp}$ ($\sigma_B = 16$) | **8.707** | 8.722 |
+| `seed_nn_fraction` | **0.031** (2 of 64) | 0.000 (0 of 46) |
+| median $d$(samples) / $d$(held-out) | 56.73 / 32.34 | 56.64 / 32.34 |
+| $D_{\text{pix}}$ (4 seeds × 10) | **3.949e-3** | 3.996e-3 |
+| $D_{\text{lp}}$ | **1.485e-4** | 1.464e-4 |
+| inherited measured / predicted (all non-DC) | **−1.753 / 0.00343** | −1.752 / 0.00343 |
+| inherited, low band ($\sigma_n \ge 8$ px) | **−6.714 / 0.01076** | −6.708 / 0.01076 |
+| PCA explained variance | **[122.70, 98.79]** | [122.7, 98.8] |
+
+Every quantity reproduces T4.2's to within the sampling noise of two different draws of the same
+checkpoint, on a seed set that is now verifiably inside the training split. $M = 1.75$ is read as
+T4.2 established: **two-sided**, and $\gg 1$ here means off-manifold, not "no copying".
+
+The inherited radial curve is written with **43 of 48 bins**; the five bins that hold no mode of
+the $192^2$ grid are dropped rather than written, because `write_json` refuses `nan` (T4.1 §6).
+
+### 6.4 Inception metrics (`05` §7; KID is the headline)
+
+800-image `ref` reference, 64 training-seeded samples, features cached at
+`ixi/_features_inception_ref.npy`, 200 bootstrap resamples over samples.
+
+| quantity | value | 95% interval |
+|---|---|---|
+| **KID** | **0.4315** | [0.4195, 0.4495] |
+| FID ($N_{\text{ref}} = 800$) | 348.86 | [348.70, 363.13] |
+| precision / recall | 0.000 / 0.000 | — |
+| density / coverage ($k = 5$) | 0.000 / 0.000 | — |
+
+A KID of 0.43 is enormous (two halves of the real `ref` split give $|KID| < 0.05$ at this sample
+size) and precision, recall, density and coverage are all exactly zero: at 750 iterations not one
+of the 64 samples has a real neighbour within the $k = 5$ manifold radius, and no real image has
+a sample neighbour. This is the same statement as $M \gg 1$ and as the octave profile, measured
+by a third instrument. **No absolute FID here is comparable to the paper's**: 348.86 is against
+800 references, and the $1/N_{\text{ref}}$ bias is why `05` §7 makes KID the headline.
+
+The FID interval is strongly asymmetric about its point estimate: the lower end sits 0.16 below
+348.86 while the upper end sits 14.3 above it. A bootstrap resample holds duplicate samples,
+which inflates FID's finite-sample bias, so the replicate distribution is shifted upward and the
+percentile interval measures spread rather than location; on other sample sizes the interval can
+lie entirely above the point estimate, which is asserted in
+`tests/metrics/test_inception.py::test_the_fid_bootstrap_interval_sits_above_the_point_estimate`
+and recorded in the `notes` block of every `final.json`. KID, being unbiased, is the metric whose
+location the interval is about — and it is also the headline for the separate
+$1/N_{\text{ref}}$ reason above.
+
+**Inception weights path: `/tmp/inception-2015-12-05.pt`.** `cleanfid.features.feature_extractor`
+hard-codes this directory (`/tmp` on Linux) and passes `download=True`; it is not
+`~/.cache`. T5.1's Picasso worker must stage the file into `/tmp` on **every** compute node, or
+run the first evaluation on a node with outbound network access. The path is printed by the CLI
+before any work and recorded in `final.json["inception"]["weights_path"]`.
+
+### 6.5 The paired plateau gate (D10 / D17)
+
+```
+metrics/gate.json: step_a=250, step_b=750, 32 paired seeds, 43 radial bins, 1000 resamples
+```
+
+| quantity | value |
+|---|---|
+| LSD at 250 / 750 | 0.7731 / 0.7622 |
+| paired difference $\mathrm{LSD}_{250} - \mathrm{LSD}_{750}$ | **+0.0109** |
+| 95% bootstrap interval over resampled seeds | **[−0.0502, +0.0492]** |
+| `extend` | **False** |
+| relative change (the 5% quantity D10 was first worded with) | 1.41% |
+
+The point improvement is positive but the interval straddles zero by a factor of five, so the
+gate says "not detectable at this budget" and does **not** extend. Note what the two rules would
+have decided differently: D10's original wording ("extend if the LSD changes by more than 5%
+between the last two checkpoints") gives 1.41% and also does not extend, but it would have made
+the decision from a point estimate with no uncertainty attached. With 32 seeds the interval is
+$\pm 0.05$ on an LSD of 0.77; at the real budget of 500 seeds it narrows by $\sqrt{500/32} = 4.0$
+to roughly $\pm 0.012$, which is the resolution the 35k-versus-40k decision will actually have.
+
+### 6.6 Cost
+
+| stage | count | wall | per unit |
+|---|---|---|---|
+| LSD set, step 250 | 32 chains | 605.9 s | 18.93 s/chain |
+| LSD set, step 750 | 32 chains | 581.2 s | 18.16 s/chain |
+| final set, step 750 | 64 chains | 1162.5 s | 18.16 s/chain |
+| held-out set, step 750 | 40 chains | 724.1 s | 18.10 s/chain |
+| Inception: 800 ref features + 64 sample features + 200 resamples | — | ≈ 13 s | — |
+| plateau gate, 1000 resamples, 32 seeds | — | ≈ 3 s | — |
+| **total** | 168 chains | **51 min** | 18.3 s/chain |
+
+Measured on the RTX 3060 at sampling batch 20, **without AMP** (`SampleRequest.amp` defaults to
+`False` and `evaluate_run` does not set it). D16 budgeted **3.2 s/chain on the A100** at batch
+32–64; the 5.7× gap is partly the card and partly AMP, and T5.1 should confirm the A100 figure
+through `evaluate_run` before the 214 A100-hour evaluation budget is treated as settled. A rerun
+of the same command reuses every cached set and costs seconds: the second invocation above
+(the gate) redrew nothing.
+
+The Inception bootstrap is affordable only because `fid_from_features`' dense `scipy.linalg.sqrtm`
+(9.5–10.0 s per call at 2048 dimensions, independent of the sample count) is replaced inside the
+bootstrap by the algebraically identical Gram-matrix form (0.003 s at $n = 64$, 0.24 s at
+$n = 2000$), which `tests/metrics/test_inception.py` pins to the frozen estimator to a relative
+1e-6. Without it, 200 resamples would cost 33 minutes per run.
+
+### 6.7 The FID licence check (H-METRICS §3) — it passes
+
+`EXPERIMENT_PLAN` §6.1 makes the Inception metrics interpretable at $192^2$ grayscale only if FID
+rises monotonically along a blur ladder. Measured on 64 real `ixi` `ref` images, each blurred with
+the released DCT heat kernel and compared against the unblurred set:
+
+| $\sigma_B$ (px) | 0 | 1 | 2 | 4 | 8 |
+|---|---|---|---|---|---|
+| FID | −0.000 | 55.23 | 120.82 | 210.03 | 316.95 |
+| KID | −0.0052 | +0.0298 | +0.0967 | +0.1928 | +0.3662 |
+
+Both are monotone and a $\sigma_B = 1$ blur is already resolved (FID 55), so **FID and KID may be
+interpreted on this data**, within the $N_{\text{ref}}$ caveat of §6.4. Two disjoint halves of the
+same 64 images give $\mathrm{KID} = +0.0026$, the noise floor at this sample size.
+
+The check is `tests/metrics/test_inception.py::test_the_fid_licence_check_of_the_blur_ladder`
+(marked `integration`). A **uniform intensity shift is not a usable perturbation**: +40 grey
+levels on these images gives $\mathrm{KID} = -0.0012$, inside the noise floor, so brightness
+alone does not move the Inception features at $n = 64$. Only the blur ladder is quoted.
+
+### 6.8 The Inception extractor is not bitwise deterministic
+
+Two calls of `inception_features` on the same 64 images, same device, same batch, differ by up to
+**2.0e-3** in absolute value (mean 9.5e-5) on features of order 0.1–1; CUDA against CPU differs
+by up to **6.6e-3**. The cause is cuDNN algorithm selection inside the torchscript Inception, not
+this code.
+
+The consequence is the reason `_features_inception_ref.npy` exists and is keyed by the dataset's
+`sha256_images`: **every arm of a dataset must be scored against one stored reference feature
+matrix**, never against a freshly computed one, or a few units of FID would separate two arms for
+no reason other than which node computed the reference. T5.1 must therefore let the first
+evaluation of a dataset write the cache and every later job read it, rather than letting 30
+concurrent array tasks each compute their own.
