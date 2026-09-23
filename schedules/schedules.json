@@ -1,55 +1,55 @@
 {
   "ixi_W2": {
     "K": 200,
-    "created": "2026-09-22T18:39:15+00:00",
+    "created": "2026-09-23T08:03:57+00:00",
     "fitted_on": "ixi/train",
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
-    "images_sha256": "93e99e89d96b984210f88b02d3c1970bf893825e972bda6b1b44662223b4b46f",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
+    "images_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
     "kind": "matched",
     "levels_per_octave": {
       "0.5-1": 19,
-      "1-2": 29,
-      "16-32": 24,
-      "2-4": 37,
-      "32-64": 23,
-      "4-8": 33,
+      "1-2": 30,
+      "16-32": 23,
+      "2-4": 38,
+      "32-64": 20,
+      "4-8": 35,
       "64-96": 9,
       "8-16": 26
     },
     "n_images": 3200,
-    "sha256": "7dc71364a9db2f8f0f796f4c53b776e400086c6200c8177986fea0c4af93adcd",
+    "sha256": "025f8c05f32b17582ae735724cd4d3f6541dae4455d4b1685ebcc0d60b7f0b39",
     "sigma_max": 96.0,
     "sigma_min": 0.5,
-    "spread": 1.001841
+    "spread": 1.001874
   },
   "ixi_W8": {
     "K": 200,
-    "created": "2026-09-22T18:39:57+00:00",
+    "created": "2026-09-23T08:04:40+00:00",
     "fitted_on": "ixi/train",
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
-    "images_sha256": "93e99e89d96b984210f88b02d3c1970bf893825e972bda6b1b44662223b4b46f",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
+    "images_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
     "kind": "matched",
     "levels_per_octave": {
       "0.5-1": 24,
-      "1-2": 36,
+      "1-2": 37,
       "16-32": 18,
       "2-4": 47,
       "32-64": 0,
-      "4-8": 43,
+      "4-8": 42,
       "64-96": 0,
       "8-16": 32
     },
     "n_images": 3200,
-    "sha256": "252de31be929945c5f45651b3a7ba6231e0bf760e33a50f87c751e3ce47af330",
+    "sha256": "25d208effd7e1b6b6d44e1c636a78d9c635a15009e8c385f0314fa30f1a0652f",
     "sigma_max": 24.0,
     "sigma_min": 0.5,
-    "spread": 1.004402
+    "spread": 1.004165
   },
   "log_W2": {
     "K": 200,
-    "created": "2026-09-22T18:38:30+00:00",
+    "created": "2026-09-23T08:03:11+00:00",
     "fitted_on": null,
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
     "images_sha256": null,
     "kind": "log",
     "levels_per_octave": {
@@ -70,9 +70,9 @@
   },
   "log_W8": {
     "K": 200,
-    "created": "2026-09-22T18:38:30+00:00",
+    "created": "2026-09-23T08:03:11+00:00",
     "fitted_on": null,
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
     "images_sha256": null,
     "kind": "log",
     "levels_per_octave": {
@@ -93,9 +93,9 @@
   },
   "lsun_bedroom_W2": {
     "K": 200,
-    "created": "2026-09-22T18:42:12+00:00",
+    "created": "2026-09-23T08:06:59+00:00",
     "fitted_on": "lsun_bedroom/train",
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
     "images_sha256": "7e4c98d1544620047967f69d2df2bdcf685e363a9eccfd71607666d6fe5687d6",
     "kind": "matched",
     "levels_per_octave": {
@@ -116,9 +116,9 @@
   },
   "lsun_church_W2": {
     "K": 200,
-    "created": "2026-09-22T18:40:44+00:00",
+    "created": "2026-09-23T08:05:28+00:00",
     "fitted_on": "lsun_church/train",
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
     "images_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
     "kind": "matched",
     "levels_per_octave": {
@@ -139,25 +139,25 @@
   },
   "oasis1_W8": {
     "K": 200,
-    "created": "2026-09-22T18:41:26+00:00",
+    "created": "2026-09-23T08:06:11+00:00",
     "fitted_on": "oasis1/train",
-    "git_sha": "8931f21cbc5e1e4b492e4d875afaf0bb1cffcf5f",
-    "images_sha256": "4392a77136ca80d08cb9a4c910876a8b26b7c3b7d69dfe53ebe5710ba655a680",
+    "git_sha": "4c59f39f910426a02271b881742445cf136ba698",
+    "images_sha256": "8396e1c113abb4df89f1b1e920b54f0b3e813f1611fe29bdff6a194d59378ef9",
     "kind": "matched",
     "levels_per_octave": {
       "0.5-1": 25,
       "1-2": 37,
-      "16-32": 15,
-      "2-4": 45,
+      "16-32": 14,
+      "2-4": 46,
       "32-64": 0,
       "4-8": 45,
       "64-96": 0,
       "8-16": 33
     },
     "n_images": 3200,
-    "sha256": "96e6676b1d665e28d68b7d9319caceacb34c15e1ac12de39a6c1479e8c09f153",
+    "sha256": "fc504dca7826afb53edaa6b9d322da66a23809c2334118dac3df73f93bad93cd",
     "sigma_max": 24.0,
     "sigma_min": 0.5,
-    "spread": 1.003183
+    "spread": 1.002991
   }
 }
