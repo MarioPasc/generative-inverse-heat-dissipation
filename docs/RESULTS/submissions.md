@@ -11,7 +11,7 @@ T3.3; harness `docs/HARNESSES/picasso.md` §5–§6.
 | field | value |
 |---|---|
 | date | 2026-09-23 |
-| job id | **pending** — submission held by `main` (IXI train/ref split being re-checked for site balance) |
+| job id | **not submitted** — held by `main` on 2026-09-23 pending a site-balance check of the IXI train/ref split; submit with `bash slurm/array/submit_array.sh` and fill this row in |
 | array spec | `0-29%8` |
 | `N_ITERS` | 40000 |
 | batch size | 16 (frozen in `configs/spectral/arms.py`, D4″) |
