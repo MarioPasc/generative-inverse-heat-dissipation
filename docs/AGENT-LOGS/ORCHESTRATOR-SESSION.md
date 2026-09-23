@@ -55,7 +55,14 @@ described").
 | W2 | T2.1 (started early: contracts only, no M1 data needed) | opus5-xhigh | `9f61ba7` | ACCEPT (154 tests; found the `lsun_church` routing bug, the float64-lr resume bug, the 61 M-param memory wall) | `1382a77` |
 | W3 | T2.2 (slot 2 while T1.1 runs) | opus5-high | `a0bc936` | ACCEPT (257 tests; 18 s per 200-step chain per image on the 3060 at batch 20; samples reproducible only at a fixed batch) | `214b419` |
 | W4 | T1.3 | opus5-xhigh | `1c7a678` | ACCEPT (310 tests; 7 frozen schedules; checklist 4/5 PASS, item ii FAIL on IXI: coarse share 3.96% > 3%, 84% of it in the (1,0) mode = a between-subject A–P intensity ramp; registration collapsed the log spread from 51×/94× to 8.7×/15.1× while the ordering and the crossover survived; N4 question sent to the reviewer) | `32df895` |
-| W5 | T3.1 (clone/env/data now; import check after T1.3 lands) ‖ T2.3 (3060 pilot) | opus5-high ‖ opus5-high | `214b419` ‖ `32df895` | running | |
+| W5 | T3.1 (clone/env/data now; import check after T1.3 lands) ‖ T2.3 (3060 pilot) | opus5-high ‖ opus5-high | `214b419` ‖ `32df895` | T3.1 ACCEPT after an orchestrator FIXUP of `picasso_setup.md` §4/§6 (driver 610.57 accepts cu130; import check PASSED: 318 tests, OK ixi/lsun_church, DONE); T2.3 partial ACCEPT (memory fit 1.705·B + 1.30 GB, lr 2e-4 stable to 525 steps; the lr 1e-4 comparison, A3/Churches pilots, resume and sampler checks were cut by the reboot and are folded into T3.2 or already evidenced by T2.1/T2.2) | `cd29f59` (both) |
+| W6 (2026-09-23) | T1.4 (N4, local CPU) ‖ T3.2 (Picasso probe) | opus5-xhigh ‖ opus5-high | `cd29f59` | running | |
+
+Decision D4⁗ (2026-09-23, orchestrator): **lr = 2e-4** (pre-registered) for every cell. Evidence:
+T2.3's `ixi,A0` pilot at batch 4 ran 525 steps at 2e-4 with no non-finite loss, train loss
+3.8 → 1.2 and eval tracking train; the 1e-4 comparison was cut by the reboot and is not repeated,
+because D4‴ only required the fallback if instability appeared. Batch stays 16 (24 predicted at
+42 GB, T3.2 confirms).
 
 (Updated as waves complete; each wave's detail is `M<k>-<slug>/WAVE-<id>.md`.)
 
