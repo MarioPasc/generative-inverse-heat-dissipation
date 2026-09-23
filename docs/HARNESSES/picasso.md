@@ -51,3 +51,11 @@ When the first A0 runs on `ixi` and `lsun_church` finish, run `evaluate_run --ck
 relative change exceeds 5% on either dataset, resubmit the whole array with `N_ITERS=30000`
 (the worker resumes every run from its rolling checkpoint). Record the decision in
 `docs/RESULTS/submissions.md`.
+
+## 7. loginexa (V100) is unusable with the `ihdm` env
+
+Measured 2026-09-23 (T3.2): loginexa carries a Tesla V100-DGXS-32GB (compute capability 7.0) and the
+cluster env ships torch 2.14.0+cu130 compiled for sm_75/80/86/90/100/120 only, so every CUDA kernel
+launch there fails ("no kernel image is available"). Do not use the `test-picasso-loginexa` skill
+with this env; a cu126 sibling env would cost ~32k more FSCRATCH files. All GPU checks go through
+A100 batch jobs.
