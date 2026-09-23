@@ -58,6 +58,8 @@ described").
 | W5 | T3.1 (clone/env/data now; import check after T1.3 lands) ‖ T2.3 (3060 pilot) | opus5-high ‖ opus5-high | `214b419` ‖ `32df895` | T3.1 ACCEPT after an orchestrator FIXUP of `picasso_setup.md` §4/§6 (driver 610.57 accepts cu130; import check PASSED: 318 tests, OK ixi/lsun_church, DONE); T2.3 partial ACCEPT (memory fit 1.705·B + 1.30 GB, lr 2e-4 stable to 525 steps; the lr 1e-4 comparison, A3/Churches pilots, resume and sampler checks were cut by the reboot and are folded into T3.2 or already evidenced by T2.1/T2.2) | `cd29f59` (both) |
 | W6 (2026-09-23) | T1.4 (N4, local CPU) ‖ T3.2 (Picasso probe) | opus5-xhigh ‖ opus5-high | `cd29f59` | T1.4 ACCEPT (340 tests; both MRI sets rebuilt with N4, subject lists identical, schedules refit, 30 cells build; D15's premise only half right, see D15′) · T3.2 ACCEPT (job 2405546: batch 16 = 28.5 GB, 1.71 it/s, 6.84 h per 40k run; batch 24 OOM; sampler 3.2 s/chain; resume verified) | T1.4 `56b74f0`; T3.2 `96917bc` |
 
+| W7 | T3.3 (array submission, `picasso-sbatch`; HELD for T1.5) ‖ T4.1 (spectral metrics) ‖ T1.5 (stratified IXI split, sonnet5-xhigh, blocking the submission) | opus5-high ‖ opus5-xhigh ‖ sonnet5-xhigh | `3ec0d92` | running | |
+
 Decision D4⁗ (2026-09-23, orchestrator): **lr = 2e-4** (pre-registered) for every cell. Evidence:
 T2.3's `ixi,A0` pilot at batch 4 ran 525 steps at 2e-4 with no non-finite loss, train loss
 3.8 → 1.2 and eval tracking train; the 1e-4 comparison was cut by the reboot and is not repeated,

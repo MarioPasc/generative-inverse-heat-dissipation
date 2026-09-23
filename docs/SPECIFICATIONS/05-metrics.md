@@ -126,6 +126,19 @@ Total 8,000 chains ≈ 7.1 A100-hours per run (≈ 214 A100-h for 30 runs) again
 plan as first written. Sampling batch 32 (18 GB) or 64 (36 GB); the batch is recorded in
 `request.json` and pinned per run because samples are reproducible only at a fixed batch.
 
+**Common random numbers (D17, reviewer, 2026-09-23).** The 500 intermediate seeds are ONE fixed
+list per dataset (500 distinct training indices drawn once with `rng 2026` and written to
+`$IHDM_DATA_ROOT/<id>/eval_seeds_500.npy` by `evaluate_run` on first use), reused at every
+checkpoint of every run of that dataset; the sampling noise uses the same `rng_seed = 2026` and
+the same sampling batch (32) everywhere, so noise streams are identical across checkpoints and
+arms. Consequences: (a) the plateau gate is a **paired** test: the per-sample log-spectral
+distance (each sample's 48-bin radial log profile against the reference profile, RMS over bins)
+is computed for the same 500 seeds at 35k and 40k, and the run is extended only if the bootstrap
+95% CI over seeds of the paired improvement $\mathrm{LSD}_{35k} - \mathrm{LSD}_{40k}$ excludes
+zero; (b) $T_\tau$ and the A3-versus-A0 LSD contrast are paired at the sample level as well as at
+the training-seed level. The 2k final set keeps "with replacement over the training split" with
+`rng_seed 0`.
+
 ## 9. Result files
 
 `<run_root>/<run_id>/metrics/ckpt_<step>.json` with keys `lsd`, `lsd_octaves`, `variance_ratio`,
