@@ -271,8 +271,11 @@ def _build_config(spec: ArmSpec) -> ml_collections.ConfigDict:
 
     # training
     config.training = training = ml_collections.ConfigDict()
-    training.batch_size = 16  # D4": 61 M-param U-Net at 192^2 needs ~1.75 GB per sample; probe may raise to 24
-    training.n_iters = 40000  # D4"": 640k samples seen at batch 16 (27500 if batch 24)
+    # D4": MEASURED, not estimated. The Picasso probe (T3.2, job 2405546, A100-SXM4-40GB) peaked
+    # at 28.54 GB at batch 16 and OOMed at batch 24 (37.15 GiB allocated, >= 38.0 GiB needed, on a
+    # card with 39.52 GiB usable), against D4"'s "raise to 24 only if it peaks <= 30 GB" gate.
+    training.batch_size = 16
+    training.n_iters = 40000  # D4"": 640k samples at batch 16; the batch-24 27500 is now moot
     training.ckpt_every = 2500
     training.resume_every = 500
     training.log_every = 50

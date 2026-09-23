@@ -1,0 +1,124 @@
+# Trimmed log of Picasso probe job 2405546 (T3.2)
+# Full logs on the cluster: ~/execs/ihdm/logs/probe_2405546.{out,err}
+# sacct: 2405546|COMPLETED|00:34:51|exa02  submit 09:11:28  start 11:02:19  end 11:37:10
+# MaxRSS (.batch step): 19240912K = 18.35 GB of the 48 GB requested
+
+==========================================
+Job:         2405546
+Node:        exa02
+Start:       2026-09-23T11:02:19+02:00
+Repo:        /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-dissipation
+Git commit:  29106ef41142b1b0934c82f449e6ea7a57d90b5f
+Git branch:  ticket/T3.2-picasso-probe
+Env prefix:  /mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm
+Data root:   /mnt/home/users/tic_163_uma/mpascual/fscratch/datasets/spectral_allocation_heat_diffusion_project
+Run root:    /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe
+==========================================
+NVIDIA A100-SXM4-40GB, 40960 MiB, 610.57.04
+
+========== 1. train lsun_church,A0 s1 batch 16, 600 iters ==========
+[cmd] /mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm/bin/python train.py --config configs/spectral/arms.py:lsun_church,A0 --config.seed=1 --config.training.n_iters=600 --config.training.ckpt_every=200 --config.training.grid_every=200 --config.training.eval_every=200 --config.training.log_every=20 --workdir /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/lsun_church_A0_s1
+[ok] 1. train lsun_church,A0 s1 batch 16, 600 iters (491 s)
+
+========== 2. train ixi,A0 s1 batch 16, 600 iters ==========
+[cmd] /mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm/bin/python train.py --config configs/spectral/arms.py:ixi,A0 --config.seed=1 --config.training.n_iters=600 --config.training.ckpt_every=200 --config.training.grid_every=200 --config.training.eval_every=200 --config.training.log_every=20 --workdir /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/ixi_A0_s1
+[ok] 2. train ixi,A0 s1 batch 16, 600 iters (480 s)
+
+----- step banners and outcomes (stdout) -----
+========== 1. train lsun_church,A0 s1 batch 16, 600 iters ==========
+[ok] 1. train lsun_church,A0 s1 batch 16, 600 iters (491 s)
+========== 2. train ixi,A0 s1 batch 16, 600 iters ==========
+[ok] 2. train ixi,A0 s1 batch 16, 600 iters (480 s)
+========== 3. memory probe ixi,A0 batch 24, 40 iters ==========
+[FAIL] 3. memory probe ixi,A0 batch 24, 40 iters (exit 1, 8 s)
+========== 4. resume ixi,A0 to 800 iters ==========
+[ok] 4. resume ixi,A0 to 800 iters (165 s)
+========== 5a. sample batch 32 (4 held-out seeds x 8) ==========
+[ok] 5a. sample batch 32 (4 held-out seeds x 8) (110 s)
+[budget] measured s/chain at batch 32: 3.2364; elapsed 1254 s of 6600
+[budget] 5b. sample batch 64 (128 train seeds x 1) projected 534 s
+========== 5b. sample batch 64 (128 train seeds x 1) ==========
+[ok] 5b. sample batch 64 (128 train seeds x 1) (416 s)
+[budget] 5c. sample batch 128 (same 128 train seeds) projected 534 s
+========== 5c. sample batch 128 (same 128 train seeds) ==========
+[ok] 5c. sample batch 128 (same 128 train seeds) (417 s)
+========== 6a. artefact listing ==========
+========== 6b. metrics.jsonl (kinds and cadence) ==========
+========== 6c. sampler request.json timing ==========
+========== 6d. device GPU memory trace ==========
+========== 6e. checkpoints ==========
+========== step summary ==========
+
+----- step 3: the batch-24 OOM (stderr, last frames) -----
+            ^^^^^^^^^^^^^
+  File "/mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt2/fscratch/users/tic_163_uma/mpascual/repos/generative-inverse-heat-dissipation/model_code/nn.py", line 25, in forward
+    return super().forward(x.float()).type(x.dtype)
+                           ^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 864.00 MiB. GPU 0 has a total capacity of 39.52 GiB of which 730.88 MiB is free. Including non-PyTorch memory, this process has 38.79 GiB memory in use. Of the allocated memory 37.15 GiB is allocated by PyTorch, and 1.13 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+/mnt2/fscratch/users/tic_163_uma/mpascual/repos/generative-inverse-heat-dissipation/scripts/losses.py:100: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+
+========== 6b. metrics.jsonl (kinds and cadence) ==========
+--- /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/lsun_church_A0_s1 ---
+  ckpt     n=  3 steps=[200, 400, 600]...600
+  eval     n=  4 steps=[0, 200, 400, 600]...600
+  grid     n=  3 steps=[200, 400, 600]...600
+  train    n= 31 steps=[0, 20, 40, 60]...600
+  median it/s (step>=100) = 1.7093
+  median img/s(step>=100) = 27.349
+  max gpu_mem_peak_gb     = 28.544
+  last train line: {"gpu_mem_peak_gb": 28.544082164764404, "grad_norm": 0.9999999403953552, "img_per_s": 26.938876869679127, "it_per_s": 1.6836798043549455, "kind": "train", "loss": 2.4896328449249268, "loss_per_octave": {"0.5-1": 4.863470928422336, "1-2": 2.2389146666372977, "16-32": 1.7853225022554398, "2-4": 1.9720501380089002, "32-64": 1.7816716083666173, "4-8": 1.9272781491279602, "64-96": 2.00495233297348, "8-16": 2.130171006634122}, "lr": 0.00012, "step": 600, "wall_s": 435.14309290500387}
+  last eval  line: {"kind": "eval", "loss": 0.9119205677509308, "step": 600}
+  resume events: []
+  abort events : 0
+--- /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/ixi_A0_s1 ---
+  ckpt     n=  4 steps=[200, 400, 600, 800]...800
+  eval     n=  5 steps=[0, 200, 400, 600]...800
+  grid     n=  4 steps=[200, 400, 600, 800]...800
+  resume   n=  1 steps=[601]...601
+  train    n= 41 steps=[0, 20, 40, 60]...800
+  median it/s (step>=100) = 1.7058
+  median img/s(step>=100) = 27.293
+  max gpu_mem_peak_gb     = 28.545
+  last train line: {"gpu_mem_peak_gb": 28.343079566955566, "grad_norm": 1.0, "img_per_s": 26.754090524423592, "it_per_s": 1.6721306577764745, "kind": "train", "loss": 1.0052579641342163, "loss_per_octave": {"0.5-1": 2.687895574067768, "1-2": 1.1029521848844446, "16-32": 0.6206955999135971, "2-4": 0.7975957565009594, "32-64": 0.7262878438288515, "4-8": 0.710666345583426, "64-96": 0.690011203289032, "8-16": 0.7298751742793963}, "lr": 0.00016, "step": 800, "wall_s": 120.51853477999975}
+  last eval  line: {"kind": "eval", "loss": 0.4612924426794052, "step": 800}
+  resume events: ['{"from": "/mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/ixi_A0_s1/checkpoints-meta/checkpoint.pth", "kind": "resume", "step": 601}']
+  abort events : 0
+--- /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/mem_b24 ---
+no metrics.jsonl
+
+========== 6c. sampler request.json timing ==========
+========== 6c. sampler request.json timing ==========
+--- /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/ixi_A0_s1/probe_samples_b128 ---
+ batch 128 n 128 wall_s 410.87 s_per_chain 3.210 samples_per_s 0.3115
+--- /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/ixi_A0_s1/probe_samples_b32 ---
+ batch 32 n 32 wall_s 103.57 s_per_chain 3.236 samples_per_s 0.3090
+--- /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/ixi_A0_s1/probe_samples_b64 ---
+ batch 64 n 128 wall_s 410.41 s_per_chain 3.206 samples_per_s 0.3119
+
+========== 6d. device GPU memory trace ==========
+  samples=418  max memory.used = 37739 MiB (36.85 GB)
+  trace file: /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm/probe/gpu_mem_trace_2405546.csv
+
+========== 6e. checkpoints ==========
+========== step summary ==========
+  1. train lsun_church,A0 s1 batch 16, 600 iters       ok
+  2. train ixi,A0 s1 batch 16, 600 iters               ok
+  3. memory probe ixi,A0 batch 24, 40 iters            FAILED(exit 1)
+  4. resume ixi,A0 to 800 iters                        ok
+  5a. sample batch 32 (4 held-out seeds x 8)           ok
+  5b. sample batch 64 (128 train seeds x 1)            ok
+  5c. sample batch 128 (same 128 train seeds)          ok
+
+==========================================
+Finished:    2026-09-23T11:37:07+02:00
+Duration:    0h 34m 48s
+sacct:
+2405546|RUNNING|00:34:51||exa02
+2405546.batch|RUNNING|00:34:51||exa02
+PROBE FINISHED
