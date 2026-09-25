@@ -25,10 +25,12 @@ from model_code.unet import UNetModel
 
 
 def _make_fixture(tmp_path: Path, dataset_root: Path, scale_first_conv: float = 1.0,
-                  logged_loss: float = 1e9) -> Path:
+                  logged_loss: float = 1e9, attention: bool = False) -> Path:
     """A guard-saved run directory: config.json, checkpoint.pth (DataParallel keys), metrics."""
     config = smoke.get_config()
     config.data.root = str(dataset_root.parent)
+    if attention:  # exercise the attention hooks the real U-Net has at 48^2 and 24^2
+        config.model.attention_levels = (1,)
     torch.manual_seed(0)
     model = UNetModel(config)
     with torch.no_grad():
@@ -144,8 +146,11 @@ def test_classify_rules(patch, expected):
 
 
 def test_a_healthy_fixture_is_not_reproduced(tmp_path, synthetic_dataset):
-    run = _make_fixture(tmp_path, synthetic_dataset)
+    run = _make_fixture(tmp_path, synthetic_dataset, attention=True)
     report = dn.run(_args(run, tmp_path / "r.json", replay_step=5))
+    attention = report["hooks"]["attention"]
+    assert attention and all(r["logit_max_abs"] is not None for r in attention)
+    assert report["hooks"]["eval_mode"]["train_mode"] is False
     assert report["classification"] == "other"
     assert report["parameters"]["non_finite_total"] == 0
     assert report["survey"]["live"]["n_batches"] == 2
