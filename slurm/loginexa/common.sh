@@ -26,6 +26,10 @@ export PYTHONPYCACHEPREFIX="${LX_SCRATCH}/pycache"
 export MPLCONFIGDIR="${LX_SCRATCH}/mplconfig"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
 export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
+# V100 accommodation, not a recipe change: batch 16 peaks at 27.9 GiB allocated on a 31.7 GiB
+# card (H1), and the first H1 run logged a caching-allocator OOM-and-retry at the eval step.
+# Expandable segments cut fragmentation; the numerics and max_memory_allocated are unchanged.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 mkdir -p "${LX_LOGS}" "${LX_SCRATCH}" "${PYTHONPYCACHEPREFIX}" "${MPLCONFIGDIR}"
 

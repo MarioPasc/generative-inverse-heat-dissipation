@@ -61,25 +61,35 @@ def main() -> int:
     batches = iter(trainloader)
     torch.cuda.reset_peak_memory_stats()
     rows = []
-    for _ in range(5):
+    # A fresh model overflows the fp16 gradients at the initial scale 65536; the GradScaler halves
+    # the scale on each such step (a no-op step) until the gradients fit, so the pre-clip norm is
+    # inf on the first steps and finite afterwards. 25 steps leave room for that.
+    for _ in range(25):
         batch = next(batches)[0].to(config.device).float()
         t0 = time.perf_counter()
         loss, _, _ = train_step(state, batch)
         torch.cuda.synchronize()
-        rows.append((int(state["step"]), float(loss), float(state["grad_norm"]),
+        rows.append((int(state["step"]), float(loss.detach()), float(state["grad_norm"]),
                      float(train_step.scaler.get_scale()), time.perf_counter() - t0))
     for row in rows:
         print("H1 step=%d loss=%.4f grad_norm_preclip=%.4g amp_scale=%.0f dt=%.2fs" % row)
     peak = torch.cuda.max_memory_allocated() / 2**30
+    steady = [r[4] for r in rows[5:]]
     ok &= report("train_step_fp16_b16",
                  all(torch.isfinite(torch.tensor(r[1])) for r in rows)
                  and batch.shape == (16, 1, 192, 192),
-                 f"batch={tuple(batch.shape)} dtype_autocast=fp16 losses={[round(r[1], 4) for r in rows]} "
-                 f"peak_alloc_gib={peak:.2f} reserved_gib={torch.cuda.max_memory_reserved() / 2**30:.2f}")
-    ok &= report("grad_norm_hook", all(r[2] > 0 for r in rows[-3:]) and len({r[2] for r in rows}) > 1,
-                 f"pre-clip norms={[f'{r[2]:.4g}' for r in rows]} (inf/nan on the first AMP steps is "
-                 "the GradScaler finding its scale)")
-    ok &= report("amp_scale", train_step.scaler.is_enabled(), f"scales={[r[3] for r in rows]}")
+                 f"batch={tuple(batch.shape)} dtype_autocast=fp16 "
+                 f"losses={[round(r[1], 4) for r in rows[-5:]]} (last 5) "
+                 f"peak_alloc_gib={peak:.2f} reserved_gib={torch.cuda.max_memory_reserved() / 2**30:.2f} "
+                 f"step_s={sum(steady) / len(steady):.3f} (mean of steps 6-25, data loading included)")
+    finite = [r[2] for r in rows if torch.isfinite(torch.tensor(r[2]))]
+    ok &= report("grad_norm_hook",
+                 all(torch.isfinite(torch.tensor(r[2])) and r[2] > 0 for r in rows[-3:])
+                 and len(set(finite)) > 1 and any(v != 1.0 for v in finite),
+                 f"pre-clip norms={[f'{r[2]:.4g}' for r in rows]} (inf while the GradScaler "
+                 "is finding its scale, then finite, varying, not capped at grad_clip=1.0)")
+    ok &= report("amp_scale", train_step.scaler.is_enabled(),
+                 f"scales={[r[3] for r in rows]}")
     eval_batch = next(iter(testloader))[0].to(config.device).float()
     eval_loss, _, _ = eval_step(state, eval_batch)
     ok &= report("eval_step", bool(torch.isfinite(eval_loss)), f"eval_loss={float(eval_loss):.4f}")
