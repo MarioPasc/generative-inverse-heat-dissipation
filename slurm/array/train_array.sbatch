@@ -155,9 +155,15 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader \
 mkdir -p "${IHDM_RUN_ROOT}"
 
 # ----------------------------------------------------------------------------------------------
-# Train.  Batch 16, lr 2e-4 and the cadences are frozen in `configs/spectral/arms.py` (D4", D4"',
-# D5") and are deliberately NOT overridden here; the only run-varying flags are the seed, the
-# iteration count and the work directory.
+# Train.  Batch 16, lr 1e-4 (recipe v2, D19) and the cadences are frozen in
+# `configs/spectral/arms.py` (D4", D4"', D5", D19) and are deliberately NOT overridden here; the
+# only run-varying flags are the seed, the iteration count and the work directory.
+#
+# Exit codes of train.py (D19): 0 finished (or already past N_ITERS); 3 the non-finite-loss
+# guard aborted (10 consecutive / >100 total skipped steps; the rolling checkpoint holds the
+# weights that produced the last non-finite loss); 4 the recipe check refused to resume a run
+# directory trained with another recipe (nothing was written); 1 any Python error; 137/143 the
+# job was killed (TIMEOUT, scancel). See slurm/array/README.md.
 # ----------------------------------------------------------------------------------------------
 CMD=("${PY}" train.py
      --config "configs/spectral/arms.py:${DATASET_ID},${ARM}"
@@ -190,7 +196,13 @@ echo "=========================================="
 echo "Finished:    $(date --iso-8601=seconds)"
 echo "Train time:  $((T1 - T0)) s"
 echo "Duration:    $((ELAPSED / 3600))h $(((ELAPSED / 60) % 60))m $((ELAPSED % 60))s"
-echo "END TASK     index=${CELL_INDEX} run_id=${RUN_ID} status=$( ((RC == 0)) && echo ok || echo FAILED) exit=${RC}"
+case "${RC}" in
+    0) STATUS=ok ;;
+    3) STATUS=FAILED_nonfinite_guard ;;
+    4) STATUS=FAILED_recipe_mismatch ;;
+    *) STATUS=FAILED ;;
+esac
+echo "END TASK     index=${CELL_INDEX} run_id=${RUN_ID} status=${STATUS} exit=${RC}"
 echo "sacct:"
 sacct -j "${SLURM_JOB_ID:-0}" -n -P -o JobID,State,Elapsed,MaxRSS,NodeList 2>&1 | head -n 5
 echo "=========================================="

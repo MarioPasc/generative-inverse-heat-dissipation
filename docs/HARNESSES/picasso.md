@@ -54,10 +54,31 @@ if the relative change exceeds 5% on either dataset, resubmit the whole array wi
 soft files after the caches were cleared; the array writes ≈ 40 files per run; evaluation
 artefacts go to `$LOCALSCRATCH` and come back as one archive per run.
 
-## 7. loginexa (V100) is unusable with the `ihdm` env
+**`.pyc` files on FSCRATCH (T3.4, 2026-09-25).** The `ihdm` env holds no compiled `.pyc` for
+sympy, mpmath, triton, pip, PIL, yaml, absl and parts of numpy, so the first process that imports
+them writes ≈ 0.9k `.pyc` files and ≈ 0.1k `__pycache__` directories into the env, i.e. onto
+FSCRATCH (measured: +1.0k files in one loginexa build, reverted). Every job and every loginexa
+process therefore sets `PYTHONPYCACHEPREFIX` to node-local storage (`slurm/array/train_array.sbatch`,
+`slurm/loginexa/common.sh`); a clean-up of the env's caches can be undone by a single run without it.
 
-Measured 2026-09-23 (T3.2): loginexa carries a Tesla V100-DGXS-32GB (compute capability 7.0) and the
-cluster env ships torch 2.14.0+cu130 compiled for sm_75/80/86/90/100/120 only, so every CUDA kernel
-launch there fails ("no kernel image is available"). Do not use the `test-picasso-loginexa` skill
-with this env; a cu126 sibling env would cost ~32k more FSCRATCH files. All GPU checks go through
-A100 batch jobs.
+## 7. loginexa (V100) through the cu126 overlay
+
+Measured 2026-09-23 (T3.2): loginexa carries 4× Tesla V100-DGXS-32GB (compute capability 7.0)
+and the cluster env ships torch 2.14.0+cu130 compiled for sm_75/80/86/90/100/120 only (CUDA 13
+dropped Volta), so every CUDA kernel launch there fails ("no kernel image is available").
+
+Since T3.4 (2026-09-25) loginexa **is usable** through an overlay: a `--system-site-packages`
+venv on top of the cluster env, in `$HOME` (`~/execs/ihdm/overlay/ihdm-v100`, ≈ 5.2k inodes,
+5.2 GB; `$HOME` went 18.6k → 24.1k of its 35k soft file quota), holding only torch 2.14.0+cu126
+and torchvision 0.29.0+cu126 (the same versions, built for sm_50–sm_90) and their CUDA 12 runtime
+wheels; the C++ headers are pruned. Every other package (numpy, ml_collections, the editable
+`ihdm`, …) is the cluster env's, so the harness tests the same code and libraries as the A100 jobs
+except the CUDA build of torch. Build: `slurm/loginexa/build_overlay.sh` (run on loginexa, which
+has internet; 2 min). Use: `slurm/loginexa/` (`common.sh` rules, `harness.sh` items,
+`launch.sh` from the workstation), documented in `docs/HARNESSES/training.md` §7. Rules: every
+process under `timeout 25m`; a GPU only when `nvidia-smi` shows < 1000 MiB on it, at most two;
+run directories on loginexa's local `/tmp` or in `$HOME`, never on FSCRATCH.
+
+V100 figures at batch 16 (production recipe, fp16 autocast): 0.88 it/s (A100 1.71), 28.5 GiB
+peak allocated of 31.7 GiB — it fits, with `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
+set by `common.sh` against fragmentation (an allocator OOM-and-retry was logged once without it).
