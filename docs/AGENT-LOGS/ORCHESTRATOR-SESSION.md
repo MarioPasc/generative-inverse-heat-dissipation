@@ -321,7 +321,7 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
 
 | wave | tickets | agents | base | verdicts | merged |
 |---|---|---|---|---|---|
-| W10 | T3.4 (recovery + loginexa harness) ‖ T5.1 (evaluation scripts + A100 cost) | opus55-xhigh ‖ opus55-high | see `M3-picasso/WAVE-W10.md` | — | — |
+| W10 | T3.4 (recovery + loginexa harness) ‖ T5.1 (evaluation scripts + A100 cost) | opus55-xhigh ‖ opus55-high | `368fdde` | T5.1 ACCEPT (606 tests; prepare 2432211 + timing 2432221; fp16 1.33×, ΔLSD 5e-5) · T3.4 ACCEPT (diagnosis: fp16 forward overflow in the decoder upsampling during an lr-2e-4 spike; S passed at 1e-4 with 0 skips; H1–H7 PASS, 30/30 cells) | `integration/W10`: `7afe5ee` (T5.1), `cd07dbd` (T3.4); detail in `M3-picasso/WAVE-W10.md` |
 
 ## 12. Lessons added to §8
 
