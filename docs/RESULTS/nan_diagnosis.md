@@ -129,9 +129,41 @@ Consequences for recipe v2:
   EMA weights at the same steps, and the v2 weights, have their largest activations measured in
   §3a). The question of fp16 overflow "at 5e-5" did not arise.
 
-### 3a. Activation headroom of healthy and v2 weights
+### 3a. Activation headroom of the spike, the EMA and the recipe-v2 weights
 
-(filled from the `headroom` harness item)
+`harness.sh headroom <gpu> <run>` (code `21adc56`–`e284287`, 12:25–12:58): `diagnose_nan
+--headroom-only --n-batches 64` on four weight sets per run, each on **the same 1,024 training
+samples** (the survey's images, levels, noise and dropout seeds), fp32 forward in train mode, max
+|output| of every leaf module; reports `~/execs/ihdm/logs/loginexa/headroom_<run>_<v1|v2>_<live|ema>.json`.
+v1 = the array-1 fixture (live = the spike weights that produced the NaN; EMA = their EMA at the
+same step); v2 = check S at step 4,000 (lr 1e-4).
+
+| run | weights | step | `output_blocks.9.2.conv` max (% of 65,504) | `output_blocks.4.2.conv` max (%) | network-wide max (%) | per-batch network max, median / p90 |
+|---|---|---|---|---|---|---|
+| `ixi_A0_s1` | v1 spike (live) | 1383 | 93,999 (**143.5 %**) | 90,329 (**137.9 %**) | `output_blocks.9.2.conv` 93,999 (**143.5 %**) | 81,686 / 87,065 |
+| `ixi_A0_s1` | v1 EMA | 1383 | 161 (0.25 %) | 347 (0.53 %) | `output_blocks.4.2.conv` 347 (0.53 %) | 275 / 321 |
+| `ixi_A0_s1` | **v2 live** | 4000 | 41 (0.06 %) | 83 (0.13 %) | `output_blocks.19.0.in_layers.2` 143 (**0.22 %**) | 117 / 132 |
+| `ixi_A0_s1` | v2 EMA | 4000 | 42 (0.06 %) | 74 (0.11 %) | `output_blocks.19.0.in_layers.2` 112 (0.17 %) | 93 / 105 |
+| `lsun_church_A3_s1` | v1 spike (live) | 1368 | 29,738 (45.4 %) | 139,822 (**213.5 %**) | `output_blocks.4.2.conv` 139,822 (**213.5 %**) | 99,163 / 115,354 |
+| `lsun_church_A3_s1` | v1 EMA | 1368 | 134 (0.20 %) | 136 (0.21 %) | `middle_block.2.skip_connection` 247 (0.38 %) | 200 / 221 |
+| `lsun_church_A3_s1` | **v2 live** | 4000 | 40 (0.06 %) | 26 (0.04 %) | `output_blocks.19.0.out_layers.3` 213 (**0.33 %**) | 193 / 200 |
+| `lsun_church_A3_s1` | v2 EMA | 4000 | 45 (0.07 %) | 25 (0.04 %) | `output_blocks.15.0.in_layers.2` 181 (0.28 %) | 158 / 172 |
+
+The spike multiplied the decoder's upsampling activations by ≈ 270 (ixi, 347 → 93,999) and ≈ 1,000
+(lsun, 136 → 139,822) relative to the EMA of the same step: the median batch of the survey already
+exceeds 65,504, which is why 27–41 % of the samples overflow. The EMA and the v2 weights keep every
+activation of the network below 0.53 % of the fp16 limit; at step 4,000 of recipe v2 the largest
+activation anywhere is 143 (ixi) and 213 (lsun), a factor ≈ 300–460 below 65,504, and the two
+modules that overflowed in v1 sit at 0.04–0.13 %. (The fp32 activations of 63,676–65,177 in the
+hook profile of §3 are single inputs of the replayed batch; this table is the maximum over the
+1,024 survey samples.)
+
+**Risk statement for the 40k-step A100 runs.** In normal operation recipe v2 has a ≈ 300× margin to
+the fp16 limit, so a non-finite loss can only come from a spike of the size v1 had (activations ×
+270–1,000 within ≈ 30 steps); check S saw none in 3,000 steps at full lr on the two cells where v1
+failed first, and if one happens late in a run the D19 guard aborts it with exit 3 and a
+diagnosis fixture — the residual risk is a late spike over the remaining 36,000 steps, which these
+measurements do not bound.
 
 ## 4. Stability check S (pre-registered in D19): **PASSED at lr 1e-4**
 
