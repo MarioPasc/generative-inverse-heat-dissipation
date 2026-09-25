@@ -64,6 +64,7 @@ from ihdm.spectral.power import mode_power
 from ihdm.stats.bootstrap import paired_lsd_gate
 
 __all__ = [
+    "AMP_MODES",
     "EVALUATED_STEPS",
     "EvalRequest",
     "SeedList",
@@ -71,6 +72,8 @@ __all__ = [
     "checkpoint_table",
     "ensure_seed_lists",
     "evaluate_run",
+    "metrics_dirname",
+    "samples_dirname",
     "select_checkpoints",
 ]
 
@@ -97,6 +100,11 @@ SEED_LIST_NAMES: dict[str, str] = {
 
 #: Sampling batch, pinned per run because samples reproduce only at a fixed batch (D16).
 DEFAULT_SAMPLE_BATCH: int = 32
+
+#: Sampling precisions of ``--amp``. ``off`` is the contract default (D16); the other two run the
+#: network under ``torch.autocast`` with that dtype and change the samples bitwise.
+AMP_MODES: tuple[str, ...] = ("off", "fp16", "bf16")
+_AMP_DTYPE: dict[str, str | None] = {"off": None, "fp16": "float16", "bf16": "bfloat16"}
 
 #: Low-pass length-scale of ``D_lp`` and ``M_lp`` (``05-metrics.md`` §3, §4).
 SIGMA_LP: float = 16.0
@@ -145,6 +153,10 @@ class EvalRequest:
         Resamples of the two bootstraps.
     k : int
         Neighbour count of recall/coverage.
+    amp : str
+        Sampling precision, one of :data:`AMP_MODES`. Every mode other than ``"off"`` writes to
+        its own ``samples_amp-<mode>/`` and ``metrics_amp-<mode>/`` trees, so samples drawn
+        under two precisions can never be mixed in one cache or one result file.
     """
 
     run: Path
@@ -163,6 +175,7 @@ class EvalRequest:
     n_boot_inception: int = 200
     n_boot_gate: int = 1000
     k: int = 5
+    amp: str = "off"
 
 
 # --------------------------------------------------------------------------------------------
@@ -561,6 +574,67 @@ def load_views(dataset_root: Path) -> DatasetViews:
 # --------------------------------------------------------------------------------------------
 
 
+def _check_amp(amp: str) -> str:
+    """Return ``amp`` if it is one of :data:`AMP_MODES`, else raise :class:`MetricError`."""
+    if amp not in AMP_MODES:
+        raise MetricError(f"amp must be one of {AMP_MODES}, got {amp!r}")
+    return amp
+
+
+def samples_dirname(amp: str = "off") -> str:
+    """Return the name of the sample-cache tree of a sampling precision.
+
+    ``"off"`` keeps the historical ``samples`` so that the fp32 caches written before ``--amp``
+    existed stay valid; every other mode gets ``samples_amp-<mode>``.
+
+    Parameters
+    ----------
+    amp : str
+        One of :data:`AMP_MODES`.
+
+    Returns
+    -------
+    str
+        The directory name under the run directory.
+
+    Raises
+    ------
+    MetricError
+        If ``amp`` is not a known mode.
+    """
+    return "samples" if _check_amp(amp) == "off" else f"samples_amp-{amp}"
+
+
+def metrics_dirname(amp: str = "off") -> str:
+    """Return the name of the result-file tree of a precision (see :func:`samples_dirname`).
+
+    Parameters
+    ----------
+    amp : str
+        One of :data:`AMP_MODES`.
+
+    Returns
+    -------
+    str
+        ``"metrics"`` for ``"off"``, ``"metrics_amp-<mode>"`` otherwise.
+
+    Raises
+    ------
+    MetricError
+        If ``amp`` is not a known mode.
+    """
+    return "metrics" if _check_amp(amp) == "off" else f"metrics_amp-{amp}"
+
+
+def _amp_signature(amp: str) -> bool | str:
+    """Return the ``amp`` entry of a cache signature.
+
+    ``"off"`` maps to ``False``, the value every fp32 ``request.json`` written before ``--amp``
+    existed already holds, so those caches are still reused; the other modes record their name.
+    """
+    return False if _check_amp(amp) == "off" else amp
+
+
 @dataclass(frozen=True)
 class SampleSet:
     """One drawn sample set and where it came from.
@@ -604,6 +678,7 @@ def _signature(
     request: SampleRequest,
     resolved: tuple[float, int, bool],
     device: str,
+    amp_signature: bool | str = False,
 ) -> dict[str, Any]:
     """Return the fingerprint a cached sample set must match to be reused."""
     delta, start_level, prior_noise = resolved
@@ -615,7 +690,7 @@ def _signature(
         "n_per_seed": int(request.n_per_seed),
         "rng_seed": int(request.rng_seed),
         "batch_size": int(request.batch_size),
-        "amp": bool(request.amp),
+        "amp": amp_signature,
         "delta": float(delta),
         "start_level": int(start_level),
         "prior_noise": bool(prior_noise),
@@ -640,6 +715,7 @@ def draw_set(
     idx_file: Path | None = None,
     split: str = "train",
     force: bool = False,
+    amp: str = "off",
 ) -> SampleSet:
     """Draw one sample set, or reuse the cached one, and write the ``sample_ckpt`` layout.
 
@@ -675,6 +751,9 @@ def draw_set(
         The split the frozen list declares.
     force : bool
         Redraw even when a matching cache exists.
+    amp : str
+        Sampling precision, one of :data:`AMP_MODES`; it selects the cache tree
+        (:func:`samples_dirname`) and enters the signature.
 
     Returns
     -------
@@ -684,9 +763,12 @@ def draw_set(
     Raises
     ------
     MetricError
-        If the seeds cannot be loaded or the sampler refuses the request.
+        If the seeds cannot be loaded, the sampler refuses the request, or the cache directory
+        holds a set drawn under a different precision (it is never overwritten, even with
+        ``force``).
     """
-    directory = Path(workdir) / "samples" / f"{step:06d}" / name
+    amp_signature = _amp_signature(amp)
+    directory = Path(workdir) / samples_dirname(amp) / f"{step:06d}" / name
     try:
         seeds_u8, seed_idx = load_seed_images(
             Path(dataset_root), seed_source, n_seeds, rng_seed, idx_file=idx_file, split=split
@@ -695,17 +777,28 @@ def draw_set(
         raise MetricError(f"{name} set: {error}") from error
 
     request = SampleRequest(
-        n_per_seed=int(n_per_seed), batch_size=int(batch_size), rng_seed=int(rng_seed)
+        n_per_seed=int(n_per_seed),
+        batch_size=int(batch_size),
+        rng_seed=int(rng_seed),
+        amp=amp != "off",
+        amp_dtype=_AMP_DTYPE[amp],
     )
     try:
         resolved = resolve_request(request, config)
     except SamplingError as error:
         raise MetricError(f"{name} set: {error}") from error
     ckpt_sha = checkpoint_sha256(Path(ckpt_path))
-    signature = _signature(name, ckpt_sha, seed_idx, request, resolved, device)
+    signature = _signature(name, ckpt_sha, seed_idx, request, resolved, device, amp_signature)
 
     samples_path = directory / "samples.npy"
     record_path = directory / "request.json"
+    if record_path.exists():
+        stored_amp = json.loads(record_path.read_text()).get("signature", {}).get("amp", False)
+        if stored_amp != amp_signature:
+            raise MetricError(
+                f"{directory} holds a {name} set drawn with amp={stored_amp!r}, but this request "
+                f"samples with amp={amp_signature!r}; refusing to mix or overwrite precisions"
+            )
     if samples_path.exists() and record_path.exists() and not force:
         stored = json.loads(record_path.read_text())
         if stored.get("signature") == signature:
@@ -751,6 +844,7 @@ def draw_set(
                 "seed_list": None if idx_file is None else str(idx_file),
                 "shape": list(samples.shape),
                 "device": str(device),
+                "amp": amp,
                 "elapsed_s": elapsed,
                 "s_per_chain": elapsed / n_chains if n_chains else None,
                 "created": datetime.now(UTC).isoformat(),
@@ -967,6 +1061,7 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
     """
     import torch
 
+    amp = _check_amp(request.amp)
     workdir = Path(request.run).resolve()
     try:
         config = load_run_config(workdir)
@@ -980,12 +1075,12 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
     steps, selection = select_checkpoints(table, request.ckpts)
     final_step = max(table)
     device = _resolve_device(request.device, config)
-    metrics_dir = workdir / "metrics"
+    metrics_dir = workdir / metrics_dirname(amp)
     metrics_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(
-        "evaluating %s: steps %s (%s), final %d, device %s",
-        config.run_id, steps, selection, final_step, device,
+        "evaluating %s: steps %s (%s), final %d, device %s, amp %s",
+        config.run_id, steps, selection, final_step, device, amp,
     )
     reference = views.reference
     reference_power = mode_power(reference.astype(np.float32) / 255.0)
@@ -1012,7 +1107,7 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
         lsd_set = draw_set(
             "lsd", workdir, step, ckpt_path, config, dataset_root, "file",
             request.n_lsd, 1, SAMPLING_RNG_INTERMEDIATE, request.sample_batch, device, loader,
-            idx_file=lists.intermediate.path, force=request.force,
+            idx_file=lists.intermediate.path, force=request.force, amp=amp,
         )
         sampling_log.append(
             {"step": step, "set": "lsd", "reused": lsd_set.reused, "elapsed_s": lsd_set.elapsed_s}
@@ -1033,6 +1128,7 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
                     "n_seeds": int(lsd_set.seed_idx.size),
                     "sample_rng_seed": SAMPLING_RNG_INTERMEDIATE,
                     "sample_batch": int(request.sample_batch),
+                    "amp": amp,
                     "samples_dir": str(lsd_set.directory),
                 }
             )
@@ -1097,7 +1193,7 @@ def _evaluate_final(
     final_set = draw_set(
         "final", workdir, step, ckpt_path, config, dataset_root, "file",
         request.n_final, 1, SAMPLING_RNG_FINAL, request.sample_batch, device, loader,
-        idx_file=lists.final.path, force=request.force,
+        idx_file=lists.final.path, force=request.force, amp=request.amp,
     )
     sampling_log.append(
         {"step": step, "set": "final", "reused": final_set.reused,
@@ -1106,7 +1202,7 @@ def _evaluate_final(
     heldout_set = draw_set(
         "heldout", workdir, step, ckpt_path, config, dataset_root, "seed",
         request.n_seeds, request.n_per_seed, SAMPLING_RNG_INTERMEDIATE, request.sample_batch,
-        device, loader, force=request.force,
+        device, loader, force=request.force, amp=request.amp,
     )
     sampling_log.append(
         {"step": step, "set": "heldout", "reused": heldout_set.reused,
@@ -1130,6 +1226,7 @@ def _evaluate_final(
         "seed_list_sha256": lists.final.sha256,
         "seed_list": str(lists.final.path),
         "sample_batch": int(request.sample_batch),
+        "amp": request.amp,
     }
     record.update(_lsd_record(final_set.flat, reference))
 
@@ -1270,7 +1367,7 @@ def run_gate(
         sets[step] = draw_set(
             "lsd", workdir, step, table[step], config, dataset_root, "file",
             request.n_lsd, 1, SAMPLING_RNG_INTERMEDIATE, request.sample_batch, device, loader,
-            idx_file=lists.intermediate.path, force=False,
+            idx_file=lists.intermediate.path, force=False, amp=request.amp,
         )
         holder.clear()
 
@@ -1289,6 +1386,7 @@ def run_gate(
             "seed_list_sha256": lists.intermediate.sha256,
             "sample_rng_seed": SAMPLING_RNG_INTERMEDIATE,
             "sample_batch": int(request.sample_batch),
+            "amp": request.amp,
             "rule": (
                 "extend the run when the bootstrap 95% CI of LSD(step_a) - LSD(step_b) over "
                 "resampled evaluation seeds lies strictly above zero (D10, D17)"
@@ -1359,6 +1457,7 @@ def _summary(
         "sampling": {
             "device": device,
             "batch": int(request.sample_batch),
+            "amp": request.amp,
             "rng_seed_intermediate": SAMPLING_RNG_INTERMEDIATE,
             "rng_seed_final": SAMPLING_RNG_FINAL,
             "n_lsd": int(request.n_lsd),

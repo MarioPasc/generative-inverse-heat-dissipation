@@ -173,3 +173,27 @@ def test_main_stays_quiet_about_the_weights_when_inception_is_skipped(monkeypatc
     )
     assert main(["--run", "/tmp/run", "--skip-inception"]) == 0
     assert "inception weights path:" not in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------------------------
+# --amp (T5.1)
+# --------------------------------------------------------------------------------------------
+
+
+def test_amp_defaults_to_off():
+    """The D16 contract samples in full precision unless ``--amp`` says otherwise."""
+    assert _parse(["--run", "/tmp/run"]).amp == "off"
+
+
+@pytest.mark.parametrize("mode", ["off", "fp16", "bf16"])
+def test_amp_modes_reach_the_request(mode):
+    """Each of the three modes is carried to the request verbatim."""
+    assert _parse(["--run", "/tmp/run", "--amp", mode]).amp == mode
+
+
+@pytest.mark.parametrize("mode", ["on", "fp32", "true", ""])
+def test_amp_rejects_an_unknown_mode(mode, capsys):
+    """argparse refuses anything outside the three modes."""
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["--run", "/tmp/run", "--amp", mode])
+    assert "invalid choice" in capsys.readouterr().err

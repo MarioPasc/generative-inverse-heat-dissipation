@@ -14,7 +14,9 @@ Two departures from the ticket's fixture, both forced by the frozen metrics:
 
 from __future__ import annotations
 
+import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -26,12 +28,15 @@ from ihdm.data.format import DatasetMeta, split_by_subject, write_dataset
 from ihdm.metrics.errors import MetricError
 from ihdm.metrics.io import read_json
 from ihdm.metrics.run_eval import (
+    AMP_MODES,
     EVALUATED_STEPS,
     EvalRequest,
     checkpoint_table,
     ensure_seed_lists,
     evaluate_run,
     load_views,
+    metrics_dirname,
+    samples_dirname,
     select_checkpoints,
 )
 from ihdm.train.checkpoints import ema_checkpoint_path
@@ -576,3 +581,125 @@ def test_the_gate_rejects_a_repeated_or_missing_step(tiny_eval_run):
         evaluate_run(EvalRequest(gate=(750, 750), **common))
     with pytest.raises(MetricError, match="no checkpoint at steps"):
         evaluate_run(EvalRequest(gate=(250, 9999), **common))
+
+
+# --------------------------------------------------------------------------------------------
+# --amp: one cache tree per precision (T5.1)
+# --------------------------------------------------------------------------------------------
+
+
+def _tree_digest(root: Path) -> dict[str, tuple[str, int]]:
+    """Return ``{relative path: (sha256, mtime_ns)}`` of every file under ``root``."""
+    return {
+        str(path.relative_to(root)): (
+            hashlib.sha256(path.read_bytes()).hexdigest(),
+            path.stat().st_mtime_ns,
+        )
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+@pytest.mark.parametrize(
+    "amp, samples, metrics",
+    [
+        ("off", "samples", "metrics"),
+        ("fp16", "samples_amp-fp16", "metrics_amp-fp16"),
+        ("bf16", "samples_amp-bf16", "metrics_amp-bf16"),
+    ],
+)
+def test_every_precision_has_its_own_trees(amp, samples, metrics):
+    """``off`` keeps the historical names, so fp32 caches written before ``--amp`` stay valid."""
+    assert samples_dirname(amp) == samples
+    assert metrics_dirname(amp) == metrics
+    assert amp in AMP_MODES
+
+
+@pytest.mark.parametrize("amp", ["", "on", "fp32", "FP16", "true"])
+def test_an_unknown_precision_is_refused(tiny_eval_run, amp):
+    """A mode outside ``AMP_MODES`` fails before anything is loaded or written."""
+    workdir, _ = tiny_eval_run
+    with pytest.raises(MetricError, match="amp must be one of"):
+        samples_dirname(amp)
+    with pytest.raises(MetricError, match="amp must be one of"):
+        evaluate_run(EvalRequest(run=workdir, ckpts="250", skip_inception=True, amp=amp))
+
+
+def test_the_default_precision_keeps_the_fp32_signature(evaluated):
+    """``--amp off`` records ``amp: false``, the value of every cache written before the flag."""
+    summary, workdir, _ = evaluated
+    record = json.loads((workdir / "samples" / "000250" / "lsd" / "request.json").read_text())
+    assert record["signature"]["amp"] is False
+    assert record["amp"] == "off"
+    assert summary["sampling"]["amp"] == "off"
+
+
+def test_a_bf16_evaluation_leaves_the_fp32_cache_untouched(evaluated):
+    """The bf16 sets and results land in their own trees; the fp32 trees keep every byte."""
+    _, workdir, _ = evaluated
+    before_samples = _tree_digest(workdir / "samples")
+    before_metrics = _tree_digest(workdir / "metrics")
+
+    summary = evaluate_run(
+        EvalRequest(
+            run=workdir, ckpts="250,750", n_lsd=8, n_final=8, n_seeds=2, n_per_seed=3,
+            sample_batch=8, skip_inception=True, device="cpu", amp="bf16",
+        )
+    )
+
+    assert _tree_digest(workdir / "samples") == before_samples
+    assert _tree_digest(workdir / "metrics") == before_metrics
+    bf16 = workdir / "samples_amp-bf16"
+    for step in FIXTURE_STEPS:
+        record = json.loads((bf16 / f"{step:06d}" / "lsd" / "request.json").read_text())
+        assert record["signature"]["amp"] == "bf16"
+        assert read_json(workdir / "metrics_amp-bf16" / f"ckpt_{step:06d}.json")["amp"] == "bf16"
+    assert (bf16 / "000750" / "final" / "samples.npy").exists()
+    assert (bf16 / "000750" / "heldout" / "samples.npy").exists()
+    assert summary["sampling"]["amp"] == "bf16"
+    assert read_json(workdir / "metrics_amp-bf16" / "summary.json")["sampling"]["amp"] == "bf16"
+    assert read_json(workdir / "metrics_amp-bf16" / "final.json")["amp"] == "bf16"
+    assert not any(entry["reused"] for entry in summary["sampling"]["log"])
+
+
+def test_a_cache_of_another_precision_is_refused_not_overwritten(tiny_eval_run, tmp_path):
+    """A set found under the wrong tree raises, even with ``force``, and keeps its bytes."""
+    source, _ = tiny_eval_run
+    workdir = tmp_path / source.name
+    shutil.copytree(source, workdir, ignore=shutil.ignore_patterns("samples_amp-*", "metrics*"))
+    evaluate_run(
+        EvalRequest(
+            run=workdir, ckpts="250", n_lsd=8, sample_batch=8, skip_inception=True,
+            device="cpu",
+        )
+    )
+    misplaced = workdir / "samples_amp-bf16" / "000250" / "lsd"
+    shutil.copytree(workdir / "samples" / "000250" / "lsd", misplaced)
+    before = _tree_digest(misplaced)
+
+    with pytest.raises(MetricError, match="refusing to mix or overwrite precisions"):
+        evaluate_run(
+            EvalRequest(
+                run=workdir, ckpts="250", n_lsd=8, sample_batch=8, skip_inception=True,
+                device="cpu", amp="bf16", force=True,
+            )
+        )
+    assert _tree_digest(misplaced) == before
+
+
+def test_the_gate_samples_and_records_under_the_requested_precision(tiny_eval_run, tmp_path):
+    """``--gate`` with ``--amp`` draws into the mode's tree and says so in ``gate.json``."""
+    source, _ = tiny_eval_run
+    workdir = tmp_path / source.name
+    shutil.copytree(source, workdir, ignore=shutil.ignore_patterns("samples*", "metrics*"))
+    evaluate_run(
+        EvalRequest(
+            run=workdir, ckpts="250", n_lsd=8, sample_batch=8, skip_inception=True,
+            device="cpu", gate=(250, 750), n_boot_gate=50, amp="bf16",
+        )
+    )
+    record = read_json(workdir / "metrics_amp-bf16" / "gate.json")
+    assert record["amp"] == "bf16"
+    assert (workdir / "samples_amp-bf16" / "000750" / "lsd" / "samples.npy").exists()
+    assert not (workdir / "samples").exists()
+    assert not (workdir / "metrics").exists()
