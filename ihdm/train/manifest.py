@@ -219,6 +219,7 @@ def write_manifest(
         The path of the written manifest.
     """
     from ihdm.paths import repo_root  # local import: avoids a cycle through ihdm.paths' defaults
+    from ihdm.train.recipe import recipe_sha256  # local import: recipe.py imports this module
 
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
@@ -251,6 +252,8 @@ def write_manifest(
             "values": schedule_values,
         },
         "config_sha256": config_sha256(config),
+        # D19: the reference of the recipe check on resume (ihdm.train.recipe).
+        "recipe_sha256": recipe_sha256(config),
         "n_params": int(sum(p.numel() for p in model.parameters())),
         "batch_size": int(config.training.batch_size),
         "n_iters": int(config.training.n_iters),

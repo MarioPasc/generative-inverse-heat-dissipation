@@ -13,6 +13,17 @@ are changed:
 * ``ihdm.train.grids.save_grid`` in place of the released gif/video writers;
 * a NaN/Inf guard, and ``full_final.pt`` plus ``DONE`` at the end.
 
+Decision D19 (after array 2408239) adds, through ``ihdm.train.guard`` and ``ihdm.train.recipe``:
+
+* the skip policy: with an enabled ``GradScaler`` a non-finite loss is a no-op step, logged as
+  ``skip``; the run aborts (exit 3) after ``training.max_consecutive_skips`` consecutive or more
+  than ``training.max_skips`` skipped steps, and at the first non-finite loss when the scaler is
+  disabled (the optimiser step then applies the non-finite gradients);
+* ``grad_norm`` = the pre-clip norm of the unscaled gradients and ``amp_scale`` on every train
+  line, read from the ``scripts/losses.py`` hook at log steps only (no new GPU synchronisation);
+* the recipe check on resume: a resume whose recipe differs from the run's exits with code 4
+  before writing anything.
+
 Resuming and extending (decision D10) are native: ``initial_step`` comes from the released
 ``restore_checkpoint`` on ``checkpoints-meta/checkpoint.pth``, so resubmitting the same workdir
 with a larger ``--config.training.n_iters`` continues the run.
@@ -30,8 +41,9 @@ from absl import app, flags
 from ml_collections.config_flags import config_flags
 
 from ihdm.train import checkpoints as ckpt_utils
-from ihdm.train import grids, manifest
-from ihdm.train.logging import MetricsLogger, global_grad_norm
+from ihdm.train import grids, manifest, recipe
+from ihdm.train import guard as guard_utils
+from ihdm.train.logging import MetricsLogger
 from model_code import utils as mutils
 from model_code.ema import ExponentialMovingAverage
 from scripts import datasets, losses, utils
@@ -51,6 +63,9 @@ N_GRID_SEEDS = 8
 
 #: Exit code of the NaN/Inf guard.
 ABORT_EXIT_CODE = 3
+
+#: Exit code of a resume refused by the recipe check (D19).
+RECIPE_EXIT_CODE = recipe.RECIPE_EXIT_CODE
 
 
 def main(argv):
@@ -110,8 +125,8 @@ def _save_grid(workdir, step, model, ema, model_evaluation_fn, config, heat_forw
         ema.restore(model.parameters())
 
 
-def _finalise(workdir, state, model, ema, config, config_hash, metrics, final_step):
-    """Write the final EMA checkpoint (if missing), ``full_final.pt`` and ``DONE``.
+def _finalise(workdir, state, model, ema, config, config_hash, metrics, final_step, n_skipped):
+    """Write the final EMA checkpoint (if missing), ``full_final.pt``, ``done`` and ``DONE``.
 
     Idempotent, so it is safe on a fresh run, on a resumed run and on a resubmission of a run
     that has already reached ``n_iters``. ``DONE`` is written last, only once both checkpoints
@@ -124,8 +139,51 @@ def _finalise(workdir, state, model, ema, config, config_hash, metrics, final_st
         metrics.log_event("ckpt", final_step, path=str(final_ema))
     ckpt_utils.save_resume(workdir, state)
     ckpt_utils.save_full_final(workdir, state)
+    metrics.log_event("done", final_step, n_skipped=int(n_skipped))
     (Path(workdir) / "DONE").touch()
     logging.info("Run %s finished at step %d", config.run_id, final_step)
+
+
+def _check_recipe_or_exit(workdir, config):
+    """D19: refuse to resume a run whose recipe differs from this invocation's.
+
+    Runs before the manifest, ``config.json``, the tensorboard writer or the ``resume`` line are
+    touched, so a refused resume leaves the run directory byte-identical.
+    """
+    try:
+        recipe.check_resume_recipe(workdir, config)
+    except recipe.RecipeMismatchError as error:
+        logging.error("Refusing to resume: %s", error)
+        sys.exit(RECIPE_EXIT_CODE)
+
+
+def _step_scalars(state, scaler, scaler_enabled):
+    """Read the pre-clip gradient norm and the AMP scale of the last step (log steps only).
+
+    Both reads synchronise with the GPU, which the loop already does at log steps.
+    """
+    grad_norm = state.get('grad_norm')
+    grad_norm = float(grad_norm) if grad_norm is not None else None
+    amp_scale = float(scaler.get_scale()) if scaler_enabled else None
+    return grad_norm, amp_scale
+
+
+def _abort(workdir, state, metrics, step, loss, decision, save_state):
+    """Log the ``abort`` event, keep the resume checkpoint when it is still valid, exit 3.
+
+    With an enabled scaler every skipped step was a no-op, so the weights are those that produced
+    the non-finite losses and are saved for diagnosis (array 1's fixtures came from exactly this).
+    With a disabled scaler the optimiser has just applied non-finite gradients, so the last
+    rolling checkpoint is the only good state left and is not overwritten.
+    """
+    metrics.log_event("abort", step, reason=decision.reason, loss=repr(float(loss.item())),
+                      n_skipped=decision.n_skipped, consecutive=decision.consecutive,
+                      resume_saved=bool(save_state))
+    if save_state:
+        ckpt_utils.save_resume(workdir, state)
+    metrics.close()
+    logging.error("Aborting at step %d: %s", step, decision.reason)
+    sys.exit(ABORT_EXIT_CODE)
 
 
 def train(config, workdir):
@@ -162,6 +220,10 @@ def train(config, workdir):
     state = utils.restore_checkpoint(str(checkpoint_meta_dir), state, config.device)
     initial_step = int(state['step'])
 
+    # Hook: D19 recipe check. A resume must continue the run's own recipe.
+    if initial_step > 0:
+        _check_recipe_or_exit(workdir, config)
+
     # Build data iterators
     trainloader, testloader = datasets.get_dataset(
         config, uniform_dequantization=config.data.uniform_dequantization)
@@ -184,6 +246,15 @@ def train(config, workdir):
                                       optimize_fn=optimize_fn,
                                       heat_forward_module=heat_forward_module)
 
+    # Hook: D19 skip policy. The scaler only protects the step when AMP actually drives it: with
+    # optim.automatic_mp=False the released code calls optimizer.step() directly, and on a host
+    # without CUDA torch.cuda.amp.GradScaler disables itself and steps unconditionally.
+    scaler = train_step_fn.scaler
+    scaler_enabled = bool(config.optim.automatic_mp) and scaler.is_enabled()
+    guard = guard_utils.NonFiniteGuard(
+        guard_utils.policy_from_config(config, scaler_enabled),
+        n_skipped=guard_utils.committed_skips_from_file(workdir / "metrics.jsonl", initial_step))
+
     # Hook: run identity, manifest and metrics (04-run-artifacts.md §5). run_id is recomputed
     # here because --config.seed is applied after the config factory has run.
     config.run_id = manifest.run_id_from_config(config)
@@ -200,12 +271,14 @@ def train(config, workdir):
         metrics.log_event("resume", initial_step, **{"from": str(checkpoint_meta_dir)})
     logging.info("Starting training loop at step %d.", initial_step)
     logging.info("Running on %s", config.device)
+    logging.info("Skip policy: %s; %d skipped steps carried over.", guard.policy, guard.n_skipped)
 
     # D10: a resubmission with the same or a smaller n_iters must exit cleanly, not retrain.
     if initial_step > num_train_steps:
         logging.info("Saved step %d is past n_iters %d; nothing to train.",
                      initial_step, num_train_steps)
-        _finalise(workdir, state, model, ema, config, config_hash, metrics, num_train_steps)
+        _finalise(workdir, state, model, ema, config, config_hash, metrics, num_train_steps,
+                  guard.n_skipped)
         metrics.close()
         return
 
@@ -225,18 +298,22 @@ def train(config, workdir):
             torch.cuda.synchronize()
         dt = time.perf_counter() - t_step
 
-        # Hook: NaN/Inf guard. Keep the resume checkpoint so the run can be restarted by hand.
-        if not bool(torch.isfinite(loss)):
-            metrics.log_event("abort", step, reason="non-finite training loss",
-                              loss=repr(float(loss.item())))
-            ckpt_utils.save_resume(workdir, state)
-            metrics.close()
-            logging.error("Non-finite loss at step %d; aborting.", step)
-            sys.exit(ABORT_EXIT_CODE)
+        # Hook: NaN/Inf guard with the D19 skip policy (ihdm.train.guard).
+        decision = guard.observe(bool(torch.isfinite(loss)))
+        if decision.skipped:
+            metrics.log_event("skip", step, loss=None, n_skipped=decision.n_skipped,
+                              consecutive=decision.consecutive)
+            logging.warning("Non-finite loss at step %d: step skipped by the GradScaler "
+                            "(%d in this run, %d consecutive).",
+                            step, decision.n_skipped, decision.consecutive)
+        if decision.abort:
+            _abort(workdir, state, metrics, step, loss, decision, save_state=scaler_enabled)
 
-        grad_norm = global_grad_norm(model.parameters()) if is_log_step else None
+        grad_norm, amp_scale = (_step_scalars(state, scaler, scaler_enabled) if is_log_step
+                                else (None, None))
         metrics.log_train(step, loss, losses_batch, fwd_steps_batch,
-                          optimizer.param_groups[0]['lr'], dt, grad_norm)
+                          optimizer.param_groups[0]['lr'], dt, grad_norm,
+                          amp_scale=amp_scale, skipped=decision.skipped)
         if is_log_step:
             logging.info("step: %d, training_loss: %.5e", step, loss.item())
 
@@ -267,7 +344,8 @@ def train(config, workdir):
                               heat_forward_module, seeds)
             metrics.log_event("grid", step, path=str(path))
 
-    _finalise(workdir, state, model, ema, config, config_hash, metrics, num_train_steps)
+    _finalise(workdir, state, model, ema, config, config_hash, metrics, num_train_steps,
+              guard.n_skipped)
     metrics.close()
 
 

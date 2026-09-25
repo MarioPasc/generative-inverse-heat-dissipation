@@ -27,7 +27,6 @@ __all__ = [
     "OCTAVE_BIN_EDGES",
     "OCTAVE_BIN_NAMES",
     "MetricsLogger",
-    "global_grad_norm",
     "octave_bin",
 ]
 
@@ -76,31 +75,6 @@ def octave_bin(sigma_b: float) -> str | None:
     index = int(np.searchsorted(OCTAVE_BIN_EDGES, sigma_b, side="right")) - 1
     index = min(index, len(OCTAVE_BIN_NAMES) - 1)
     return OCTAVE_BIN_NAMES[index]
-
-
-def global_grad_norm(parameters: Any) -> float:
-    """Return the 2-norm of the concatenated gradients of ``parameters``.
-
-    Called from ``train.py`` after the released ``optimize_fn`` has run, because
-    ``scripts/losses.py: optimization_manager`` discards the pre-clip norm returned by
-    ``torch.nn.utils.clip_grad_norm_`` and that file may only be edited at the frozen hook
-    line. The value reported therefore saturates at ``config.optim.grad_clip``: a value equal
-    to ``grad_clip`` means the step was clipped.
-
-    Parameters
-    ----------
-    parameters : Iterable[torch.nn.Parameter]
-        The model parameters, immediately after the optimiser step.
-
-    Returns
-    -------
-    float
-        The gradient norm, or 0.0 when no parameter carries a gradient.
-    """
-    norms = [p.grad.detach().norm(2) for p in parameters if p.grad is not None]
-    if not norms:
-        return 0.0
-    return float(torch.norm(torch.stack(norms), 2).item())
 
 
 class MetricsLogger:
@@ -181,8 +155,14 @@ class MetricsLogger:
         lr: float,
         dt: float,
         grad_norm: float | None = None,
+        amp_scale: float | None = None,
+        skipped: bool = False,
     ) -> bool:
         """Accumulate one training step and emit a ``train`` line every ``log_every`` steps.
+
+        A step skipped by the non-finite guard (D19) counts for the throughput but contributes
+        no loss to the window; on a log step its line still appears, with the window's finite
+        losses (``loss: null`` if there are none), so the cadence of ``train`` lines is exact.
 
         Parameters
         ----------
@@ -200,7 +180,13 @@ class MetricsLogger:
         dt : float
             Seconds this step took, measured by the caller.
         grad_norm : float | None
-            The gradient norm, measured by the caller at log steps only.
+            The pre-clip global norm of the unscaled gradients of this step (D19), read by the
+            caller at log steps only; ``None`` or non-finite is written as ``null``.
+        amp_scale : float | None
+            The ``GradScaler`` scale after this step's ``update()``, read at log steps only;
+            ``None`` when the scaler is disabled.
+        skipped : bool
+            The step was skipped by the non-finite guard; its losses are not accumulated.
 
         Returns
         -------
@@ -208,15 +194,20 @@ class MetricsLogger:
             ``True`` if a line was written.
         """
         del loss  # the emitted value is the window mean, which equals the mean of losses_batch
-        self._window_losses.append(losses_batch.detach().float().cpu().numpy().ravel())
-        self._window_levels.append(fwd_steps_batch.detach().cpu().numpy().ravel().astype(np.int64))
+        if not skipped:
+            self._window_losses.append(losses_batch.detach().float().cpu().numpy().ravel())
+            self._window_levels.append(
+                fwd_steps_batch.detach().cpu().numpy().ravel().astype(np.int64)
+            )
         self._window_dt += float(dt)
         self._window_steps += 1
 
         if step % self._log_every != 0:
             return False
 
-        window_loss = float(np.mean(np.concatenate(self._window_losses)))
+        window_loss = (
+            float(np.mean(np.concatenate(self._window_losses))) if self._window_losses else None
+        )
         it_per_s = self._window_steps / self._window_dt if self._window_dt > 0 else 0.0
         record = {
             "step": int(step),
@@ -227,13 +218,19 @@ class MetricsLogger:
             "img_per_s": it_per_s * self._batch_size,
             "gpu_mem_peak_gb": self._peak_memory_gb(),
             "grad_norm": float(grad_norm) if grad_norm is not None else None,
+            "amp_scale": float(amp_scale) if amp_scale is not None else None,
             "wall_s": time.perf_counter() - self._t_start,
             "loss_per_octave": self._loss_per_octave(),
         }
         self._write(record)
-        self._writer.add_scalar("train/loss", window_loss, step)
+        if window_loss is not None:
+            self._writer.add_scalar("train/loss", window_loss, step)
         self._writer.add_scalar("train/lr", record["lr"], step)
         self._writer.add_scalar("train/it_per_s", record["it_per_s"], step)
+        for name in ("grad_norm", "amp_scale"):
+            value = record[name]
+            if value is not None and math.isfinite(value):
+                self._writer.add_scalar(f"train/{name}", value, step)
         for name, value in record["loss_per_octave"].items():
             if value is not None:
                 self._writer.add_scalar(f"train/loss_octave_{name}", value, step)
@@ -260,7 +257,7 @@ class MetricsLogger:
         self._writer.add_scalar("eval/loss", float(loss), step)
 
     def log_event(self, kind: str, step: int, **fields: Any) -> None:
-        """Write one non-scalar event line (``ckpt``, ``grid``, ``resume``, ``abort``, ``done``).
+        """Write one event line (``ckpt``, ``grid``, ``resume``, ``skip``, ``abort``, ``done``).
 
         Parameters
         ----------

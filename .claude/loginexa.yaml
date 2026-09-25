@@ -1,0 +1,48 @@
+# .claude/loginexa.yaml — per-project config for the test-picasso-loginexa skill (T3.4, 2026-09-25).
+# Interview answers given by `main` in the T3.4 prompt (docs/AGENT-LOGS/M3-picasso/T3.4-*.md §1).
+
+# The rsynced working tree on Picasso's $HOME (never git on Picasso; never FSCRATCH):
+#   git ls-files -z | rsync -a --from0 --files-from=- ./ picasso:<repo_path_remote>/
+repo_path_remote: /mnt/home/users/tic_163_uma/mpascual/execs/ihdm/wt/T3.4
+
+# The V100 overlay: a --system-site-packages venv on top of the cluster `ihdm` env holding
+# torch 2.14.0+cu126 (sm_70 kernels); the plain env (torch 2.14.0+cu130) cannot run on the V100.
+# Built by slurm/loginexa/build_overlay.sh.
+python_interpreter: /mnt/home/users/tic_163_uma/mpascual/execs/ihdm/overlay/ihdm-v100/bin/python
+
+# One harness item per session, launched from the workstation (loginexa is reachable only
+# through picasso): bash slurm/loginexa/launch.sh <item> <gpu> [args]
+# {config} is the harness item and its arguments, e.g. "h3 2 ixi,A0".
+smoke_cmd_template: 'bash {repo}/slurm/loginexa/harness.sh {config}'
+
+n_gpus_needed: 1          # two items may run at once on two GPUs, never more
+default_cuda_visible_devices: null   # harness.sh pins a GPU only if nvidia-smi shows < 1000 MiB
+
+warm_imports: ['torch']
+wallclock_budget_minutes: 25         # every process runs under `timeout 25m`
+
+loginexa_log_dir: /mnt/home/users/tic_163_uma/mpascual/execs/ihdm/logs/loginexa
+# Test run directories live on loginexa's local disk (H1-H7) or in $HOME (the multi-session S
+# runs); FSCRATCH is at its file quota and the v2 array's run root must stay empty.
+experiments_root: /tmp/ihdm_T3.4
+s_runs_root: /mnt/home/users/tic_163_uma/mpascual/execs/ihdm/loginexa_runs
+run_dir_pattern: null
+smoke_config_glob: null   # the harness shortens n_iters itself; production cadence is by design
+
+# Pass criteria: ticket §5 H1-H7 (docs/SPECIFICATIONS/M3-picasso/T3.4-training-recovery-loginexa.md),
+# each item prints its own verdict lines.
+pass_criteria:
+  log_pattern: 'check_run PASS|H1 overall PASS|S_SESSION_END'
+  forbidden_log_patterns:
+    - 'Traceback'
+    - 'CUDA out of memory'
+    - 'no kernel image is available'
+    - 'refusing to write on FSCRATCH'
+
+process_anchor: 'ihdm-v100/bin/python'
+poll_interval_seconds: 90
+
+# Environment every loginexa process gets (slurm/loginexa/common.sh):
+#   PYTHONPYCACHEPREFIX=/tmp/ihdm_T3.4/pycache   (no .pyc into the base env on FSCRATCH)
+#   PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True   (batch 16 peaks at 27.9 of 31.7 GiB)
+#   IHDM_DATA_ROOT=<fscratch>/datasets/spectral_allocation_heat_diffusion_project (read-only)

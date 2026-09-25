@@ -92,13 +92,16 @@ def test_metrics_events_and_cadences(smoke_run):
     assert _steps(records, "grid") == [3, 6]  # grid_every = 3, and n_iters
     assert _steps(records, "resume") == []  # a fresh run does not resume
     assert _steps(records, "abort") == []
+    assert _steps(records, "skip") == []
+    done = [r for r in records if r["kind"] == "done"]
+    assert [(r["step"], r["n_skipped"]) for r in done][:1] == [(6, 0)]  # D19: the final event
 
 
 def test_train_lines_have_the_contract_fields(smoke_run):
     line = next(r for r in _records(smoke_run) if r["kind"] == "train" and r["step"] == 6)
     expected = {
         "step", "kind", "loss", "lr", "it_per_s", "img_per_s", "gpu_mem_peak_gb",
-        "grad_norm", "wall_s", "loss_per_octave",
+        "grad_norm", "amp_scale", "wall_s", "loss_per_octave",
     }
     assert expected == line.keys()
     assert line["loss"] > 0
@@ -106,7 +109,16 @@ def test_train_lines_have_the_contract_fields(smoke_run):
     assert line["it_per_s"] > 0
     assert line["img_per_s"] == line["it_per_s"] * 4
     assert line["gpu_mem_peak_gb"] == 0.0  # CUDA is masked in the subprocess
-    assert line["grad_norm"] >= 0
+    assert line["amp_scale"] is None  # the smoke config trains without AMP
+
+
+def test_grad_norm_is_the_pre_clip_norm(smoke_run):
+    # D19: array 1 logged the post-clip norm, identically optim.grad_clip = 1.0. The pre-clip
+    # norm varies from line to line and is not capped at the clip value.
+    norms = [r["grad_norm"] for r in _records(smoke_run) if r["kind"] == "train"]
+    assert all(n is not None and n > 0 for n in norms)
+    assert len(set(norms)) == len(norms)
+    assert max(norms) > 1.0, f"a 32x32 model at init has gradient norms far above 1: {norms}"
 
 
 def test_loss_per_octave_is_binned_by_blur_scale(smoke_run):

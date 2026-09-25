@@ -115,7 +115,9 @@ def test_frozen_recipe_values(schedules_dir):
     assert config.training.eval_every == 500
     assert config.training.grid_every == 2500
     assert config.eval.batch_size == config.training.batch_size
-    assert config.optim.lr == pytest.approx(2e-4)
+    assert config.optim.lr == pytest.approx(1e-4)  # D19, recipe v2 (v1 was 2e-4)
+    assert config.training.max_consecutive_skips == 10  # D19 skip policy
+    assert config.training.max_skips == 100
     assert config.optim.warmup == 1000
     assert config.optim.grad_clip == 1.0
     assert config.optim.automatic_mp is True

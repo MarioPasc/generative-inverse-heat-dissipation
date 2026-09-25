@@ -47,9 +47,50 @@ Index 0 is `ixi_A0_s1` and index 3 is `lsun_church_A0_s1`: the two runs D10 need
 | `--mem=32G` | host RAM | probe MaxRSS 18.4 GB |
 | `--array=0-29%8` | 8 concurrent | QOS `medium_uma` allows gpu=23 per user; 8 is one node's worth and leaves the cluster usable |
 
-Nothing else is overridden: batch 16, lr 2e-4, `ckpt_every=2500` are frozen in
-`configs/spectral/arms.py` (D4″, D4‴, D5″). The only run-varying flags are `--config.seed`,
-`--config.training.n_iters` and `--workdir`.
+Nothing else is overridden: batch 16, lr **1e-4** (recipe v2, D19; array 2408239 ran 2e-4),
+`ckpt_every=2500` and the skip limits are frozen in `configs/spectral/arms.py` (D4″, D4‴, D5″,
+D19). The only run-varying flags are `--config.seed`, `--config.training.n_iters` and
+`--workdir`.
+
+## Exit codes, the skip policy and the recipe check (D19, T3.4)
+
+| `train.py` exit | worker `status=` | meaning | what to do |
+|---|---|---|---|
+| 0 | `ok` | finished, or already past `N_ITERS` | nothing |
+| 3 | `FAILED_nonfinite_guard` | the non-finite-loss guard aborted: 10 consecutive or more than 100 skipped steps (`training.max_consecutive_skips`, `training.max_skips`), or one non-finite loss with the `GradScaler` disabled | read the `skip`/`abort` lines of `metrics.jsonl`; the rolling checkpoint holds the weights of the last non-finite loss (a diagnosis fixture: `python -m ihdm.cli.diagnose_nan --fixture <run>`); do **not** resubmit blindly — the D19 lr ladder is 1e-4 → 5e-5 → stop |
+| 4 | `FAILED_recipe_mismatch` | the resume was refused: the run directory was trained with another recipe (any config key except `training.n_iters`, the cadences `ckpt_every`, `resume_every`, `log_every`, `eval_every`, `grid_every` and their released aliases, and the location keys `model.blur_schedule_file`, `data.root`, `device`) or on other images (the dataset's `images_sha256` differs from the manifest's); nothing was written, not even a `resume` line | point the task at an empty run root, or at the run's own recipe; the refused keys are in the `.err` log (`Refusing to resume: … optim.lr: 0.0002 -> 0.0001`) |
+| 1 | `FAILED` | a Python error (or a setup `[FATAL]` in the worker) | read the `.err` log |
+| 137 / 143 | `FAILED` | killed (TIMEOUT, `scancel`, node failure) | resubmit the index: it resumes |
+
+**Skip policy.** Under fp16 AMP with an enabled `GradScaler`, a non-finite loss makes the
+optimiser step a no-op (the scaler skips it and halves its scale); the trainer logs
+`{"kind": "skip", "loss": null, "n_skipped": k, "consecutive": c}` and continues. The count `k`
+survives a resume (it is replayed from `metrics.jsonl`) and appears in the final
+`{"kind": "done", "n_skipped": k}` line. A handful of skips over 40k steps is benign; a `skip`
+line in the first v2 array is still worth a look, because v1 had none before its aborts.
+
+**Recipe check.** Every resume compares the invocation's recipe with the run's
+(`manifest.json: recipe_sha256`, key diff from `config.json`). It is what makes a blanket
+resubmission safe: a run root that still holds array-1 (lr 2e-4) directories refuses to
+resume them (exit 4) instead of continuing them under the v2 label. Paths are not part of the
+recipe (a moved clone or data root resumes normally); their content is: the schedule values
+and hash are recipe keys, and the dataset's `images_sha256` must match the manifest's.
+
+**Logged scalars.** `grad_norm` on every train line is the pre-clip global norm of the unscaled
+gradients (array 1 logged the post-clip value, identically 1.0; recipe v2 measured ≈ 400–1000 at
+step 500 against the clip of 1.0, i.e. every step is clipped); `amp_scale` is the `GradScaler`
+scale after the step (a power of two; `null` without AMP). `null` `grad_norm` marks a step whose
+fp16 gradients overflowed (the scaler skipped it), normal for the first steps of a run and of
+every resume (the scale restarts at 65536).
+
+**`.pyc` files.** The worker exports `PYTHONPYCACHEPREFIX` to node-local `$TMPDIR`/`/tmp`:
+the env ships no compiled `.pyc` for sympy, triton, pip, PIL, …, so without it the first task
+writes ≈ 0.9k `.pyc` files and ≈ 0.1k `__pycache__` directories into the env on FSCRATCH, which
+sits at its file quota (measured by T3.4, 2026-09-25).
+
+**Tested on loginexa before submission.** `slurm/loginexa/harness.sh` item H2 runs this worker
+with bash and hand-set SLURM variables on every one of the 30 cells (`N_ITERS=2`, V100 overlay);
+see `docs/HARNESSES/training.md` §7 and `docs/RESULTS/loginexa_harness.md`.
 
 Output goes to `$IHDM_RUN_ROOT` on FSCRATCH, not `$LOCALSCRATCH`: a run writes ≈ 40 files over
 6.8 h, which is not the thousands-of-small-files pattern the manual's §4.9 rule is about, and
@@ -59,11 +100,17 @@ uses `$LOCALSCRATCH`.
 
 ## Submit
 
+Before the v2 submission (D19): the loginexa harness has passed on the commit being submitted
+(`docs/RESULTS/loginexa_harness.md`), the run root is empty (`ls $IHDM_RUN_ROOT` prints nothing;
+array-1 directories left there are refused with exit 4 rather than resumed), and FSCRATCH has
+≥ 1.3k files of headroom below its 250k soft quota (≈ 40 files per run).
+
 ```bash
 ssh picasso
 cd /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-dissipation
-git fetch && git checkout ticket/T3.3-full-array-submission && git log -1
+git fetch && git checkout main && git pull && git log -1
 
+ls /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm     # must be empty
 quota                                          # file-count headroom: ~40 files per run
 bash slurm/array/submit_array.sh --dry-run     # print the sbatch line, submit nothing
 bash slurm/array/submit_array.sh --test-only   # sbatch --test-only, submit nothing
