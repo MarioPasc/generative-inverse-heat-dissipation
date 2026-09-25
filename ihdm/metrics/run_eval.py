@@ -826,6 +826,14 @@ def draw_set(
         raise MetricError(f"{name} set: {error}") from error
     elapsed = time.perf_counter() - start
 
+    # A non-finite value (e.g. a half-precision overflow under --amp) would otherwise pass the
+    # clamp as NaN and become an arbitrary byte in the uint8 cast, i.e. a silently wrong sample.
+    n_bad = int(np.size(drawn) - np.count_nonzero(np.isfinite(drawn)))
+    if n_bad:
+        raise MetricError(
+            f"{name} set at step {step}: {n_bad} of {np.size(drawn)} sample values are not "
+            f"finite (amp={amp}); nothing was written"
+        )
     samples = np.rint(drawn * 255.0).clip(0, 255).astype(np.uint8)
     directory.mkdir(parents=True, exist_ok=True)
     np.save(samples_path, samples)

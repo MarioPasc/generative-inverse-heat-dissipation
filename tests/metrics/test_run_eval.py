@@ -751,3 +751,32 @@ def test_naming_the_last_step_in_ckpts_also_draws_the_final_sets(tiny_eval_run, 
         "samples/000250/lsd", "samples/000750/final", "samples/000750/heldout",
         "samples/000750/lsd",
     ]
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf])
+def test_a_non_finite_draw_is_refused_before_anything_is_written(
+    tiny_eval_run, tmp_path, monkeypatch, bad
+):
+    """A half-precision overflow must fail loudly, not become arbitrary bytes in the cache."""
+    import ihdm.metrics.run_eval as run_eval
+
+    source, _ = tiny_eval_run
+    workdir = tmp_path / source.name
+    shutil.copytree(source, workdir, ignore=shutil.ignore_patterns("samples*", "metrics*"))
+    real = run_eval.sample_from_seeds
+
+    def poisoned(*args, **kwargs):
+        out = real(*args, **kwargs)
+        out.reshape(-1)[3] = bad
+        return out
+
+    monkeypatch.setattr(run_eval, "sample_from_seeds", poisoned)
+    with pytest.raises(MetricError, match="1 of .* sample values are not finite"):
+        evaluate_run(
+            EvalRequest(
+                run=workdir, ckpts="250", n_lsd=8, sample_batch=8, skip_inception=True,
+                device="cpu", amp="bf16",
+            )
+        )
+    assert not list(workdir.rglob("samples.npy"))
+    assert not list(workdir.rglob("request.json"))
