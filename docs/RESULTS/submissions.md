@@ -4,9 +4,9 @@ Record of every submission of the training array of `00-overview.md` §1. Script
 `slurm/array/` (`cells.csv`, `train_array.sbatch`, `submit_array.sh`, `README.md`); ticket
 T3.3; harness `docs/HARNESSES/picasso.md` §5–§6.
 
-**Status (2026-09-25):** array **2408239 FAILED 30/30** (§7). Recipe v2 (lr 1e-4, skip policy,
-D19) is being verified on loginexa by T3.4; the v2 array is submitted by `main` after that
-ticket merges. The run root `fscratch/runs/ihdm` is empty.
+**Status (2026-09-25 13:40):** array 1 (**2408239**) FAILED 30/30 (§7). Array 2 (**2432693**,
+recipe v2: lr 1e-4, D19 skip policy) was submitted at 13:39 and its first 8 tasks started at
+once. The plateau-gate job **2432703** (fp16, D20) waits on tasks 0 and 3 (§8).
 
 ---
 
@@ -354,3 +354,29 @@ Picasso at Mario's request. The eight setup/probe logs cited in `picasso_setup.m
 `ixi_A0_s1` and `lsun_church_A3_s1` (the resume checkpoints the guard saved at steps 1383 and
 1368, i.e. the weights that produced the non-finite loss) and `ixi_A0_s2` (EMA 5,000 and 7,500).
 They are removed when W10 closes.
+
+---
+
+## 8. Array 2 (2432693), recipe v2, 30 runs at 40,000 iterations (2026-09-25, `main`)
+
+| field | value |
+|---|---|
+| job id | **2432693**, submitted 2026-09-25 13:39 (after W10 merged; Mario approved the merge, push and submission) |
+| array spec | `0-29%8`; tasks 0–7 started 13:39:51 on `exa02`/`exa03`/`exa04` (the queue was nearly empty) |
+| recipe | v2 (D19): **lr 1e-4**; batch 16, warm-up 1,000, clip 1.0, fp16 AMP, EMA 0.999, K = 200; skip policy 10 consecutive / 100 total; recipe check on resume (exit 4) |
+| `N_ITERS` / `--time` / QOS | 40000 / `11:00:00` / `medium_uma`; resources as array 1 (§1) |
+| repo SHA on the cluster | **`3e9dbf2b7ac5fb9e69117e0134ce4fe87f8fb8e7`** (`main`, clean; the W10 integration merge) |
+| worker changes since array 1 | exports `PYTHONPYCACHEPREFIX` to node-local `/tmp` (the env on FSCRATCH has no `.pyc`); names exit 3 (guard abort) and 4 (recipe mismatch) in its status line |
+| verification before submission | T3.4 loginexa harness H1–H7 PASS, all 30 cells through the real worker (`docs/RESULTS/loginexa_harness.md`); check S passed at lr 1e-4 on the two cells that failed first under v1 (`docs/RESULTS/nan_diagnosis.md` §4); integration suite 699 passed |
+| `--test-only` | accepted: `Job 2432692 to start at 2026-09-27T21:39:49 … on nodes exa02` (worst-case bound; the tasks started immediately) |
+| quota at submission | FSCRATCH 248.7k of 250.0k files (the ≈ 1.2k array files may cross the soft limit into its 7-day grace; Mario accepted this); `$HOME` 24.7k of 35.0k |
+
+**Plateau gate (D10, D17, D20):** job **2432703**, `slurm/eval/submit_eval.sh gate` with
+`TRAIN_ARRAY=2432693 AMP=fp16`, dependency `afterok:2432693_0:2432693_3`, `--time 03:00:00`. It
+runs `evaluate_run --ckpts 35000 --gate 35000,40000 --n-lsd 500 --skip-inception --amp fp16` on
+`ixi_A0_s1` and `lsun_church_A0_s1` and writes `~/execs/ihdm/eval/gate/<run_id>_amp-fp16_gate.json`.
+Extend every run to 60k (`N_ITERS=60000 bash slurm/array/submit_array.sh`) only if the CI of
+LSD(35k) − LSD(40k) lies above zero; the evaluation array (T5.1, `AMP=fp16 TIME_LIMIT=07:30:00`,
+`docs/RESULTS/evaluation_plan.md` §6) is submitted after that decision.
+
+**Outcome:** _running._
