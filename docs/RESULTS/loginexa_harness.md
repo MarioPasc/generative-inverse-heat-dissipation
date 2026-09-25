@@ -22,11 +22,11 @@ full logs are in `~/execs/ihdm/logs/loginexa/` on Picasso).
 
 | item | verdict | evidence (below) |
 |---|---|---|
-| H1 environment | (pending) | |
+| H1 environment | **PASS** | `H1 overall PASS`, `185 passed` on loginexa |
 | H2 all 30 cells through the real worker | **PASS** (30/30) | `H2[i] check_run PASS`, `status=ok exit=0` ×30 |
 | H3 artefacts and cadence, MRI and photograph cell | **PASS** (2/2) | `H3 check_run PASS` ×2 |
-| H4 resume, extension, recipe check | (pending) | |
-| H5 skip and abort paths on the CUDA scaler | (pending) | |
+| H4 resume, extension, recipe check | **PASS** | resume at 151, 301, 401; `rc=4 run_dir=identical` ×4 |
+| H5 skip and abort paths on the CUDA scaler | **PASS** | skips 25, 33 then `done n_skipped 2`; abort at 10 consecutive (exit 3); carried 10; disabled scaler exit 3 |
 | H6 downstream (`load_ema_model`, `evaluate_run`) | (pending) | |
 | H7 V100 memory and throughput at batch 16 | **PASS** | 0.87–0.88 it/s, 28.52 GiB peak |
 | S (pre-registered stability check) | **PASS at lr 1e-4** | `docs/RESULTS/nan_diagnosis.md` §4 |
@@ -158,3 +158,122 @@ first train line: {"step": 0, "kind": "train", "loss": 3.739612102508545, "lr": 
 H2[29] check_run PASS /tmp/ihdm_T3.4/h2_gpu3/lsun_bedroom_A3_s2 (0 problems)
 H2 cell=29 worker_rc=0 seconds=113
 ```
+
+## H1 — environment
+
+`harness.sh h1 3` (`slurm/loginexa/h1_env.py` then `pytest tests/train` with the overlay python),
+code `e284287`, `h1_gpu3_20260925_121415.log`. The first H1 run (09:26, `bdd6e00`) had already
+shown the device, the fp16 step and pytest green, and failed only its own pre-clip-norm check,
+which looked at 5 steps while the scaler needs 7 to find its scale; the check was lengthened to 25
+steps and rerun. Verbatim:
+
+```
+H1 device PASS Tesla V100-DGXS-32GB capability=(7, 0) torch=2.14.0+cu126 cuda=12.6 arch=['sm_50', 'sm_60', 'sm_70', 'sm_75', 'sm_80', 'sm_86', 'sm_90'] cudnn=91002
+H1 step=1 loss=3.8487 grad_norm_preclip=inf amp_scale=32768 dt=1.65s
+…
+H1 step=7 loss=3.9628 grad_norm_preclip=inf amp_scale=512 dt=1.09s
+H1 step=8 loss=3.9381 grad_norm_preclip=834.2 amp_scale=512 dt=1.18s
+…
+H1 step=25 loss=3.8310 grad_norm_preclip=292.9 amp_scale=512 dt=1.11s
+H1 train_step_fp16_b16 PASS batch=(16, 1, 192, 192) dtype_autocast=fp16 losses=[3.8449, 3.8516, 3.8261, 3.8422, 3.831] (last 5) peak_alloc_gib=28.29 reserved_gib=28.86 step_s=1.110 (mean of steps 6-25, data loading included)
+H1 grad_norm_hook PASS pre-clip norms=['inf', 'inf', 'inf', 'inf', 'inf', 'inf', 'inf', '834.2', '623.3', '386', '512.8', '463.1', '281.4', '183.5', '420.4', '249.5', '669', '375.6', '608.2', '288.9', '355.9', '239.4', '207.9', '253.9', '292.9'] (inf while the GradScaler is finding its scale, then finite, varying, not capped at grad_clip=1.0)
+H1 amp_scale PASS scales=[32768.0, 16384.0, 8192.0, 4096.0, 2048.0, 1024.0, 512.0, 512.0, …, 512.0]
+H1 eval_step PASS eval_loss=3.9368
+H1 overall PASS
+---- pytest tests/train (the overlay python) ----
+185 passed in 101.72s (0:01:41)
+H1 pytest exit=0
+```
+
+The five production steps through the released `create_model` (`DataParallel`) and
+`scripts.losses.get_step_fn` run the real U-Net (61,056,257 parameters) in fp16 autocast at
+batch 16 on real `ixi` batches; the step-1 loss 3.8487 equals the S run's and H3's step-0 loss
+(same seed, same data order).
+
+## H4 — resume after SIGTERM, extension, recipe check
+
+`harness.sh h4 2 ixi,A0`, code `e284287`, `h4_ixi_A0_gpu2_20260925_120409.log`, H3's shortened
+cadence (`resume_every=50`). Verbatim:
+
+```
+---- H4a: start n_iters=300, SIGTERM once a train line past step 170 is written
+H4a SIGTERM after train step 170: rc=143
+H4a rolling checkpoint step: 151
+---- H4b: the same command resumes
+H4b rc=0
+{"step": 151, "kind": "resume", "from": "/tmp/ihdm_T3.4/h4/ixi_A0_s1/checkpoints-meta/checkpoint.pth"}
+{"step": 160, "kind": "train", "loss": 0.5446709394454956, "lr": 1.6000000000000003e-05, …}
+-- H-TRAIN §3 cadence: {'train': (33, [0, 10, 20], 300), 'eval': (7, [0, 50, 100], 300), 'ckpt': (3, [100, 200, 300], 300), 'grid': (3, [100, 200, 300], 300), 'resume': (1, [151], 151), 'done': (1, [300], 300)}
+H4b check_run PASS /tmp/ihdm_T3.4/h4/ixi_A0_s1 (0 problems)
+---- H4c: extension 300 -> 400
+H4c rc=0
+{"step": 301, "kind": "resume", "from": "/tmp/ihdm_T3.4/h4/ixi_A0_s1/checkpoints-meta/checkpoint.pth"}
+-- H-TRAIN §3 cadence: {'train': (43, [0, 10, 20], 400), 'eval': (9, [0, 50, 100], 400), 'ckpt': (4, [100, 200, 300], 400), 'grid': (4, [100, 200, 300], 400), 'resume': (2, [151, 301], 301), 'done': (2, [300, 400], 400)}
+H4c check_run PASS /tmp/ihdm_T3.4/h4/ixi_A0_s1 (0 problems)
+---- H4e: the clone and the data root moved (same code, same images): 400 -> 410 resumes
+H4e moved clone+data rc=0
+{"step": 401, "kind": "resume", "from": "/tmp/ihdm_T3.4/h4/ixi_A0_s1/checkpoints-meta/checkpoint.pth"}
+    "root": "/tmp/ihdm_T3.4/h4_moved/data",
+    "file": "/tmp/ihdm_T3.4/h4_moved/clone/schedules/log_W2.npy",
+---- H4f: a data root with other images (meta.json sha256_images changed) is refused
+E0925 12:23:20.875733 … train.py:156] Refusing to resume: dataset content of /tmp/ihdm_T3.4/h4/ixi_A0_s1 differs from this invocation's: data images_sha256: b666e407e9afcc03... -> ffff0000... (/tmp/ihdm_T3.4/h4_moved/data/ixi/meta.json)
+H4f other images rc=4 run_dir=identical
+---- H4d: recipe mismatch --config.optim.lr=5e-5
+E0925 12:23:50.722215 … train.py:156] Refusing to resume: recipe of /tmp/ihdm_T3.4/h4/ixi_A0_s1 (manifest recipe_sha256 9e3ec7add745) differs from this invocation's (694ac506b10b): optim.lr: 0.0001 -> 5e-05
+H4d --config.optim.lr=5e-5 rc=4 run_dir=identical files=21
+---- H4d: recipe mismatch --config.training.batch_size=8
+E0925 12:24:20.182868 … train.py:156] Refusing to resume: recipe of … differs from this invocation's (8179bdefa976): training.batch_size: 16 -> 8
+H4d --config.training.batch_size=8 rc=4 run_dir=identical files=21
+---- H4d: recipe mismatch --config.seed=2
+E0925 12:24:49.733294 … train.py:156] Refusing to resume: recipe of … differs from this invocation's (6fdc23a79a25): seed: 1 -> 2
+H4d --config.seed=2 rc=4 run_dir=identical files=21
+```
+
+The SIGTERM (exit 143) left the rolling checkpoint of step 150 (`step` 151); the restart logged
+exactly one `resume` at 151, replayed steps 151–170 (the duplicates the cadence check allows after
+a resume) and finished; the extension continued the EMA numbering (`ema_iter_000400.pt`) with a
+second `done`; a resume from a copied clone and a copied data root (same images) went through;
+every refused resume exited 4 and left all 21 files of the run directory byte-identical and with
+unchanged mtimes (`run_dir=identical`: size, mtime and sha256 of every file compared before and
+after), with no `resume` line.
+
+## H5 — skip path and abort path on the CUDA GradScaler
+
+`harness.sh h5 3`, code `e284287`, `h5_gpu3_20260925_120415.log`; the non-finite losses are
+injected by `slurm/loginexa/train_inject.py` (the loss times NaN inside the autocast region, at
+chosen loop steps), `ixi,A0`, `log_every=5`. Verbatim:
+
+```
+---- H5a: two isolated non-finite losses (steps 25, 33) under the enabled scaler
+H5a rc=0 (expect 0)
+   {"step": 20, "kind": "train", "loss": 3.9509220123291016, "grad_norm": 236.93280029296875, "amp_scale": 512.0}
+   {"step": 25, "kind": "skip", "loss": null, "n_skipped": 1, "consecutive": 1}
+   {"step": 25, "kind": "train", "loss": 3.947147846221924, "grad_norm": null, "amp_scale": 256.0}
+   {"step": 30, "kind": "train", "loss": 3.914700984954834, "grad_norm": 309.2106018066406, "amp_scale": 256.0}
+   {"step": 33, "kind": "skip", "loss": null, "n_skipped": 2, "consecutive": 1}
+   {"step": 35, "kind": "train", "loss": 3.754249095916748, "grad_norm": 306.876953125, "amp_scale": 128.0}
+   {"step": 40, "kind": "done", "n_skipped": 2}
+H5a check_run PASS /tmp/ihdm_T3.4/h5/skip (0 problems)
+---- H5b: ten consecutive non-finite losses (steps 12-21)
+H5b rc=3 (expect 3)
+   {"step": 12, "kind": "skip", "loss": null, "n_skipped": 1, "consecutive": 1}
+   …
+   {"step": 20, "kind": "train", "loss": null, "grad_norm": null, "amp_scale": 1.0}
+   {"step": 21, "kind": "skip", "loss": null, "n_skipped": 10, "consecutive": 10}
+   {"step": 21, "kind": "abort", "loss": "nan", "n_skipped": 10, "consecutive": 10, "reason": "10 consecutive non-finite training losses (max_consecutive_skips=10)", "resume_saved": true}
+H5b rolling checkpoint step 22
+---- H5c: resume H5b without injection to n_iters=30 (the 10 skips carry over)
+H5c rc=0 (expect 0)
+   {"step": 30, "kind": "done", "n_skipped": 10}
+---- H5d: disabled scaler (optim.automatic_mp=false, fp32, batch 4): abort at once
+H5d rc=3 (expect 3)
+   {"step": 12, "kind": "abort", "loss": "nan", "n_skipped": 0, "consecutive": 0, "reason": "non-finite training loss with the GradScaler disabled: the optimiser step applied the non-finite gradients", "resume_saved": false}
+H5d rolling checkpoint step 11 finite True
+```
+
+Each injected non-finite loss halved the real CUDA scaler's scale (512 → 256 at step 25, → 128
+after 33; ten consecutive: 512 → 1.0) — the step was a no-op; the train cadence kept its line at
+every log step (`loss: null` for a window of skipped steps only); the tenth consecutive skip
+aborted with exit 3 and kept the rolling checkpoint (step 22); the resume carried `n_skipped=10`
+to the final `done`; with `optim.automatic_mp=false` the first non-finite loss aborted with exit 3
+and left the previous rolling checkpoint (step 11) untouched and finite.
