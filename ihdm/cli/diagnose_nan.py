@@ -666,6 +666,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "torch": torch.__version__}}
     report["parameters"] = param_report(fixture)
     logger.info("parameters done (%.0f s)", time.perf_counter() - t0)
+    modules = tuple(m for m in args.headroom_modules.split(",") if m)
+    if args.headroom_only:
+        report["headroom"] = headroom(fixture, heat, dataset, args.n_batches, args.seed, modules)
+        report["classification"], report["reasons"] = None, ["--headroom-only"]
+        report["seconds"] = time.perf_counter() - t0
+        return report
     report["survey"] = survey(fixture, heat, dataset, args.n_batches, args.seed)
     logger.info("survey done (%.0f s)", time.perf_counter() - t0)
 
@@ -694,9 +700,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         logger.info("replay done (%.0f s)", time.perf_counter() - t0)
 
     report["hooks"] = _hooks_on_worst(fixture, heat, report, sweep_x, replay_x, args.seed)
-    headroom_levels = _parse_levels(args.headroom_levels, int(config.model.K))
-    report["headroom"] = headroom(fixture, heat, replay_x if replay_x is not None else sweep_x,
-                                  headroom_levels, args.seed)
+    report["headroom"] = headroom(fixture, heat, dataset, args.n_batches, args.seed, modules)
     report["classification"], report["reasons"] = classify(report)
     report["seconds"] = time.perf_counter() - t0
     return report
@@ -710,39 +714,75 @@ def _load_ema_permanently(fixture: Fixture) -> None:
             p.copy_(e.to(p.device))
 
 
-def headroom(fixture: Fixture, heat, x, levels: list[int], seed: int) -> dict[str, Any]:
-    """Largest fp32 activation of the network per level, against the fp16 limit.
+def headroom(fixture: Fixture, heat, dataset, n_batches: int, seed: int,
+             modules: tuple[str, ...]) -> dict[str, Any]:
+    """Largest fp32 activation of every module over the survey's samples, against fp16's limit.
 
-    One fp32, eval-mode forward of ``x`` per level (no dropout, so the numbers are a property of
-    the weights and the inputs), with the recorder on every module.
+    The batches, levels, noise and dropout seeds are exactly those of :func:`survey` (same
+    ``seed``), so two weight sets of the same dataset are compared on the same samples. The
+    forward runs in fp32 in train mode (dropout on, as in training): the numbers are the true
+    magnitudes an fp16 forward would have to store.
+
+    Parameters
+    ----------
+    fixture : Fixture
+        The loaded fixture (live or EMA weights already in the model).
+    heat : torch.nn.Module
+        The run's forward blur process.
+    dataset : torch.utils.data.Dataset
+        The train split.
+    n_batches : int
+        Batches of ``training.batch_size``.
+    seed : int
+        The survey seed.
+    modules : tuple[str, ...]
+        Modules reported by name (the ones that overflowed in array 1).
 
     Returns
     -------
     dict[str, Any]
-        ``{"by_level": {level: [top-5 (module, max_abs)]}, "max_abs": float, "module": str,
-        "level": int, "ratio_to_fp16_max": float}``.
+        ``{"n_samples", "mode", "modules": {name: {"max_abs", "ratio"}}, "module", "max_abs",
+        "ratio_to_fp16_max", "per_batch_max": {"median", "p90", "max"}, "top": [...]}``.
     """
-    by_level: dict[int, list[tuple[str, float]]] = {}
-    best = ("", -1.0, 0)
-    sigma = float(fixture.config.model.sigma)
-    for level in levels:
-        noise = draw_noise(x, sigma, draw_seed(seed, level, 0))
-        lv = torch.full((x.shape[0],), level, dtype=torch.long, device=x.device)
-        recorder = ActivationRecorder(fixture.model)
+    config, model = fixture.config, fixture.model
+    rng = np.random.default_rng(seed)
+    b, k_max = int(config.training.batch_size), int(config.model.K)
+    shape = (1, int(config.data.image_size), int(config.data.image_size))
+    best: dict[str, float] = {}
+    per_batch: list[float] = []
+    leaf_names: set[str] | None = None
+    for i in range(n_batches):
+        idx = rng.choice(len(dataset), size=b, replace=False)
+        x = _batch(dataset, idx, config.device)
+        levels, noise = _levels_noise(k_max, b, shape, config.model.sigma, seed + i, config.device)
+        recorder = ActivationRecorder(model)
         try:
-            per_sample_loss(fixture.model, heat, x, lv, noise, Condition(False, False),
-                            draw_seed(seed, level, 0))
+            per_sample_loss(model, heat, x, levels, noise, Condition(False, True), seed + i)
         finally:
             recorder.close()
-        names = {r["module"] for r in recorder.records}
-        leaves = [r for r in recorder.records if r["max_abs"] is not None
-                  and not any(n.startswith(r["module"] + ".") for n in names)]
-        top = sorted(leaves, key=lambda r: -r["max_abs"])[:5]
-        by_level[level] = [(r["module"], r["max_abs"]) for r in top]
-        if top and top[0]["max_abs"] > best[1]:
-            best = (top[0]["module"], top[0]["max_abs"], level)
-    return {"by_level": by_level, "module": best[0], "max_abs": best[1], "level": best[2],
-            "ratio_to_fp16_max": best[1] / FP16_MAX}
+        if leaf_names is None:
+            names = {r["module"] for r in recorder.records}
+            leaf_names = {n for n in names if not any(m.startswith(n + ".") for m in names)}
+        batch_max = 0.0
+        for r in recorder.records:
+            if r["max_abs"] is None or r["module"] not in leaf_names:
+                continue
+            best[r["module"]] = max(best.get(r["module"], 0.0), r["max_abs"])
+            batch_max = max(batch_max, r["max_abs"])
+        per_batch.append(batch_max)
+    top = sorted(best.items(), key=lambda kv: -kv[1])[:10]
+    module, value = top[0] if top else ("", 0.0)
+    return {
+        "n_samples": n_batches * b,
+        "mode": "fp32, train mode (dropout as in training), the survey's samples",
+        "modules": {m: {"max_abs": best.get(m), "ratio": (best.get(m) or 0.0) / FP16_MAX}
+                    for m in modules},
+        "module": module, "max_abs": value, "ratio_to_fp16_max": value / FP16_MAX,
+        "per_batch_max": {"median": float(np.median(per_batch)) if per_batch else None,
+                          "p90": float(np.quantile(per_batch, 0.9)) if per_batch else None,
+                          "max": float(np.max(per_batch)) if per_batch else None},
+        "top": [{"module": m, "max_abs": v, "ratio": v / FP16_MAX} for m, v in top],
+    }
 
 
 def _hooks_on_worst(fixture, heat, report, sweep_x, replay_x, seed) -> dict[str, Any]:
@@ -773,11 +813,22 @@ def _hooks_on_worst(fixture, heat, report, sweep_x, replay_x, seed) -> dict[str,
     return profile
 
 
+def _headroom_line(h: dict[str, Any]) -> str:
+    named = ", ".join(f"{m} {v['ratio']:.3f}" for m, v in h["modules"].items())
+    return (f"headroom ({h['n_samples']} samples, fp32 train mode): network max {h['module']} "
+            f"{h['max_abs']:.1f} = {h['ratio_to_fp16_max']:.3f} of 65504; {named}; per-batch max "
+            f"median {h['per_batch_max']['median']:.1f}")
+
+
 def _summary_lines(report: dict[str, Any]) -> list[str]:
-    fx, p, sv = report["fixture"], report["parameters"], report["survey"]["live"]
-    lines = [f"run {fx['run']} checkpoint step {fx['checkpoint_step']} abort {fx['abort']}",
+    fx, p = report["fixture"], report["parameters"]
+    lines = [f"run {fx['run']} ({fx['weights']} weights) checkpoint step {fx['checkpoint_step']} "
+             f"abort {fx['abort']}",
              f"params: total norm {p['total_norm']:.4g}, max |w| {p['max_abs_overall']:.4g}, "
              f"non-finite {p['non_finite_total']}, lr in optimizer {p['optimizer_lr']}"]
+    if "survey" not in report:
+        return [*lines, _headroom_line(report["headroom"])]
+    sv = report["survey"]["live"]
     for cond in CONDITIONS:
         s = sv[cond.name]
         lines.append(f"survey live {cond.name}: {s['batches_non_finite']}/{sv['n_batches']} "
@@ -797,6 +848,7 @@ def _summary_lines(report: dict[str, Any]) -> list[str]:
     lines.append(f"hooks ({h['source']}): first non-finite fp16 module "
                  f"{(h['first_non_finite_fp16'] or {}).get('module')}; "
                  f"modules >= 65504 in fp32: {over}")
+    lines.append(_headroom_line(report["headroom"]))
     lines.append(f"CLASSIFICATION {report['classification']}: " + " | ".join(report["reasons"]))
     return lines
 
@@ -824,8 +876,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="noise/dropout draws per level in the replay sweep")
     parser.add_argument("--levels", default="all",
                         help='levels of the sweeps: "all" (1..K) or e.g. "1-10,50,200"')
-    parser.add_argument("--headroom-levels", default="2,12,50,85,100,150,197",
-                        help="levels of the fp32 activation-headroom profile")
+    parser.add_argument("--headroom-modules",
+                        default="output_blocks.9.2.conv,output_blocks.4.2.conv",
+                        help="modules whose fp32 max |activation| the headroom reports by name")
+    parser.add_argument("--headroom-only", action="store_true",
+                        help="only the parameters and the fp32 activation headroom")
     parser.add_argument("--weights", choices=("live", "ema"), default="live",
                         help="diagnose the saved live weights or their EMA")
     parser.add_argument("--replay-step", type=int, default=None,

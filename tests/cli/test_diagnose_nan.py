@@ -55,7 +55,8 @@ def _args(run: Path, out: Path, **overrides):
     argv = ["--fixture", str(run), "--out", str(out), "--n-batches", "2", "--sweep-images", "4",
             "--draws", "1", "--device", "cpu"]
     for key, value in overrides.items():
-        argv += [f"--{key.replace('_', '-')}", str(value)]
+        flag = f"--{key.replace('_', '-')}"
+        argv += [flag] if value is True else [flag, str(value)]
     return dn.parse_args(argv)
 
 
@@ -183,6 +184,20 @@ def test_an_fp16_overflow_is_found_and_classified(tmp_path, synthetic_dataset):
     assert report["survey"]["ema"]["fp16_train"]["batches_non_finite"] == 0
     assert report["headroom"]["ratio_to_fp16_max"] >= 1.0
     assert report["headroom"]["module"] == "input_blocks.0.0"
+
+
+def test_headroom_only_compares_weight_sets_on_the_same_samples(tmp_path, synthetic_dataset):
+    run = _make_fixture(tmp_path, synthetic_dataset, scale_first_conv=1e6)
+    live = dn.run(_args(run, tmp_path / "a.json", headroom_only=True,
+                        headroom_modules="input_blocks.0.0,out.2"))
+    ema = dn.run(_args(run, tmp_path / "b.json", headroom_only=True, weights="ema",
+                       headroom_modules="input_blocks.0.0,out.2"))
+    assert "survey" not in live and live["classification"] is None
+    assert live["headroom"]["n_samples"] == ema["headroom"]["n_samples"] == 8
+    first_live = live["headroom"]["modules"]["input_blocks.0.0"]["ratio"]
+    first_ema = ema["headroom"]["modules"]["input_blocks.0.0"]["ratio"]
+    assert first_live > 1e4 * first_ema  # the same inputs through a conv scaled by 1e6
+    assert live["headroom"]["per_batch_max"]["max"] == pytest.approx(live["headroom"]["max_abs"])
 
 
 def test_the_ema_weights_can_be_diagnosed_instead(tmp_path, synthetic_dataset):

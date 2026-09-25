@@ -274,21 +274,20 @@ diag)
     echo "diag rc=$?"
     ;;
 headroom)
-    # fp32 activation headroom (and a short survey) of six weight sets: the array-1 live weights,
-    # their EMA, and the recipe-v2 weights of check S at step 4000.
-    lx_banner "diagnose_nan headroom set"
+    # fp32 activation headroom of four weight sets of one run on the same 1024 survey samples:
+    # the array-1 spike (live) weights, their EMA, and the recipe-v2 weights of check S at step
+    # 4000 (live and EMA).
+    RUN_ID="${1:?ixi_A0_s1 or lsun_church_A3_s1}"
+    lx_banner "diagnose_nan headroom ${RUN_ID}"
     lx_pin_gpu "${GPU}" || exit 75
-    FIXD="${USER_ROOT}/execs/ihdm/fixtures/array_2408239"
-    SHORT=(--n-batches 8 --sweep-images 16 --draws 1 --levels 2,12,50,85,100,150,197)
-    for spec in "${FIXD}/ixi_A0_s1:live" "${FIXD}/ixi_A0_s1:ema" \
-                "${FIXD}/lsun_church_A3_s1:live" "${FIXD}/lsun_church_A3_s1:ema" \
-                "${LX_S_ROOT}/S_lr1e-4/ixi_A0_s1:live" "${LX_S_ROOT}/S_lr1e-4/lsun_church_A3_s1:live"; do
-        DIR="${spec%:*}"; W="${spec##*:}"
-        TAG="$(basename "$(dirname "${DIR}")")_$(basename "${DIR}")_${W}"
-        OUT="${LX_LOGS}/headroom_${TAG}.json"
-        timeout 4m "${LX_PY}" -m ihdm.cli.diagnose_nan --fixture "${DIR}" --out "${OUT}" \
-            --weights "${W}" "${SHORT[@]}" | grep -E '^(survey live fp16_train|survey live fp32_train|CLASSIFICATION|report)'
-        echo "headroom ${TAG} rc=${PIPESTATUS[0]}"
+    FIXD="${USER_ROOT}/execs/ihdm/fixtures/array_2408239/${RUN_ID}"
+    SDIR="${LX_S_ROOT}/S_lr1e-4/${RUN_ID}"
+    for spec in "${FIXD}:live:v1" "${FIXD}:ema:v1" "${SDIR}:live:v2" "${SDIR}:ema:v2"; do
+        IFS=: read -r DIR W V <<<"${spec}"
+        OUT="${LX_LOGS}/headroom_${RUN_ID}_${V}_${W}.json"
+        timeout 5m "${LX_PY}" -m ihdm.cli.diagnose_nan --fixture "${DIR}" --out "${OUT}" \
+            --weights "${W}" --headroom-only --n-batches 64 | grep -E '^(run|headroom|report)'
+        echo "headroom ${RUN_ID} ${V} ${W} rc=${PIPESTATUS[0]}"
     done
     ;;
 s)
