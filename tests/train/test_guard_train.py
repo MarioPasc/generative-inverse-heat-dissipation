@@ -155,14 +155,34 @@ def test_a_resume_with_another_recipe_exits_4_and_writes_nothing(
     assert _snapshot(workdir) == before, "a refused resume must leave the run directory untouched"
 
 
-def test_a_resume_with_new_cadences_and_n_iters_is_accepted(
+def test_a_resume_on_other_images_exits_4_and_writes_nothing(
     tmp_path, smoke_run, smoke_dataset, train_runner
 ):
     workdir = tmp_path / "copy"
     shutil.copytree(smoke_run, workdir)
+    other_root = tmp_path / "other_root"
+    shutil.copytree(smoke_dataset, other_root / smoke_dataset.name)
+    meta_path = other_root / smoke_dataset.name / "meta.json"
+    meta = json.loads(meta_path.read_text())
+    meta["sha256_images"] = "f" * 64
+    meta_path.write_text(json.dumps(meta))
+    before = _snapshot(workdir)
+    result = train_runner(other_root, workdir, n_iters=9)
+    assert result.returncode == 4, result.stdout + result.stderr
+    assert "images_sha256" in result.stderr
+    assert _snapshot(workdir) == before
+
+
+def test_a_resume_with_new_cadences_n_iters_and_data_root_is_accepted(
+    tmp_path, smoke_run, smoke_dataset, train_runner
+):
+    workdir = tmp_path / "copy"
+    shutil.copytree(smoke_run, workdir)
+    moved_root = tmp_path / "moved_root"  # same images elsewhere: a moved data root
+    shutil.copytree(smoke_dataset, moved_root / smoke_dataset.name)
     saved = _saved_step(workdir)  # 7, or 10 if test_smoke_train's extension ran first
     before = len(_records(workdir))
-    result = train_runner(smoke_dataset.parent, workdir, n_iters=saved + 2,
+    result = train_runner(moved_root, workdir, n_iters=saved + 2,
                           overrides={"training.resume_every": 1, "training.eval_every": 2,
                                      "training.log_every": 2})
     assert result.returncode == 0, result.stdout + result.stderr

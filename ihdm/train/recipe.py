@@ -5,11 +5,15 @@ guard: its run directories were left behind, and a v2 submission (lr 1e-4) on to
 have continued the v1 runs (lr 2e-4) silently, producing a hybrid that no table could describe.
 
 The *recipe* of a run is its resolved config minus the keys that may legitimately change between
-submissions of the same run: the iteration count (the plateau-gate extension, D10) and the
-cadences (a harness may shorten ``resume_every``), under both their new and their released names.
-Everything else (``optim.*``, ``training.batch_size``, ``model.*`` with the schedule and its hash,
-``data.*``, ``sampling.*``, ``eval.*``, ``seed``, ``device``, the arm) must be identical, or the
-trainer aborts before writing anything.
+submissions of the same run: the iteration count (the plateau-gate extension, D10), the
+cadences (a harness may shorten ``resume_every``) under both their new and their released names,
+and the keys that say *where* things are rather than *what* they are (``model.blur_schedule_file``,
+``data.root``, ``device``): a moved clone or data root must not block a resume. Content identity
+is compared instead: ``model.blur_schedule`` and ``model.blur_schedule_sha256`` are in the
+recipe, and the dataset's ``images_sha256`` recorded in the run's manifest must equal the one of
+the data root the resume reads. Everything else (``optim.*``, ``training.batch_size``,
+``model.*``, ``data.dataset`` and the other ``data.*`` values, ``sampling.*``, ``eval.*``,
+``seed``, the arm) must be identical, or the trainer aborts before writing anything.
 
 The reference is the ``recipe_sha256`` the run's first start stored in ``manifest.json``; the
 per-key difference that makes the error message useful is computed against the run's
@@ -21,11 +25,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from ihdm.train.errors import TrainError
-from ihdm.train.manifest import config_to_json
+from ihdm.train.manifest import config_to_json, load_data_meta
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "RECIPE_EXCLUDED_KEYS",
@@ -42,8 +49,9 @@ __all__ = [
 RECIPE_EXIT_CODE = 4
 
 #: Dotted keys excluded from the recipe: the iteration count, the cadences under their new and
-#: released names, and ``run_id`` (derived from ``data.dataset``, ``arm`` and ``seed``, which are
-#: all compared).
+#: released names, ``run_id`` (derived from ``data.dataset``, ``arm`` and ``seed``, which are all
+#: compared) and the path- and host-valued keys (their content is compared through the schedule
+#: values and hash and the dataset's ``images_sha256``).
 RECIPE_EXCLUDED_KEYS: frozenset[str] = frozenset(
     {
         "training.n_iters",
@@ -58,6 +66,9 @@ RECIPE_EXCLUDED_KEYS: frozenset[str] = frozenset(
         "training.eval_freq",
         "training.sampling_freq",
         "run_id",
+        "model.blur_schedule_file",
+        "data.root",
+        "device",
     }
 )
 
@@ -167,8 +178,28 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         raise RecipeMismatchError(f"{path} is not valid JSON ({error})") from error
 
 
+def _check_data_content(workdir: Path, manifest: dict[str, Any] | None, config: Any) -> None:
+    """Refuse a resume whose data root holds other images than the run was trained on.
+
+    Compares the ``data.images_sha256`` the run's manifest recorded with the ``sha256_images``
+    of ``<data.root>/<data.dataset>/meta.json`` now; nothing to compare when the run recorded
+    none (a dataset without ``meta.json``).
+    """
+    saved = ((manifest or {}).get("data") or {}).get("images_sha256")
+    if saved is None:
+        return
+    meta = load_data_meta(config)
+    current = (meta or {}).get("sha256_images")
+    if current != saved:
+        where = Path(config.data.root) / config.data.dataset / "meta.json"
+        raise RecipeMismatchError(
+            f"dataset content of {workdir} differs from this invocation's: data images_sha256: "
+            f"{saved[:16]}... -> {str(current)[:16]}... ({where})"
+        )
+
+
 def check_resume_recipe(workdir: Path, config: Any) -> None:
-    """Refuse to resume ``workdir`` with a config whose recipe differs from the run's.
+    """Refuse to resume ``workdir`` with a config whose recipe or data differ from the run's.
 
     Reads only; writes nothing. Called by ``train.py`` before the manifest, ``config.json``,
     the tensorboard writer or the ``resume`` line are touched.
@@ -184,8 +215,9 @@ def check_resume_recipe(workdir: Path, config: Any) -> None:
     ------
     RecipeMismatchError
         If the manifest's ``recipe_sha256`` differs from the current one, if the recipe stored
-        in ``config.json`` differs key by key, or if neither file exists (the recipe of the
-        checkpoint cannot be established).
+        in ``config.json`` differs key by key, if the dataset's ``images_sha256`` differs from
+        the one the manifest recorded, or if neither file exists (the recipe of the checkpoint
+        cannot be established).
     """
     workdir = Path(workdir)
     manifest = _read_json(workdir / "manifest.json")
@@ -196,18 +228,26 @@ def check_resume_recipe(workdir: Path, config: Any) -> None:
     stored_hash = (manifest or {}).get("recipe_sha256")
     if stored_hash is not None:
         if stored_hash != recipe_sha256(config):
-            detail = "; ".join(diff) if diff else "config.json does not show which key changed"
-            raise RecipeMismatchError(
-                f"recipe of {workdir} (manifest recipe_sha256 {stored_hash[:12]}) differs from "
-                f"this invocation's ({recipe_sha256(config)[:12]}): {detail}"
-            )
-        return
-    if saved_config is None:
+            if saved_config is not None and not diff:
+                # The run's config.json holds the same recipe key by key: the stored hash was
+                # computed by an older definition of the recipe (e.g. before the path keys were
+                # excluded), not from another recipe.
+                logger.warning("manifest recipe_sha256 %s differs from %s but config.json shows "
+                               "no differing recipe key; resuming", stored_hash[:12],
+                               recipe_sha256(config)[:12])
+            else:
+                detail = "; ".join(diff) if diff else "no config.json to show which key changed"
+                raise RecipeMismatchError(
+                    f"recipe of {workdir} (manifest recipe_sha256 {stored_hash[:12]}) differs "
+                    f"from this invocation's ({recipe_sha256(config)[:12]}): {detail}"
+                )
+    elif saved_config is None:
         raise RecipeMismatchError(
             f"{workdir} holds a rolling checkpoint but neither a manifest with recipe_sha256 nor a "
             "config.json: the recipe it was trained with cannot be established"
         )
-    if diff:
+    elif diff:
         raise RecipeMismatchError(
             f"recipe of {workdir} (config.json) differs from this invocation's: " + "; ".join(diff)
         )
+    _check_data_content(workdir, manifest, config)

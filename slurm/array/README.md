@@ -58,7 +58,7 @@ D19). The only run-varying flags are `--config.seed`, `--config.training.n_iters
 |---|---|---|---|
 | 0 | `ok` | finished, or already past `N_ITERS` | nothing |
 | 3 | `FAILED_nonfinite_guard` | the non-finite-loss guard aborted: 10 consecutive or more than 100 skipped steps (`training.max_consecutive_skips`, `training.max_skips`), or one non-finite loss with the `GradScaler` disabled | read the `skip`/`abort` lines of `metrics.jsonl`; the rolling checkpoint holds the weights of the last non-finite loss (a diagnosis fixture: `python -m ihdm.cli.diagnose_nan --fixture <run>`); do **not** resubmit blindly — the D19 lr ladder is 1e-4 → 5e-5 → stop |
-| 4 | `FAILED_recipe_mismatch` | the resume was refused: the run directory was trained with another recipe (any config key except `training.n_iters` and the cadences `ckpt_every`, `resume_every`, `log_every`, `eval_every`, `grid_every` and their released aliases); nothing was written, not even a `resume` line | point the task at an empty run root, or at the run's own recipe; the refused keys are in the `.err` log (`Refusing to resume: … optim.lr: 0.0002 -> 0.0001`) |
+| 4 | `FAILED_recipe_mismatch` | the resume was refused: the run directory was trained with another recipe (any config key except `training.n_iters`, the cadences `ckpt_every`, `resume_every`, `log_every`, `eval_every`, `grid_every` and their released aliases, and the location keys `model.blur_schedule_file`, `data.root`, `device`) or on other images (the dataset's `images_sha256` differs from the manifest's); nothing was written, not even a `resume` line | point the task at an empty run root, or at the run's own recipe; the refused keys are in the `.err` log (`Refusing to resume: … optim.lr: 0.0002 -> 0.0001`) |
 | 1 | `FAILED` | a Python error (or a setup `[FATAL]` in the worker) | read the `.err` log |
 | 137 / 143 | `FAILED` | killed (TIMEOUT, `scancel`, node failure) | resubmit the index: it resumes |
 
@@ -72,8 +72,9 @@ line in the first v2 array is still worth a look, because v1 had none before its
 **Recipe check.** Every resume compares the invocation's recipe with the run's
 (`manifest.json: recipe_sha256`, key diff from `config.json`). It is what makes a blanket
 resubmission safe: a run root that still holds array-1 (lr 2e-4) directories refuses to
-resume them (exit 4) instead of continuing them under the v2 label. The schedule file path is
-part of the recipe, so a resume must run from the same clone path.
+resume them (exit 4) instead of continuing them under the v2 label. Paths are not part of the
+recipe (a moved clone or data root resumes normally); their content is: the schedule values
+and hash are recipe keys, and the dataset's `images_sha256` must match the manifest's.
 
 **Logged scalars.** `grad_norm` on every train line is the pre-clip global norm of the unscaled
 gradients (array 1 logged the post-clip value, identically 1.0; recipe v2 measured ≈ 400–1000 at

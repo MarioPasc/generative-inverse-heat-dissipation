@@ -136,6 +136,31 @@ EOF
     tail -n "+$((BEFORE + 1))" "${RUN}/metrics.jsonl" | head -n 2 | cut -c1-160
     "${LX_PY}" slurm/loginexa/check_run.py "${RUN}" --data-root "${IHDM_DATA_ROOT}" --lr 1e-4 \
         --label H4c | grep -E '^(PROBLEM|-- H-TRAIN §3)|check_run' | cut -c1-600
+    echo "---- H4e: the clone and the data root moved (same code, same images): 400 -> 410 resumes"
+    MOVED="${LX_SCRATCH}/h4_moved"
+    rm -rf "${MOVED}"; mkdir -p "${MOVED}/data"
+    cp -r "${LX_REPO}" "${MOVED}/clone"
+    cp -r "${IHDM_DATA_ROOT}/${SPEC%%,*}" "${MOVED}/data/"
+    BEFORE=$(wc -l < "${RUN}/metrics.jsonl")
+    (cd "${MOVED}/clone" && PYTHONPATH="${MOVED}/clone" IHDM_DATA_ROOT="${MOVED}/data" \
+        timeout 5m "${LX_PY}" train.py --config "configs/spectral/arms.py:${SPEC}" --config.seed=1 \
+        --config.training.log_every=10 --config.training.eval_every=50 \
+        --config.training.ckpt_every=100 --config.training.resume_every=50 \
+        --config.training.grid_every=100 --config.training.n_iters=410 --workdir "${RUN}") \
+        > "${RUN}.e.log" 2>&1
+    echo "H4e moved clone+data rc=$?"
+    tail -n "+$((BEFORE + 1))" "${RUN}/metrics.jsonl" | head -n 1 | cut -c1-160
+    grep -E '"(file|root)"' "${RUN}/manifest.json" | head -3
+    echo "---- H4f: a data root with other images (meta.json sha256_images changed) is refused"
+    sed -i 's/"sha256_images": "[0-9a-f]*"/"sha256_images": "ffff0000"/' "${MOVED}/data/${SPEC%%,*}/meta.json"
+    snapshot > "${RUN}.snap_before"
+    IHDM_DATA_ROOT="${MOVED}/data" timeout 4m "${BASE[@]}" --config.training.n_iters=500 > "${RUN}.f.log" 2>&1
+    RC=$?
+    snapshot > "${RUN}.snap_after"
+    grep -E 'Refusing to resume' "${RUN}.f.log" | cut -c1-300
+    if cmp -s "${RUN}.snap_before" "${RUN}.snap_after"; then SAME=identical; else SAME=CHANGED; fi
+    echo "H4f other images rc=${RC} run_dir=${SAME}"
+    rm -rf "${MOVED}"
     for BAD in --config.optim.lr=5e-5 --config.training.batch_size=8 --config.seed=2; do
         echo "---- H4d: recipe mismatch ${BAD}"
         snapshot > "${RUN}.snap_before"
