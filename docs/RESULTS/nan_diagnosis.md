@@ -1,5 +1,16 @@
 # Why array 2408239 hit non-finite losses — diagnosis from the saved weights (T3.4, D19)
 
+**Summary.** The non-finite losses of array 1 were **fp16 forward overflows in the decoder's
+upsampling convolutions (`output_blocks.9.2.conv`, `output_blocks.4.2.conv`), reached during an
+optimisation spike of the live weights at lr 2e-4**: at the saved weights 27–41 % of training
+samples give NaN in fp16 and none in fp32, those modules' fp32 activations reach 143–213 % of
+65,504, while the EMA of the same step (and the recipe-v2 weights) stay below 0.53 % (§3, §3a).
+**The D19 skip policy alone would not have saved array 1**: at those weights almost every batch
+overflows and a skipped step does not move the weights, so the guard would have aborted after
+ten consecutive skips; the fix is the smaller step, lr 1e-4, which check S confirmed on the two
+cells that failed first (zero non-finite losses over 3,000 full-lr steps, §4). No bf16 is needed
+on this evidence.
+
 ## 1. Question and fixtures
 
 Array 2408239 (recipe v1: lr 2e-4 after a 1,000-step warm-up, batch 16, fp16 AMP, clip 1.0)
