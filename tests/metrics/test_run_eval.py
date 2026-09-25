@@ -703,3 +703,51 @@ def test_the_gate_samples_and_records_under_the_requested_precision(tiny_eval_ru
     assert (workdir / "samples_amp-bf16" / "000750" / "lsd" / "samples.npy").exists()
     assert not (workdir / "samples").exists()
     assert not (workdir / "metrics").exists()
+
+
+def test_the_gate_command_draws_only_the_two_lsd_sets(tiny_eval_run, tmp_path):
+    """``--ckpts a --gate a,b`` on a run holding both steps draws exactly two LSD sets.
+
+    This is the command of ``slurm/eval/gate.sbatch``: the final and held-out sets belong to the
+    *largest available* checkpoint, and are drawn only when that step is among ``--ckpts``, so
+    naming the earlier step alone keeps the gate at ``2 x n_lsd`` chains.
+    """
+    source, _ = tiny_eval_run
+    workdir = tmp_path / source.name
+    shutil.copytree(source, workdir, ignore=shutil.ignore_patterns("samples*", "metrics*"))
+    summary = evaluate_run(
+        EvalRequest(
+            run=workdir, ckpts="250", n_lsd=8, sample_batch=8, skip_inception=True,
+            device="cpu", gate=(250, 750), n_boot_gate=50,
+        )
+    )
+    drawn = sorted(
+        str(path.parent.relative_to(workdir)) for path in workdir.rglob("samples.npy")
+    )
+    assert drawn == ["samples/000250/lsd", "samples/000750/lsd"]
+    for set_dir in drawn:
+        assert np.load(workdir / set_dir / "samples.npy").shape[:2] == (8, 1)
+    assert "final" not in summary
+    assert not (workdir / "metrics" / "final.json").exists()
+    assert summary["checkpoint_steps"] == [250]
+    assert read_json(workdir / "metrics" / "gate.json")["n_seeds"] == 8
+
+
+def test_naming_the_last_step_in_ckpts_also_draws_the_final_sets(tiny_eval_run, tmp_path):
+    """The contrast that makes the gate command above necessary: ``--ckpts a,b`` costs more."""
+    source, _ = tiny_eval_run
+    workdir = tmp_path / source.name
+    shutil.copytree(source, workdir, ignore=shutil.ignore_patterns("samples*", "metrics*"))
+    evaluate_run(
+        EvalRequest(
+            run=workdir, ckpts="250,750", n_lsd=8, n_final=8, n_seeds=2, n_per_seed=3,
+            sample_batch=8, skip_inception=True, device="cpu", gate=(250, 750), n_boot_gate=50,
+        )
+    )
+    drawn = sorted(
+        str(path.parent.relative_to(workdir)) for path in workdir.rglob("samples.npy")
+    )
+    assert drawn == [
+        "samples/000250/lsd", "samples/000750/final", "samples/000750/heldout",
+        "samples/000750/lsd",
+    ]
