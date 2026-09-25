@@ -649,6 +649,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     t0 = time.perf_counter()
     fixture = load_fixture(Path(args.fixture), args.device, args.data_root)
+    if args.weights == "ema":
+        _load_ema_permanently(fixture)
     config = fixture.config
     heat = mutils.create_forward_process_from_sigmas(config, config.model.blur_schedule,
                                                      config.device)
@@ -659,7 +661,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "checkpoint_step": fixture.step, "abort": fixture.abort,
         "last_train": [{k: r.get(k) for k in ("step", "loss", "lr", "grad_norm")}
                        for r in fixture.last_train],
-        "lr": float(config.optim.lr), "device": str(config.device),
+        "lr": float(config.optim.lr), "device": str(config.device), "weights": args.weights,
         "gpu": torch.cuda.get_device_name(0) if config.device.type == "cuda" else None,
         "torch": torch.__version__}}
     report["parameters"] = param_report(fixture)
@@ -692,9 +694,55 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         logger.info("replay done (%.0f s)", time.perf_counter() - t0)
 
     report["hooks"] = _hooks_on_worst(fixture, heat, report, sweep_x, replay_x, args.seed)
+    headroom_levels = _parse_levels(args.headroom_levels, int(config.model.K))
+    report["headroom"] = headroom(fixture, heat, replay_x if replay_x is not None else sweep_x,
+                                  headroom_levels, args.seed)
     report["classification"], report["reasons"] = classify(report)
     report["seconds"] = time.perf_counter() - t0
     return report
+
+
+def _load_ema_permanently(fixture: Fixture) -> None:
+    """Replace the live weights of the fixture's model by its EMA (``--weights ema``)."""
+    params = [p for p in fixture.model.parameters() if p.requires_grad]
+    with torch.no_grad():
+        for p, e in zip(params, fixture.ema_params, strict=True):
+            p.copy_(e.to(p.device))
+
+
+def headroom(fixture: Fixture, heat, x, levels: list[int], seed: int) -> dict[str, Any]:
+    """Largest fp32 activation of the network per level, against the fp16 limit.
+
+    One fp32, eval-mode forward of ``x`` per level (no dropout, so the numbers are a property of
+    the weights and the inputs), with the recorder on every module.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``{"by_level": {level: [top-5 (module, max_abs)]}, "max_abs": float, "module": str,
+        "level": int, "ratio_to_fp16_max": float}``.
+    """
+    by_level: dict[int, list[tuple[str, float]]] = {}
+    best = ("", -1.0, 0)
+    sigma = float(fixture.config.model.sigma)
+    for level in levels:
+        noise = draw_noise(x, sigma, draw_seed(seed, level, 0))
+        lv = torch.full((x.shape[0],), level, dtype=torch.long, device=x.device)
+        recorder = ActivationRecorder(fixture.model)
+        try:
+            per_sample_loss(fixture.model, heat, x, lv, noise, Condition(False, False),
+                            draw_seed(seed, level, 0))
+        finally:
+            recorder.close()
+        names = {r["module"] for r in recorder.records}
+        leaves = [r for r in recorder.records if r["max_abs"] is not None
+                  and not any(n.startswith(r["module"] + ".") for n in names)]
+        top = sorted(leaves, key=lambda r: -r["max_abs"])[:5]
+        by_level[level] = [(r["module"], r["max_abs"]) for r in top]
+        if top and top[0]["max_abs"] > best[1]:
+            best = (top[0]["module"], top[0]["max_abs"], level)
+    return {"by_level": by_level, "module": best[0], "max_abs": best[1], "level": best[2],
+            "ratio_to_fp16_max": best[1] / FP16_MAX}
 
 
 def _hooks_on_worst(fixture, heat, report, sweep_x, replay_x, seed) -> dict[str, Any]:
@@ -776,6 +824,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="noise/dropout draws per level in the replay sweep")
     parser.add_argument("--levels", default="all",
                         help='levels of the sweeps: "all" (1..K) or e.g. "1-10,50,200"')
+    parser.add_argument("--headroom-levels", default="2,12,50,85,100,150,197",
+                        help="levels of the fp32 activation-headroom profile")
+    parser.add_argument("--weights", choices=("live", "ema"), default="live",
+                        help="diagnose the saved live weights or their EMA")
     parser.add_argument("--replay-step", type=int, default=None,
                         help="loop step to replay (default: the abort step in metrics.jsonl)")
     parser.add_argument("--seed", type=int, default=0)

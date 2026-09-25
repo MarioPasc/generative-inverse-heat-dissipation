@@ -33,10 +33,11 @@ def _make_fixture(tmp_path: Path, dataset_root: Path, scale_first_conv: float = 
         config.model.attention_levels = (1,)
     torch.manual_seed(0)
     model = UNetModel(config)
+    # The EMA keeps the healthy weights, as in array 1 (EMA loss 0.39 where the live one was 1.55).
+    ema = ExponentialMovingAverage(model.parameters(), decay=0.999)
     with torch.no_grad():
         model.input_blocks[0][0].weight.mul_(scale_first_conv)
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
-    ema = ExponentialMovingAverage(model.parameters(), decay=0.999)
     run = tmp_path / "fixture"
     (run / "checkpoints-meta").mkdir(parents=True)
     write_config_json(run, config)
@@ -179,3 +180,15 @@ def test_an_fp16_overflow_is_found_and_classified(tmp_path, synthetic_dataset):
                for r in report["hooks"]["modules_at_or_over_fp16_max_in_fp32"])
     assert report["classification"] == "fp16_forward_overflow"
     assert np.isfinite(report["survey"]["live"]["fp32_train"]["batch_loss_median"])
+    assert report["survey"]["ema"]["fp16_train"]["batches_non_finite"] == 0
+    assert report["headroom"]["ratio_to_fp16_max"] >= 1.0
+    assert report["headroom"]["module"] == "input_blocks.0.0"
+
+
+def test_the_ema_weights_can_be_diagnosed_instead(tmp_path, synthetic_dataset):
+    run = _make_fixture(tmp_path, synthetic_dataset, scale_first_conv=1e6)
+    report = dn.run(_args(run, tmp_path / "r.json", weights="ema"))
+    assert report["fixture"]["weights"] == "ema"
+    assert report["survey"]["live"]["fp16_train"]["batches_non_finite"] == 0
+    assert report["classification"] == "other"
+    assert report["headroom"]["ratio_to_fp16_max"] < 1.0

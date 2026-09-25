@@ -273,6 +273,24 @@ diag)
     timeout 23m "${LX_PY}" -m ihdm.cli.diagnose_nan --fixture "${FIX}" --out "${OUT}" "$@"
     echo "diag rc=$?"
     ;;
+headroom)
+    # fp32 activation headroom (and a short survey) of six weight sets: the array-1 live weights,
+    # their EMA, and the recipe-v2 weights of check S at step 4000.
+    lx_banner "diagnose_nan headroom set"
+    lx_pin_gpu "${GPU}" || exit 75
+    FIXD="${USER_ROOT}/execs/ihdm/fixtures/array_2408239"
+    SHORT=(--n-batches 8 --sweep-images 16 --draws 1 --levels 2,12,50,85,100,150,197)
+    for spec in "${FIXD}/ixi_A0_s1:live" "${FIXD}/ixi_A0_s1:ema" \
+                "${FIXD}/lsun_church_A3_s1:live" "${FIXD}/lsun_church_A3_s1:ema" \
+                "${LX_S_ROOT}/S_lr1e-4/ixi_A0_s1:live" "${LX_S_ROOT}/S_lr1e-4/lsun_church_A3_s1:live"; do
+        DIR="${spec%:*}"; W="${spec##*:}"
+        TAG="$(basename "$(dirname "${DIR}")")_$(basename "${DIR}")_${W}"
+        OUT="${LX_LOGS}/headroom_${TAG}.json"
+        timeout 4m "${LX_PY}" -m ihdm.cli.diagnose_nan --fixture "${DIR}" --out "${OUT}" \
+            --weights "${W}" "${SHORT[@]}" | grep -E '^(survey live fp16_train|survey live fp32_train|CLASSIFICATION|report)'
+        echo "headroom ${TAG} rc=${PIPESTATUS[0]}"
+    done
+    ;;
 s)
     s_paths "$@"
     lx_banner "S session ${S_RUN_ID} (${S_TAG})"
