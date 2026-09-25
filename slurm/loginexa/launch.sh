@@ -15,6 +15,8 @@ TAG="$(printf '%s_' "${ITEM}" "$@" | tr -c 'A-Za-z0-9_.-' '_' | cut -c1-60)"
 LOG="${REMOTE_LOGS}/${TAG}gpu${GPU}_$(date +%Y%m%d_%H%M%S).log"
 ARGS="$(printf ' %q' "${ITEM}" "${GPU}" "$@")"
 
+# `mkdir ...; nohup ... &` and not `mkdir ... && nohup ... &`: the latter backgrounds a subshell
+# that keeps the ssh channel's stdout open until the item ends (the launch then blocks 25 min).
 # shellcheck disable=SC2029  # expanded locally on purpose: every value is known here
-ssh picasso "ssh loginexa 'mkdir -p ${REMOTE_LOGS} && nohup timeout 25m bash ${REMOTE_REPO}/slurm/loginexa/harness.sh${ARGS} > ${LOG} 2>&1 < /dev/null & sleep 3; test -s ${LOG} && echo started || echo \"log still empty after 3 s\"'"
+ssh picasso "ssh loginexa 'mkdir -p ${REMOTE_LOGS}; nohup timeout 25m bash ${REMOTE_REPO}/slurm/loginexa/harness.sh${ARGS} > ${LOG} 2>&1 < /dev/null & sleep 3; test -s ${LOG} && echo started || echo \"log still empty after 3 s\"'"
 echo "LOG=${LOG}"
