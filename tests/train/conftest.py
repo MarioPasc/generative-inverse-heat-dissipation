@@ -153,7 +153,23 @@ def smoke_dataset(tmp_path_factory) -> Path:
     return build_dataset(tmp_path_factory.mktemp("t21_data"), "synthetic")
 
 
-def run_training(data_root: Path, workdir: Path, n_iters: int, timeout: int = 300):
+def _cpu_env() -> dict[str, str]:
+    """The environment of a CPU-only trainer subprocess (see :func:`run_training`)."""
+    env = dict(os.environ)
+    env["CUDA_VISIBLE_DEVICES"] = ""
+    env["PYTHONPATH"] = str(REPO_ROOT)
+    env["OMP_NUM_THREADS"] = str(TORCH_THREADS)
+    env["MKL_NUM_THREADS"] = str(TORCH_THREADS)
+    return env
+
+
+def run_training(
+    data_root: Path,
+    workdir: Path,
+    n_iters: int,
+    timeout: int = 300,
+    overrides: dict[str, object] | None = None,
+):
     """Run ``train.train`` on the smoke config in a CPU-only subprocess.
 
     ``model_code/utils.py: create_model`` wraps the model in
@@ -174,12 +190,17 @@ def run_training(data_root: Path, workdir: Path, n_iters: int, timeout: int = 30
         ``config.training.n_iters`` for this invocation.
     timeout : int
         Subprocess timeout in seconds.
+    overrides : dict[str, object] | None
+        Extra ``{"section.key": value}`` assignments applied to the config before training.
 
     Returns
     -------
     subprocess.CompletedProcess
         The finished process, so callers can assert on the return code and the output.
     """
+    assignments = "\n".join(
+        f"config.{key} = {value!r}" for key, value in (overrides or {}).items()
+    )
     script = textwrap.dedent(
         f"""
         import torch
@@ -192,23 +213,53 @@ def run_training(data_root: Path, workdir: Path, n_iters: int, timeout: int = 30
         config = smoke.get_config()
         config.data.root = {str(data_root)!r}
         config.training.n_iters = {n_iters}
-        trainer.train(config, {str(workdir)!r})
         """
-    )
-    env = dict(os.environ)
-    env["CUDA_VISIBLE_DEVICES"] = ""
-    env["PYTHONPATH"] = str(REPO_ROOT)
-    env["OMP_NUM_THREADS"] = str(TORCH_THREADS)
-    env["MKL_NUM_THREADS"] = str(TORCH_THREADS)
+    ) + assignments + f"\ntrainer.train(config, {str(workdir)!r})\n"
     return subprocess.run(
         [sys.executable, "-c", script],
         cwd=REPO_ROOT,
-        env=env,
+        env=_cpu_env(),
         capture_output=True,
         text=True,
         timeout=timeout,
         check=False,
     )
+
+
+def run_injected(data_root: Path, workdir: Path, args: list[str], timeout: int = 300):
+    """Run ``slurm/loginexa/train_inject.py`` on the smoke config in a CPU-only subprocess.
+
+    Parameters
+    ----------
+    data_root : Path
+        The directory *containing* the synthetic dataset folder.
+    workdir : Path
+        The run directory.
+    args : list[str]
+        Extra arguments of the driver (``--inject``, ``--set``, ``--cpu-grad-scaler``).
+    timeout : int
+        Subprocess timeout in seconds.
+
+    Returns
+    -------
+    subprocess.CompletedProcess
+        The finished process.
+    """
+    command = [
+        sys.executable, str(REPO_ROOT / "slurm" / "loginexa" / "train_inject.py"),
+        "--smoke-data-root", str(data_root), "--workdir", str(workdir),
+        "--threads", str(TORCH_THREADS), *args,
+    ]
+    return subprocess.run(
+        command, cwd=REPO_ROOT, env=_cpu_env(), capture_output=True, text=True,
+        timeout=timeout, check=False,
+    )
+
+
+@pytest.fixture(scope="session")
+def inject_runner():
+    """Expose :func:`run_injected` to the test modules."""
+    return run_injected
 
 
 @pytest.fixture(scope="session")

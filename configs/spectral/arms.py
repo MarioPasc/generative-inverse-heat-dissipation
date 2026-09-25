@@ -287,6 +287,10 @@ def _build_config(spec: ArmSpec) -> ml_collections.ConfigDict:
     training.log_freq = training.log_every
     training.eval_freq = training.eval_every
     training.sampling_freq = training.grid_every
+    # D19 skip policy (ihdm.train.guard): under an enabled GradScaler a non-finite loss is a no-op
+    # step, logged as "skip"; abort after 10 consecutive or more than 100 skipped steps.
+    training.max_consecutive_skips = 10
+    training.max_skips = 100
 
     # sampling (D3: the paper's prior is N(u_K, delta^2 I))
     config.sampling = sampling = ml_collections.ConfigDict()
@@ -347,7 +351,10 @@ def _build_config(spec: ArmSpec) -> ml_collections.ConfigDict:
     # optimization
     config.optim = optim = ml_collections.ConfigDict()
     optim.optimizer = "Adam"
-    optim.lr = 2e-4
+    # D19 (recipe v2): D4"'s pre-registered fallback. Array 2408239 ran 2e-4 and 7 of its 11
+    # started runs hit a non-finite loss 367-888 steps after the warm-up ended; the released
+    # configs use 2e-5 (LSUN Churches 128, FFHQ 256) and 1e-4 (AFHQ 256) at these resolutions.
+    optim.lr = 1e-4
     optim.beta1 = 0.9
     optim.eps = 1e-8
     optim.weight_decay = 0.0

@@ -35,11 +35,13 @@ def optimization_manager(config):
             if warmup > 0:
                 for g in optimizer.param_groups:
                     g['lr'] = lr * np.minimum(step / warmup, 1.0)
+            grad_norm = None  # D19 hook (04 §5): the pre-clip norm of the unscaled gradients
             if grad_clip >= 0:
-                torch.nn.utils.clip_grad_norm_(params, max_norm=grad_clip)
+                grad_norm = torch.nn.utils.clip_grad_norm_(params, max_norm=grad_clip)
             # Since grads already scaled, this just takes care of possible NaN values
             scaler.step(optimizer)
             scaler.update()
+            return grad_norm
     else:
         def optimize_fn(optimizer, params, step, lr=config.optim.lr,
                         warmup=config.optim.warmup,
@@ -48,9 +50,11 @@ def optimization_manager(config):
             if warmup > 0:
                 for g in optimizer.param_groups:
                     g['lr'] = lr * np.minimum(step / warmup, 1.0)
+            grad_norm = None  # D19 hook (04 §5): the pre-clip gradient norm
             if grad_clip >= 0:
-                torch.nn.utils.clip_grad_norm_(params, max_norm=grad_clip)
+                grad_norm = torch.nn.utils.clip_grad_norm_(params, max_norm=grad_clip)
             optimizer.step()
+            return grad_norm
     return optimize_fn
 
 
@@ -115,15 +119,15 @@ def get_step_fn(train, scales, config, optimize_fn=None,
                     # Followed https://github.com/pytorch/pytorch/issues/37730
                     scaler.scale(loss).backward()
                 scaler.scale(losses_batch)
-                optimize_fn(optimizer, model.parameters(), step=state['step'],
-                            scaler=scaler)
+                state['grad_norm'] = optimize_fn(optimizer, model.parameters(), step=state['step'],
+                                                 scaler=scaler)
                 state['step'] += 1
                 state['ema'].update(model.parameters())
             else:
                 optimizer.zero_grad()
                 loss, losses_batch, fwd_steps_batch = loss_fn(model, batch)
                 loss.backward()
-                optimize_fn(optimizer, model.parameters(), step=state['step'])
+                state['grad_norm'] = optimize_fn(optimizer, model.parameters(), step=state['step'])
                 state['step'] += 1
                 state['ema'].update(model.parameters())
         else:
@@ -136,4 +140,5 @@ def get_step_fn(train, scales, config, optimize_fn=None,
 
         return loss, losses_batch, fwd_steps_batch
 
+    step_fn.scaler = scaler  # D19 hook (04 §5): train.py reads the AMP scale at log steps
     return step_fn

@@ -140,6 +140,11 @@ fi
 cd "${REPO_DIR}" || exit 1
 export PYTHONPATH="${REPO_DIR}:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
+# The env ships no .pyc for sympy, triton, PIL, pip, ...: without this, the first task writes
+# ~900 .pyc files and ~120 __pycache__ dirs into the env on FSCRATCH, which sits at its file
+# quota (T3.4, measured 2026-09-25). Node-local, per job, never on FSCRATCH or $HOME.
+export PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/ihdm_pycache_${SLURM_JOB_ID:-$$}"
+echo "Pycache:     ${PYTHONPYCACHEPREFIX}"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export MKL_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 

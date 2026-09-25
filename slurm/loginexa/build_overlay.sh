@@ -19,6 +19,11 @@
 # Idempotent: re-running on a complete overlay only re-verifies it.
 set -euo pipefail
 
+# The base env holds no .pyc for pip, sympy, triton, PIL, yaml, absl, ...; without this line the
+# first import writes ~900 of them (and ~120 __pycache__ dirs) INTO the base env on FSCRATCH,
+# which is at its file quota (measured on the first build, 2026-09-25, and reverted).
+export PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/ihdm_pycache_${USER}}"
+
 USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 BASE_ENV="${IHDM_ENV_PREFIX:-${USER_ROOT}/fscratch/conda_envs/ihdm}"
 OVERLAY="${IHDM_OVERLAY:-${USER_ROOT}/execs/ihdm/overlay/ihdm-v100}"

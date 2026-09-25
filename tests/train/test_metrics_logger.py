@@ -15,7 +15,7 @@ import pytest
 import torch
 
 from configs.spectral import smoke
-from ihdm.train.logging import OCTAVE_BIN_NAMES, MetricsLogger, global_grad_norm, octave_bin
+from ihdm.train.logging import OCTAVE_BIN_NAMES, MetricsLogger, octave_bin
 
 
 @pytest.mark.parametrize(
@@ -127,14 +127,28 @@ def test_events_carry_their_kind_and_extra_fields(tmp_path):
     assert records[2] == {"step": 7, "kind": "resume", "from": "/somewhere/checkpoint.pth"}
 
 
-def test_global_grad_norm_matches_the_manual_norm():
-    layer = torch.nn.Linear(4, 3)
-    layer(torch.ones(2, 4)).sum().backward()
-    expected = float(
-        np.sqrt(sum(float(p.grad.pow(2).sum()) for p in layer.parameters()))
-    )
-    assert global_grad_norm(layer.parameters()) == pytest.approx(expected, rel=1e-6)
+def test_grad_norm_and_amp_scale_are_written_as_given(tmp_path):
+    logger = _logger(tmp_path, log_every=1)
+    logger.log_train(0, 1.0, torch.tensor([1.0]), torch.tensor([1]), 1e-4, 0.1, 3.5,
+                     amp_scale=32768.0)
+    logger.log_train(1, 1.0, torch.tensor([1.0]), torch.tensor([1]), 1e-4, 0.1, None)
+    logger.close()
+    first, second = _records(tmp_path)
+    assert (first["grad_norm"], first["amp_scale"]) == (3.5, 32768.0)
+    assert (second["grad_norm"], second["amp_scale"]) == (None, None)
 
 
-def test_global_grad_norm_is_zero_without_gradients():
-    assert global_grad_norm(torch.nn.Linear(2, 2).parameters()) == 0.0
+def test_a_skipped_step_adds_no_loss_but_keeps_the_cadence(tmp_path):
+    logger = _logger(tmp_path, log_every=2)
+    nan = torch.tensor([float("nan")])
+    logger.log_train(1, 1.0, torch.tensor([2.0]), torch.tensor([1]), 1e-4, 0.1, 1.0)
+    logger.log_train(2, 1.0, nan, torch.tensor([1]), 1e-4, 0.1, float("nan"), skipped=True)
+    logger.log_train(3, 1.0, nan, torch.tensor([1]), 1e-4, 0.1, None, skipped=True)
+    logger.log_train(4, 1.0, nan, torch.tensor([1]), 1e-4, 0.1, None, skipped=True)
+    logger.close()
+    first, second = _records(tmp_path)
+    assert first["step"] == 2 and first["loss"] == pytest.approx(2.0)  # only the finite step
+    assert first["it_per_s"] == pytest.approx(2 / 0.2)  # the skipped step still took time
+    assert second["step"] == 4 and second["loss"] is None  # a window of skipped steps only
+    assert all(value is None for value in second["loss_per_octave"].values())
+    assert "NaN" not in (tmp_path / "metrics.jsonl").read_text()
