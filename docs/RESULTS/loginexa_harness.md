@@ -27,7 +27,7 @@ full logs are in `~/execs/ihdm/logs/loginexa/` on Picasso).
 | H3 artefacts and cadence, MRI and photograph cell | **PASS** (2/2) | `H3 check_run PASS` ×2 |
 | H4 resume, extension, recipe check | **PASS** | resume at 151, 301, 401; `rc=4 run_dir=identical` ×4 |
 | H5 skip and abort paths on the CUDA scaler | **PASS** | skips 25, 33 then `done n_skipped 2`; abort at 10 consecutive (exit 3); carried 10; disabled scaler exit 3 |
-| H6 downstream (`load_ema_model`, `evaluate_run`) | (pending) | |
+| H6 downstream (`load_ema_model`, `evaluate_run`) | **PASS** | both loads finite; `evaluate_run` and `--gate` rc=0, strict JSON, no NaN (4 documented nulls) |
 | H7 V100 memory and throughput at batch 16 | **PASS** | 0.87–0.88 it/s, 28.52 GiB peak |
 | S (pre-registered stability check) | **PASS at lr 1e-4** | `docs/RESULTS/nan_diagnosis.md` §4 |
 
@@ -277,3 +277,36 @@ every log step (`loss: null` for a window of skipped steps only); the tenth cons
 aborted with exit 3 and kept the rolling checkpoint (step 22); the resume carried `n_skipped=10`
 to the final `done`; with `optim.automatic_mp=false` the first non-finite loss aborted with exit 3
 and left the previous rolling checkpoint (step 11) untouched and finite.
+
+## H6 — downstream: `load_ema_model` and `evaluate_run` on the H3 checkpoints
+
+`harness.sh h6 2 /tmp/ihdm_T3.4/h3/ixi_A0_s1`, code `e284287`,
+`h6__tmp_ihdm_T3.4_h3_ixi_A0_s1_gpu2_20260925_122545.log`: `ihdm.sampling.loader.load_ema_model`
+on `ema_iter_000200.pt` and `ema_iter_000300.pt` (with `load_run_config`), then the ticket's two
+commands (`evaluate_run` is T5.1's, run unchanged). Verbatim:
+
+```
+H6 load_ema_model step=200 training=False n_params=61056257 out_finite=True
+H6 load_ema_model step=300 training=False n_params=61056257 out_finite=True
+H6 evaluate_run rc=0 seconds=476
+2026-09-25 12:32:47,595 INFO ihdm.metrics.run_eval final set: 16 chains at step 300 in 132.4 s (8.273 s/chain) -> /tmp/ihdm_T3.4/h3/ixi_A0_s1/samples/000300/final
+2026-09-25 12:33:43,846 INFO ihdm.metrics.run_eval heldout set: 6 chains at step 300 in 55.5 s (9.248 s/chain) -> /tmp/ihdm_T3.4/h3/ixi_A0_s1/samples/000300/heldout
+OK ixi_A0_s1 dataset=ixi arm=A0 seed=1 steps=[200, 300] lsd={200: 0.3856, 300: 0.4497} t_tau=None final_lsd=0.44740589850027607 M=1.2177296119855652 D_pix=0.007858124063315087 kid=None fid=None n_ref=None -> /tmp/ihdm_T3.4/h3/ixi_A0_s1/metrics
+H6 evaluate_run --gate rc=0 seconds=12
+2026-09-25 12:34:06,630 INFO ihdm.metrics.run_eval gate 200 vs 300: LSD 0.3856 -> 0.4497, difference -0.0641 [-0.1131, -0.0181], extend=False
+GATE [200, 300] difference=-0.06410 CI=[-0.11308, -0.01810] extend=False
+H6 ckpt_000200.json: 781 bytes, top keys ['checkpoint', 'checkpoint_sha256', 'lsd', 'lsd_octaves', 'n_reference', 'n_samples', 'n_seeds', 'sample_batch', 'sample_rng_seed', 'samples_dir', 'seed_list', 'seed_list_sha256', 'step', 'variance_ratio'], null/nan leaves 0 []
+H6 ckpt_000300.json: 778 bytes, top keys [...], null/nan leaves 0 []
+H6 final.json: 3105 bytes, top keys ['M', 'M_lp', 'checkpoint', …], null/nan leaves 1 ['final.inception']
+H6 gate.json: 589 bytes, top keys ['difference', 'extend', 'lsd_a', 'lsd_b', 'n_bins', 'n_reference', 'n_seeds', 'relative_change', 'rule', 'sample_batch', 'sample_rng_seed', 'seed_list_sha256', 'step_a', 'step_b'], null/nan leaves 0 []
+H6 summary.json: 3576 bytes, top keys ['a0_final_lsd', 'checkpoint_selection', …, 't_tau', 't_tau_note', 'variance_ratio_by_step'], null/nan leaves 3 ['summary.a0_final_lsd', 'summary.final.inception', 'summary.t_tau']
+```
+
+Both commands exit 0 and write every file; every file is strict JSON (parsed with `NaN`/`Infinity`
+rejected) and holds **no NaN**. The four `null` leaves are the documented "not computed" markers
+of the options the ticket prescribes, each with its note in the same file: `final.inception`
+(`"inception_note": "skipped (--skip-inception)"`) and `t_tau` / `a0_final_lsd` (`"t_tau_note":
+"not computed: --a0-final-lsd was not given (T_tau needs the A0 run's final LSD)"`). No defect to
+report to T5.1. The seed lists the command reads (`<dataset>/eval_seeds_*.npy`, created at 09:32 by
+T5.1's work) already existed, so nothing was written on FSCRATCH (checked: no FSCRATCH entry newer
+than 09:33 at 12:36). Sampling on the V100: 8.27 s per 200-step chain per image (A100: 3.21 s).
