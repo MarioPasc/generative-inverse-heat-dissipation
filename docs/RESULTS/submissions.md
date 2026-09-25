@@ -380,3 +380,9 @@ LSD(35k) − LSD(40k) lies above zero; the evaluation array (T5.1, `AMP=fp16 TIM
 `docs/RESULTS/evaluation_plan.md` §6) is submitted after that decision.
 
 **Outcome:** _running._
+
+- **Early check (≈ 14:00, `main`).** Tasks 0–7 all passed step 2,000, beyond array 1's failure window (1,367–1,888).
+- **Guard events.** Zero `skip` and zero `abort` events.
+- **Cell decoding.** Each `CELL index=… run_id=…` line matches `cells.csv`.
+- **Throughput and memory.** 1.69–1.70 it/s, 28.54 GB peak.
+- **Gradient norm and loss scale.** The pre-clip `grad_norm` at step 2,000 was 135–829, and `amp_scale` was 32–128.
