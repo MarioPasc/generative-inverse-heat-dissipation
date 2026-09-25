@@ -71,17 +71,20 @@ def main() -> int:
         torch.cuda.synchronize()
         rows.append((int(state["step"]), float(loss.detach()), float(state["grad_norm"]),
                      float(train_step.scaler.get_scale()), time.perf_counter() - t0))
-    for row in rows:
-        print("H1 step=%d loss=%.4f grad_norm_preclip=%.4g amp_scale=%.0f dt=%.2fs" % row)
+    for step, loss_v, norm, scale, dt in rows:
+        print(f"H1 step={step} loss={loss_v:.4f} grad_norm_preclip={norm:.4g} "
+              f"amp_scale={scale:.0f} dt={dt:.2f}s")
     peak = torch.cuda.max_memory_allocated() / 2**30
+    reserved = torch.cuda.max_memory_reserved() / 2**30
     steady = [r[4] for r in rows[5:]]
     ok &= report("train_step_fp16_b16",
                  all(torch.isfinite(torch.tensor(r[1])) for r in rows)
                  and batch.shape == (16, 1, 192, 192),
                  f"batch={tuple(batch.shape)} dtype_autocast=fp16 "
                  f"losses={[round(r[1], 4) for r in rows[-5:]]} (last 5) "
-                 f"peak_alloc_gib={peak:.2f} reserved_gib={torch.cuda.max_memory_reserved() / 2**30:.2f} "
-                 f"step_s={sum(steady) / len(steady):.3f} (mean of steps 6-25, data loading included)")
+                 f"peak_alloc_gib={peak:.2f} reserved_gib={reserved:.2f} "
+                 f"step_s={sum(steady) / len(steady):.3f} (mean of steps 6-25, data loading "
+                 "included)")
     finite = [r[2] for r in rows if torch.isfinite(torch.tensor(r[2]))]
     ok &= report("grad_norm_hook",
                  all(torch.isfinite(torch.tensor(r[2])) and r[2] > 0 for r in rows[-3:])
