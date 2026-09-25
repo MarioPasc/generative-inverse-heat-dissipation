@@ -100,11 +100,17 @@ uses `$LOCALSCRATCH`.
 
 ## Submit
 
+Before the v2 submission (D19): the loginexa harness has passed on the commit being submitted
+(`docs/RESULTS/loginexa_harness.md`), the run root is empty (`ls $IHDM_RUN_ROOT` prints nothing;
+array-1 directories left there are refused with exit 4 rather than resumed), and FSCRATCH has
+≥ 1.3k files of headroom below its 250k soft quota (≈ 40 files per run).
+
 ```bash
 ssh picasso
 cd /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-dissipation
-git fetch && git checkout ticket/T3.3-full-array-submission && git log -1
+git fetch && git checkout main && git pull && git log -1
 
+ls /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm     # must be empty
 quota                                          # file-count headroom: ~40 files per run
 bash slurm/array/submit_array.sh --dry-run     # print the sbatch line, submit nothing
 bash slurm/array/submit_array.sh --test-only   # sbatch --test-only, submit nothing
