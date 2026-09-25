@@ -56,7 +56,82 @@ while every fp32 loss on the same inputs is finite (the hook profile then names 
 
 ## 3. Results
 
-(filled from the loginexa runs below)
+Runs: `harness.sh diag` on loginexa GPUs 2 and 3, 2026-09-25 11:06–11:22, code `677cec4`, V100
+with the cu126 overlay; reports `~/execs/ihdm/logs/loginexa/diag_{ixi_A0_s1,lsun_church_A3_s1}.json`
+(704 s and 931 s). Verbatim verdict lines:
+
+```
+run ixi_A0_s1 checkpoint step 1383 abort {'step': 1382, 'kind': 'abort', 'reason': 'non-finite training loss', 'loss': 'nan'}
+params: total norm 201.5, max |w| 1.085, non-finite 0, lr in optimizer [0.0002]
+survey live fp16_train: 64/64 batches, 272/1024 samples non-finite; median batch loss 1.6172401905059814
+survey live fp32_train: 0/64 batches, 0/1024 samples non-finite; median batch loss 1.5511428713798523
+survey live fp16_eval: 63/64 batches, 271/1024 samples non-finite; median batch loss 1.6048554182052612
+survey live fp32_eval: 0/64 batches, 0/1024 samples non-finite; median batch loss 1.5347827672958374
+survey ema fp16_train: 0/64 batches non-finite
+sweep: fp16 non-finite samples 772 at levels [26, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93]; fp32 non-finite 0
+replay: fp16 non-finite samples 820 at levels [12, 19, 23, 24, 26, 32, 37, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87]; fp32 non-finite 0
+hooks (replay level 12 draw 1): first non-finite fp16 module output_blocks.9.2.conv; modules >= 65504 in fp32: []
+CLASSIFICATION fp16_forward_overflow: 2135 non-finite fp16 losses, 0 non-finite fp32 losses on the same inputs | first non-finite fp16 output: output_blocks.9.2.conv (Conv2d) | fp32 median batch loss 1.551 vs logged [0.44221675395965576, 0.5370804667472839, 0.6657921075820923, 0.4849953353404999, 0.42022505402565]
+
+run lsun_church_A3_s1 checkpoint step 1368 abort {'step': 1367, 'kind': 'abort', 'reason': 'non-finite training loss', 'loss': 'nan'}
+CLASSIFICATION fp16_forward_overflow: 3879 non-finite fp16 losses, 0 non-finite fp32 losses on the same inputs | first non-finite fp16 output: output_blocks.4.2.conv (Conv2d); its fp32 activation reaches the fp16 limit | fp32 median batch loss 2.751 vs logged [2.0256409645080566, 0.5454163551330566, 0.5914579629898071, 0.7005817890167236, 0.7674493193626404]
+```
+
+| measurement | `ixi_A0_s1` @1383 | `lsun_church_A3_s1` @1368 |
+|---|---|---|
+| weights: global L2 norm / max \|w\| / non-finite | 201.5 / 1.085 / 0 | 202.3 / 1.064 / 0 |
+| largest live–EMA relative distance | `out.2.bias` 1.31; deep GroupNorm biases 0.57–0.69 | `out.2.bias` 10.6; `input_blocks.18–19` norm/out biases 3.7–5.3 |
+| survey, live, fp16 train mode (as trained) | **64/64 batches, 272/1024 samples (26.6 %) non-finite** | **64/64 batches, 422/1024 samples (41.2 %)** |
+| survey, live, fp16 eval mode | 63/64 batches, 271/1024 samples | 64/64 batches, 419/1024 samples |
+| survey, live, fp32 (train / eval) | **0/1024 non-finite**; median batch loss 1.551 / 1.535 | **0/1024**; median 2.751 / 2.744 |
+| survey, EMA, all four conditions | 0/1024 non-finite; median 0.389 (train) / 0.351 (eval) | 0/1024; median 0.483 / 0.459 |
+| last five logged v1 train losses (steps 1150–1350) | 0.442, 0.537, 0.666, 0.485, 0.420 | 2.026, 0.545, 0.591, 0.701, 0.767 |
+| level sweep (16 random images × levels 1–200, fp16) | 772/3200 non-finite, levels 26 and 75–152 ($\sigma_B$ 1.0 and 3.5–27 px); fp32 0 | 1289/3200, levels 1–191 ($\sigma_B$ 0.5–19 px); fp32 0 |
+| replay of the failing step's 16 images (2 draws per level) | 820/6400, levels 12–149; all 16 images fail at levels 83–109; fp32 0 | 1749/6400, levels 2–200; all 16 fail at levels 133–158; fp32 0 |
+| first non-finite fp16 module (train mode, replay input) | `output_blocks.9.2.conv` (the Upsample conv 48² → 96², 256 channels) | `output_blocks.4.2.conv` (the Upsample conv 24² → 48², 256 channels) |
+| that module's fp32 max \|output\| (train / eval mode) | 63,676 / 65,177 = **97.2 % / 99.5 % of 65,504** | 87,149 / 86,983 = **133 % of 65,504** |
+| next largest fp32 activations | `output_blocks.4.2.conv` 62,085–62,518; `output_blocks.5.0.skip_connection` 56,140 | `output_blocks.5.0.skip_connection` 70,188 (107 %); `output_blocks.6` 41,913 |
+| max \|attention logit\| (fp32, any block) | 270 (`input_blocks.12`) | 309 (`input_blocks.16`) |
+
+**Classification: fp16 forward overflow in the decoder's upsampling convolutions, reached during
+a loss spike of the live weights at lr 2e-4** — not a true divergence. Evidence, rule by rule:
+the weights are finite and small (max |w| ≈ 1.1); every fp32 loss on every input is finite (0 of
+1024 survey samples, 0 in the sweeps and replays), while 27–41 % of the training samples give a
+NaN in fp16; the first non-finite fp16 output is an Upsample convolution of the decoder whose
+fp32 output sits at 97–133 % of the fp16 maximum, and the NaN follows from the `GroupNorm32`
+of the next block (`x.float()` of an `inf`); the attention logits (≤ 310) are nowhere near the
+fp16 limit, so the hypothesis of an attention `einsum` overflow is rejected.
+
+The **weights, however, were not healthy**: their fp32 loss is 2.3–5× the train losses logged
+30–230 steps earlier (ixi 1.55 against 0.42–0.67; lsun 2.75 against 0.55–0.77, after a 2.03 at
+step 1,150) and 4–5.7× their own EMA's (ixi 1.55 against 0.39; lsun 2.75 against 0.48), and the
+largest live–EMA distances sit in the output bias and the deepest normalisation biases. The v1
+run was in one of the loss spikes that the logs show throughout the lr ramp (2.83 at step 800,
+1.37 at 900 in `ixi_A0_s1`; 1.83 and 1.91 in `lsun_church_A0_s2`), and at 2e-4 a spike carried
+the decoder's residual stream (a sum of block outputs and skip connections that no normalisation
+bounds) past 65,504. Under rule (1) the fp32 loss would have to exceed 10× the logged one to
+count as divergence; it is 3.5–5.7×, so the pre-registered label is `fp16_forward_overflow`, and
+the mechanism is **an optimisation spike made fatal by fp16**.
+
+Consequences for recipe v2:
+
+- **The skip policy alone would not have saved array 1.** At these weights a batch of 16 has
+  every sample finite with probability $0.734^{16} = 0.7\%$ (ixi) or $0.588^{16} = 0.02\%$ (lsun),
+  and a skipped step leaves the weights unchanged, so the D19 guard would have logged ten
+  consecutive `skip` lines and aborted. The skip policy protects against isolated overflows; what
+  prevents the state is a smaller step, i.e. the lr.
+- **lr 1e-4 removes the event in the window where v1 failed**: check S (§4) ran 3,000 steps at
+  full lr on the two same-seed cells with zero non-finite losses; v1 failed them after 382 and
+  367. The spikes remain visible at 1e-4 (train loss 0.89 at step 1,250 in ixi, 1.07 in lsun, with
+  pre-clip norms 2,483 and 1,148), but finite.
+- **bf16 is not needed** for recipe v2 on this evidence: S passed at 1e-4, and the overflow is
+  a consequence of the spike rather than of values that approach 65,504 in normal operation (the
+  EMA weights at the same steps, and the v2 weights, have their largest activations measured in
+  §3a). The question of fp16 overflow "at 5e-5" did not arise.
+
+### 3a. Activation headroom of healthy and v2 weights
+
+(filled from the `headroom` harness item)
 
 ## 4. Stability check S (pre-registered in D19): **PASSED at lr 1e-4**
 
