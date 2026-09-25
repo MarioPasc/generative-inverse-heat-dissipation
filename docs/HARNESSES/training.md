@@ -85,8 +85,17 @@ bash slurm/loginexa/launch.sh h3 3 lsun_church,A3
 bash slurm/loginexa/launch.sh h4 2 ixi,A0                # SIGTERM + resume, 300 -> 400, recipe-mismatch refusals
 bash slurm/loginexa/launch.sh h5 3                       # skip / abort / carried count / disabled scaler, CUDA scaler
 bash slurm/loginexa/launch.sh h6 2 /tmp/ihdm_T3.4/h3/ixi_A0_s1   # load_ema_model + evaluate_run (+ --gate)
+# several items back to back on one GPU (waits for the GPU to be free before each):
+bash slurm/loginexa/queue.sh 2 h3:ixi,A0 h2:0:7 h2:16:23 h4:ixi,A0 h6:/tmp/ihdm_T3.4/h3/ixi_A0_s1
+# a guard-saved run (exit 3) or any run directory: diagnosis and fp32 activation headroom
+bash slurm/loginexa/launch.sh diag 3 <run_dir> [--weights ema]
+bash slurm/loginexa/launch.sh headroom 3 ixi_A0_s1     # T3.4's four weight sets of one S cell
+# a multi-session run (the S check): chains 24-minute sessions until DONE
+bash slurm/loginexa/chain_s.sh 2 ixi,A0 1
 # 3. poll
 ssh picasso 'tail -n 30 <LOG>'
+# 4. at the end: remove the local scratch of loginexa
+ssh picasso 'ssh loginexa "rm -rf /tmp/ihdm_T3.4 /tmp/ihdm_pycache_h2_*"'
 ```
 
 | item | pass criterion |
