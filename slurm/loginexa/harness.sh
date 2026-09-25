@@ -68,6 +68,7 @@ h2)
         grep -E 'Traceback|Error|error:' "${H2_ROOT}.worker.log" | grep -v FutureWarning | head -5
         RUN="$(find "${H2_ROOT}" -mindepth 1 -maxdepth 1 -type d | head -1)"
         if [[ -n "${RUN}" ]]; then
+            echo "first train line: $(head -n 1 "${RUN}/metrics.jsonl" | cut -c1-230)"
             "${LX_PY}" slurm/loginexa/check_run.py "${RUN}" --data-root "${IHDM_DATA_ROOT}" \
                 --lr 1e-4 --label "H2[${i}]" \
                 | grep -E '^(manifest|tail|PROBLEM|H2)|check_run' | cut -c1-400
