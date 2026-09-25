@@ -23,7 +23,7 @@ full logs are in `~/execs/ihdm/logs/loginexa/` on Picasso).
 | item | verdict | evidence (below) |
 |---|---|---|
 | H1 environment | (pending) | |
-| H2 all 30 cells through the real worker | (pending) | |
+| H2 all 30 cells through the real worker | **PASS** (30/30) | `H2[i] check_run PASS`, `status=ok exit=0` ×30 |
 | H3 artefacts and cadence, MRI and photograph cell | **PASS** (2/2) | `H3 check_run PASS` ×2 |
 | H4 resume, extension, recipe check | (pending) | |
 | H5 skip and abort paths on the CUDA scaler | (pending) | |
@@ -90,3 +90,71 @@ From every train line of the S runs (4,000 steps each, production recipe, fp16 a
 the A100's 28.544 GiB within 0.1 %; `nvidia-smi` showed 30,189 MiB used of 32,768 during S
 (expandable segments on). A 40k-step run would take ≈ 12.8 h on a V100; the A100 array's
 `--time=11:00:00` is sized from the A100's 6.84 h and is unaffected.
+
+## H2 — all 30 cells through the real worker (`N_ITERS=2`)
+
+`harness.sh h2 <gpu> <first> <last>` runs, for each index, the production worker exactly as SLURM
+would, with the SLURM variables set by hand and only the paths pointed at the harness:
+
+```bash
+IHDM_REPO_DIR=~/execs/ihdm/wt/T3.4 IHDM_ENV_PREFIX=~/execs/ihdm/overlay/ihdm-v100 \
+IHDM_RUN_ROOT=/tmp/ihdm_T3.4/h2_gpu<g> N_ITERS=2 SLURM_ARRAY_TASK_ID=<i> SLURM_ARRAY_JOB_ID=h2 \
+SLURM_JOB_ID=h2_<i> SLURM_CPUS_PER_TASK=4 timeout 6m bash slurm/array/train_array.sbatch
+```
+
+then `check_run.py <run> --data-root $IHDM_DATA_ROOT --lr 1e-4` (with the production cadence at
+`n_iters=2`: a train and an eval line at step 0, a checkpoint and a grid at step 2, `done` at 2,
+`full_final.pt`, `DONE`), and deletes the run directory (≈ 2.1 GB) before the next cell. Four
+sessions (cells 0–7 and 16–23 on GPU 2, 8–15 and 24–29 on GPU 3), 11:31–12:04, code `21adc56`–
+`e284287` (the trainer is identical across them). Every cell's worker log shows the decoded row
+(`CELL index=i run_id=…`, checked against `cells.csv` by the worker itself), `Pycache:
+/tmp/ihdm_pycache_h2_<i>`, and `END TASK … status=ok exit=0`. **30 of 30 PASS**:
+
+| index | run_id (decoded) | tier | worker | schedule (sha256) | data sha256 | step-0 loss | check_run | s |
+|---|---|---|---|---|---|---|---|---|
+| 0 | `ixi_A0_s1` | 1 | ok (exit 0) | `log_W2` ad9c8c1163f5… | b666e407e9af… | finite (value not printed by the first H2 session) | PASS | 119 |
+| 1 | `ixi_A0_s2` | 1 | ok (exit 0) | `log_W2` ad9c8c1163f5… | b666e407e9af… | finite (value not printed by the first H2 session) | PASS | 115 |
+| 2 | `ixi_A0_s3` | 1 | ok (exit 0) | `log_W2` ad9c8c1163f5… | b666e407e9af… | finite (value not printed by the first H2 session) | PASS | 116 |
+| 3 | `lsun_church_A0_s1` | 1 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 299c076853b0… | finite (value not printed by the first H2 session) | PASS | 116 |
+| 4 | `lsun_church_A0_s2` | 1 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 299c076853b0… | finite (value not printed by the first H2 session) | PASS | 115 |
+| 5 | `lsun_church_A0_s3` | 1 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 299c076853b0… | finite (value not printed by the first H2 session) | PASS | 115 |
+| 6 | `ixi_A3_s1` | 1 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | b666e407e9af… | finite (value not printed by the first H2 session) | PASS | 116 |
+| 7 | `ixi_A3_s2` | 1 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | b666e407e9af… | finite (value not printed by the first H2 session) | PASS | 115 |
+| 8 | `ixi_A3_s3` | 1 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | b666e407e9af… | 3.7507593631744385 | PASS | 113 |
+| 9 | `lsun_church_A3_s1` | 1 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 299c076853b0… | 3.734490156173706 | PASS | 114 |
+| 10 | `lsun_church_A3_s2` | 1 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 299c076853b0… | 3.7439205646514893 | PASS | 114 |
+| 11 | `lsun_church_A3_s3` | 1 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 299c076853b0… | 3.7352845668792725 | PASS | 115 |
+| 12 | `ixi_A1_s1` | 2 | ok (exit 0) | `log_W8` 840237df58f9… | b666e407e9af… | 3.751293182373047 | PASS | 114 |
+| 13 | `ixi_A1_s2` | 2 | ok (exit 0) | `log_W8` 840237df58f9… | b666e407e9af… | 3.7673168182373047 | PASS | 113 |
+| 14 | `lsun_church_A1_s1` | 2 | ok (exit 0) | `log_W8` 840237df58f9… | 299c076853b0… | 3.729823112487793 | PASS | 114 |
+| 15 | `lsun_church_A1_s2` | 2 | ok (exit 0) | `log_W8` 840237df58f9… | 299c076853b0… | 3.741638422012329 | PASS | 114 |
+| 16 | `ixi_A2_s1` | 2 | ok (exit 0) | `ixi_W2` 9c80d11c6141… | b666e407e9af… | 3.838407516479492 | PASS | 116 |
+| 17 | `ixi_A2_s2` | 2 | ok (exit 0) | `ixi_W2` 9c80d11c6141… | b666e407e9af… | 3.9464807510375977 | PASS | 115 |
+| 18 | `lsun_church_A2_s1` | 2 | ok (exit 0) | `ixi_W2` 9c80d11c6141… | 299c076853b0… | 3.7999520301818848 | PASS | 115 |
+| 19 | `lsun_church_A2_s2` | 2 | ok (exit 0) | `ixi_W2` 9c80d11c6141… | 299c076853b0… | 3.791059970855713 | PASS | 115 |
+| 20 | `lsun_church_A2p_s1` | 2 | ok (exit 0) | `lsun_church_W2` fa28a66e71c6… | 299c076853b0… | 3.8006129264831543 | PASS | 116 |
+| 21 | `lsun_church_A2p_s2` | 2 | ok (exit 0) | `lsun_church_W2` fa28a66e71c6… | 299c076853b0… | 3.8053805828094482 | PASS | 115 |
+| 22 | `oasis1_A0_s1` | 3 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 8396e1c113ab… | 3.801084518432617 | PASS | 115 |
+| 23 | `oasis1_A0_s2` | 3 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 8396e1c113ab… | 3.833141326904297 | PASS | 116 |
+| 24 | `lsun_bedroom_A0_s1` | 3 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 7e4c98d15446… | 3.792151927947998 | PASS | 114 |
+| 25 | `lsun_bedroom_A0_s2` | 3 | ok (exit 0) | `log_W2` ad9c8c1163f5… | 7e4c98d15446… | 3.8098320960998535 | PASS | 114 |
+| 26 | `oasis1_A3_s1` | 3 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 8396e1c113ab… | 3.7523374557495117 | PASS | 115 |
+| 27 | `oasis1_A3_s2` | 3 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 8396e1c113ab… | 3.7607791423797607 | PASS | 114 |
+| 28 | `lsun_bedroom_A3_s1` | 3 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 7e4c98d15446… | 3.723694086074829 | PASS | 114 |
+| 29 | `lsun_bedroom_A3_s2` | 3 | ok (exit 0) | `ixi_W8` 8bfe56bd7592… | 7e4c98d15446… | 3.739612102508545 | PASS | 113 |
+
+
+The schedule of every arm is the one `04` §2 assigns (A0 `log_W2`, A1 `log_W8`, A2 `ixi_W2`, A3
+`ixi_W8`, A2′ `lsun_church_W2`), and `check_run` verified each manifest hash against the file
+and `schedules/schedules.json`; the data hash of every dataset (`ixi` b666…, `lsun_church` 299c…,
+`oasis1` 8396…, `lsun_bedroom` 7e4c…) against its `meta.json`. Peak memory at step 0 is 27.83 GiB
+in every cell (batch 16 of 192² on the V100); every step-0 loss is finite (3.72–3.95). Verbatim
+sample (cell 29):
+
+```
+CELL         index=29 run_id=lsun_bedroom_A3_s2 dataset=lsun_bedroom arm=A3 seed=2 tier=3
+END TASK     index=29 run_id=lsun_bedroom_A3_s2 status=ok exit=0
+first train line: {"step": 0, "kind": "train", "loss": 3.739612102508545, "lr": 0.0, "it_per_s": 0.6019646549227528, "im…
+H2[29] check_run PASS /tmp/ihdm_T3.4/h2_gpu3/lsun_bedroom_A3_s2 (0 problems)
+H2 cell=29 worker_rc=0 seconds=113
+```
