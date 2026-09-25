@@ -32,3 +32,23 @@ large (> 0.3) and the reference-vs-reference LSD (run `lsd(ref[:400], ref[400:])
 FID of a dataset's ref split against a blurred copy ($\sigma_B = 1, 2, 4$) increases
 monotonically; FID(ref, ref-with-different-seed-subsets) is small. If not monotone at $192^2$
 grayscale, FID is reported but not interpreted (EXPERIMENT_PLAN §6.1).
+
+## 4. The evaluation array on Picasso (T5.1)
+
+Scripts are in `slurm/eval/`; the order, the flags and the file budget are in
+`slurm/eval/README.md`, and the sizing and AMP decision in `docs/RESULTS/evaluation_plan.md`.
+What a green evaluation looks like, and how to check it:
+
+| check | command | expected |
+|---|---|---|
+| one writer ran | `ls $IHDM_DATA_ROOT/<ds>/` | 6 cache files per dataset; `prepare_<job>.json` in `~/execs/ihdm/eval/` lists the digests of `slurm/eval/expected_seed_lists.csv` |
+| no second writer | `stat -c %Y $IHDM_DATA_ROOT/<ds>/_features_inception_ref.npy` before and after the array | unchanged |
+| the gate costs 1,000 chains | `pytest tests/metrics/test_run_eval.py -k gate_command` | green; on the cluster, `gate.tar` holds exactly two `samples.npy` |
+| a task finished | `ls ~/execs/ihdm/eval/<run_id>_summary.json` | present; `checkpoint_steps` = the eight D16 steps; `sampling.amp` = the decided mode |
+| every set reused on a rerun | resubmit one index with `FORCE_EVAL=1` | every `sampling.log` entry `reused: true` |
+| precisions never mix | `pytest tests/metrics/test_run_eval.py -k "precision or amp"` | green: an fp16/bf16 evaluation writes to `samples_amp-<mode>/`/`metrics_amp-<mode>/` and leaves the fp32 trees byte-identical; a set of another precision is refused, never overwritten |
+
+Local dry runs of the workers (no SLURM needed) set `LOCALSCRATCH`, `IHDM_REPO_DIR`,
+`IHDM_ENV_PREFIX`, `IHDM_DATA_ROOT`, `IHDM_RUN_ROOT`, `IHDM_EVAL_HOME`, `IHDM_INCEPTION_SRC` and
+the tiny counts (`TIMING_N`, `GATE_N_LSD`, `EVAL_EXTRA_ARGS`); the exact invocations used in
+T5.1 are in its log §4.

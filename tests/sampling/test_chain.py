@@ -7,6 +7,7 @@ import pytest
 import torch
 
 from ihdm.sampling.chain import (
+    AMP_DTYPES,
     SampleRequest,
     prior_state,
     resolve_request,
@@ -244,3 +245,81 @@ def test_sample_from_seeds_rejects_a_bad_stack(tiny_run, tiny_config):
     flat = np.zeros((32, 32), dtype=np.uint8)
     with pytest.raises(SamplingError, match=r"\(N, H, W\) stack"):
         sample_from_seeds(model, tiny_config, flat, SampleRequest(n_per_seed=1), "cpu")
+
+
+# --------------------------------------------------------------------------------------------
+# The autocast dtype (T5.1, ``--amp bf16``)
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("dtype", [None, "float16", "bfloat16"])
+def test_resolve_request_accepts_the_known_autocast_dtypes(tiny_config, dtype):
+    """``None`` (the device default) and the two half-precision dtypes pass validation."""
+    request = SampleRequest(n_per_seed=1, amp=True, amp_dtype=dtype)
+    resolve_request(request, tiny_config)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "fp16", "half", ""])
+def test_resolve_request_rejects_an_unknown_autocast_dtype(tiny_config, dtype):
+    """A dtype outside ``AMP_DTYPES`` is refused before any tensor is allocated."""
+    with pytest.raises(SamplingError, match="amp_dtype must be one of"):
+        resolve_request(SampleRequest(n_per_seed=1, amp=True, amp_dtype=dtype), tiny_config)
+
+
+def test_the_default_request_keeps_autocast_off():
+    """The defaults are today's behaviour: no autocast, no dtype."""
+    request = SampleRequest(n_per_seed=1)
+    assert request.amp is False and request.amp_dtype is None
+    assert AMP_DTYPES == ("float16", "bfloat16")
+
+
+def test_bf16_autocast_samples_are_valid(tiny_run, tiny_config, tiny_dataset):
+    """``bfloat16`` runs the real network end to end and stays finite in [0, 1]."""
+    from ihdm.sampling.seeds import load_seed_images
+
+    seeds, _ = load_seed_images(tiny_dataset, "seed", n=2, rng_seed=0)
+    model = _model(tiny_run, tiny_config)
+    kwargs = {"n_per_seed": 2, "batch_size": 4, "rng_seed": 3, "delta": 0.05}
+
+    fp32 = sample_from_seeds(model, tiny_config, seeds, SampleRequest(**kwargs), "cpu")
+    bf16 = sample_from_seeds(
+        model, tiny_config, seeds, SampleRequest(amp=True, amp_dtype="bfloat16", **kwargs), "cpu"
+    )
+
+    assert bf16.shape == fp32.shape and bf16.dtype == np.float32
+    assert np.isfinite(bf16).all()
+    assert bf16.min() >= 0.0 and bf16.max() <= 1.0
+
+
+class AutocastProbe(torch.nn.Module):
+    """Records whether autocast is on, and with which dtype, at every network call."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.seen: list[tuple[bool, torch.dtype]] = []
+
+    def forward(self, x, levels):  # noqa: D102 - trivial test double
+        self.seen.append((torch.is_autocast_enabled("cpu"), torch.get_autocast_dtype("cpu")))
+        return torch.zeros_like(x)
+
+
+@pytest.mark.parametrize(
+    "amp, dtype, expected",
+    [
+        (False, None, False),
+        (True, "bfloat16", torch.bfloat16),
+        (True, "float16", torch.float16),
+    ],
+)
+def test_the_requested_autocast_dtype_reaches_the_network(tiny_config, amp, dtype, expected):
+    """The network, and only the network, runs under autocast with the requested dtype."""
+    probe = AutocastProbe()
+    seeds = np.full((1, 32, 32), 128, dtype=np.uint8)
+    request = SampleRequest(n_per_seed=1, batch_size=1, amp=amp, amp_dtype=dtype, start_level=2)
+    sample_from_seeds(probe, tiny_config, seeds, request, "cpu")
+
+    assert len(probe.seen) == 2
+    for enabled, seen_dtype in probe.seen:
+        assert enabled is bool(amp)
+        if amp:
+            assert seen_dtype == expected

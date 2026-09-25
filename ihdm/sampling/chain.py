@@ -37,7 +37,14 @@ import torch
 from ihdm.sampling.errors import SamplingError
 from ihdm.sampling.loader import build_heat_module
 
-__all__ = ["SampleRequest", "prior_state", "resolve_request", "reverse_chain", "sample_from_seeds"]
+__all__ = [
+    "AMP_DTYPES",
+    "SampleRequest",
+    "prior_state",
+    "resolve_request",
+    "reverse_chain",
+    "sample_from_seeds",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +73,9 @@ class SampleRequest:
         Seed of the ``torch.Generator`` that draws the prior and sampling noise.
     amp : bool
         Run the network under ``torch.autocast`` on the sampling device.
+    amp_dtype : str | None
+        Autocast dtype, ``"float16"`` or ``"bfloat16"``; ``None`` keeps the device's autocast
+        default (``float16`` on CUDA). Ignored when ``amp`` is ``False``.
     """
 
     n_per_seed: int
@@ -75,6 +85,22 @@ class SampleRequest:
     batch_size: int = 64
     rng_seed: int = 0
     amp: bool = False
+    amp_dtype: str | None = None
+
+
+#: The autocast dtypes a request may name.
+AMP_DTYPES: tuple[str, ...] = ("float16", "bfloat16")
+
+
+def _autocast_dtype(request: SampleRequest) -> torch.dtype | None:
+    """Return the ``torch`` dtype of ``request.amp_dtype``, or ``None`` for the device default."""
+    if request.amp_dtype is None:
+        return None
+    if request.amp_dtype not in AMP_DTYPES:
+        raise SamplingError(
+            f"amp_dtype must be one of {AMP_DTYPES} or None, got {request.amp_dtype!r}"
+        )
+    return getattr(torch, request.amp_dtype)
 
 
 def resolve_request(request: SampleRequest, config: Any) -> tuple[float, int, bool]:
@@ -95,8 +121,8 @@ def resolve_request(request: SampleRequest, config: Any) -> tuple[float, int, bo
     Raises
     ------
     SamplingError
-        If ``n_per_seed`` or ``batch_size`` is not positive, ``delta`` is negative, or
-        ``start_level`` falls outside ``[0, K]``.
+        If ``n_per_seed`` or ``batch_size`` is not positive, ``delta`` is negative,
+        ``start_level`` falls outside ``[0, K]``, or ``amp_dtype`` is not a known dtype.
     """
     if request.n_per_seed <= 0:
         raise SamplingError(f"n_per_seed must be positive, got {request.n_per_seed}")
@@ -114,6 +140,7 @@ def resolve_request(request: SampleRequest, config: Any) -> tuple[float, int, bo
     start_level = k if request.start_level is None else int(request.start_level)
     if not 0 <= start_level <= k:
         raise SamplingError(f"start_level must lie in [0, {k}], got {start_level}")
+    _autocast_dtype(request)
     prior_noise = (
         bool(config.sampling.get("prior_noise", False))
         if request.prior_noise is None
@@ -266,6 +293,7 @@ def sample_from_seeds(
 
     heat_module = build_heat_module(config, device)
     model_fn = get_model_fn(model, train=False)
+    autocast_kwargs = {} if (dtype := _autocast_dtype(request)) is None else {"dtype": dtype}
     generator = torch.Generator(device=device)
     generator.manual_seed(int(request.rng_seed))
 
@@ -280,7 +308,9 @@ def sample_from_seeds(
             # of magnitude in the mode weights, which half precision cannot carry. Only the
             # network evaluations run under autocast.
             state = prior_state(heat_module, batch, start_level, delta, prior_noise, generator)
-            with torch.autocast(device_type=device.type, enabled=bool(request.amp)):
+            with torch.autocast(
+                device_type=device.type, enabled=bool(request.amp), **autocast_kwargs
+            ):
                 samples = reverse_chain(model_fn, state, start_level, delta, generator)
             out[flat_start:flat_stop] = (
                 samples.float().clamp(0.0, 1.0).squeeze(1).detach().cpu().numpy()

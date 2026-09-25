@@ -18,11 +18,13 @@ from pathlib import Path
 
 from ihdm.metrics.errors import MetricError
 from ihdm.metrics.run_eval import (
+    AMP_MODES,
     DEFAULT_SAMPLE_BATCH,
     N_SEEDS_FINAL,
     N_SEEDS_INTERMEDIATE,
     EvalRequest,
     evaluate_run,
+    metrics_dirname,
 )
 
 __all__ = ["build_parser", "main", "request_from_args"]
@@ -80,6 +82,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--device", default=None, help="torch device (default: the run's config)")
     parser.add_argument(
+        "--amp", choices=AMP_MODES, default="off",
+        help="sampling precision; 'off' is the D16 contract, fp16/bf16 run the network under "
+        "torch.autocast and write to samples_amp-<mode>/ and metrics_amp-<mode>/",
+    )
+    parser.add_argument(
         "--force", action="store_true", help="redraw samples and rewrite result files"
     )
     return parser
@@ -133,6 +140,7 @@ def request_from_args(args: argparse.Namespace) -> EvalRequest:
         n_boot_inception=int(args.fid_boot),
         n_boot_gate=int(args.gate_boot),
         k=int(args.k),
+        amp=str(args.amp),
     )
 
 
@@ -177,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         f"D_pix={final.get('diversity_pix')} "
         f"kid={inception.get('kid')} fid={inception.get('fid')} "
         f"n_ref={inception.get('n_reference')} "
-        f"-> {Path(request.run) / 'metrics'}"
+        f"amp={request.amp} -> {Path(request.run) / metrics_dirname(request.amp)}"
     )
     if summary.get("gate"):
         gate = summary["gate"]
