@@ -4,10 +4,9 @@ Record of every submission of the training array of `00-overview.md` §1. Script
 `slurm/array/` (`cells.csv`, `train_array.sbatch`, `submit_array.sh`, `README.md`); ticket
 T3.3; harness `docs/HARNESSES/picasso.md` §5–§6.
 
-**Status (2026-09-23):** array **2408239** is queued — 30 tasks, `--array=0-29%8`, all `PENDING`
-with `Reason=Priority`. Nothing has started yet and nothing is blocking. Next action: watch for
-the first `RUNNING` task (§1, "First task to run"), then evaluate the plateau gate on the first
-A0 runs (§3).
+**Status (2026-09-25):** array **2408239 FAILED 30/30** (§7). Recipe v2 (lr 1e-4, skip policy,
+D19) is being verified on loginexa by T3.4; the v2 array is submitted by `main` after that
+ticket merges. The run root `fscratch/runs/ihdm` is empty.
 
 ---
 
@@ -323,3 +322,35 @@ done
 ```
 
 `MaxRSS` is recorded on the `.batch` step, so drop `-X` when you want memory.
+
+---
+
+## 7. Outcome of array 1 (2408239): FAILED 30/30 (recorded 2026-09-25 by `main`)
+
+Tasks started 2026-09-24 09:24 on `exa04`/`exa02` (≈ 21 h after submission). Throughput was
+as the probe predicted: 50 steps per 29.3 s = 1.71 it/s, peak 28.5 GB.
+
+| cause | indices | evidence |
+|---|---|---|
+| non-finite training loss, guard abort (exit 3) | 0, 2, 4, 5, 6, 8, 9 | abort at steps 1382, 1606, 1888, 1434, 1672, 1861, 1367 (`ixi_A0_s1`, `ixi_A0_s3`, `lsun_church_A0_s2`, `lsun_church_A0_s3`, `ixi_A3_s1`, `ixi_A3_s3`, `lsun_church_A3_s1`); the lr had been at 2e-4 since step 1,000; last logged train loss 0.35–0.49 |
+| FSCRATCH outage while running (exit 1) | 1, 3, 7, 10 | `OSError: [Errno 116] Stale file handle` on `metrics.jsonl` / tensorboard at 2026-09-24 10:54; reached steps 8750, 7900, 5400, 750 with no non-finite loss |
+| FSCRATCH outage at start (exit 1, 2 s) | 11–29 | `couldn't chdir … Stale file handle`; `[FATAL] no interpreter at …/conda_envs/ihdm/bin/python` |
+
+The logged `grad_norm` is identically 1.0 in every run because it was read after
+`clip_grad_norm_`; it carried no information (fixed in D19). The loss curves showed spikes
+during the warm-up ramp from lr ≈ 1.2e-4 on (e.g. `ixi_A0_s1` 2.83 at step 800 and 1.37 at 900 against
+≈ 0.4–0.6 around them; `lsun_church_A0_s2` 1.83 at 600 and 1.91 at 900).
+
+**Decision:** D19 (`00-overview.md`) — recipe v2 with lr 1e-4, skip policy, pre-registered
+stability check S, loginexa harness (T3.4), rerun of all 30 cells from scratch.
+
+**Archive and wipe.** Everything under `fscratch/runs/ihdm/` (11 run directories, 82 files,
+12 GB) and all of `~/execs/ihdm/logs/` were copied to
+`/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/training/array_2408239_failed/`
+on the workstation, then the run directories and the 60 `train_2408239_*` logs were deleted on
+Picasso at Mario's request. The eight setup/probe logs cited in `picasso_setup.md` and
+`picasso_probe.md` were kept. Fixtures for T3.4's diagnosis and T5.1's timing job (16 files,
+2.3 GB, in `$HOME`, not FSCRATCH) are at `~/execs/ihdm/fixtures/array_2408239/`:
+`ixi_A0_s1` and `lsun_church_A3_s1` (the resume checkpoints the guard saved at steps 1383 and
+1368, i.e. the weights that produced the non-finite loss) and `ixi_A0_s2` (EMA 5,000 and 7,500).
+They are removed when W10 closes.

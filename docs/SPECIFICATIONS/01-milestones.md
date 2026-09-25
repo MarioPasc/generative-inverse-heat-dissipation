@@ -33,10 +33,11 @@ dead time. M3 still closes only when the full array is submitted.
 | T3.1 | Picasso: env, repo clone, data rsync, import check job | single | opus5-high | T2.3 | `slurm/**` (env + sync scripts), `docs/RESULTS/picasso_setup.md` |
 | T3.2 | Picasso probe: 3 epochs of `lsun_church` and `ixi`, resume test, artefact check | single | opus5-high | T3.1 | `slurm/probe/**`, `docs/RESULTS/picasso_probe.md` |
 | T3.3 | Full array submission through the `picasso-sbatch` skill | single | opus5-high (+ skill) | T3.2 | `slurm/array/**`, `docs/RESULTS/submissions.md` |
+| T3.4 | Training recovery after array 1 (D19): NaN diagnosis, recipe v2 (lr 1e-4), skip policy, exhaustive loginexa harness | ‖ with T5.1 | opus55-xhigh | T3.3 | see `M3-picasso/T3.4-training-recovery-loginexa.md` |
 | T4.1 | Spectral metrics: LSD, octave profile, $T_\tau$, inherited band | ‖ with T4.2 | opus5-xhigh | T2.2 | `ihdm/metrics/spectral.py`, `tests/metrics/test_spectral.py` |
 | T4.2 | Memorisation ratio $M$, within-seed diversity, PCA-around-seed | ‖ with T4.1 | opus5-xhigh | T2.2 | `ihdm/metrics/memorisation.py`, `ihdm/metrics/diversity.py`, `tests/metrics/test_mem*.py` |
 | T4.3 | `evaluate_run` CLI, statistics (bootstrap over seeds, permutation test), result schema | single | opus5-high | T4.1, T4.2 | `ihdm/cli/evaluate_run.py`, `ihdm/stats/**`, `tests/stats/**` |
-| T5.1 | Evaluation array on Picasso (sampling + metrics per checkpoint) | single | opus5-high (+ skill) | T3.3, T4.3 | `slurm/eval/**` |
+| T5.1 | Evaluation array on Picasso: scripts, one-writer caches, gate job, measured A100 cost (submission by `main` after training) | ‖ with T3.4 | opus55-high (+ skill) | T4.3 | see `M5-evaluation/T5.1-evaluation-array.md` |
 | T5.2 | Collect results, copy to `$HOME`, integrity check | single | sonnet5-high | T5.1 | `ihdm/cli/collect_results.py`, `docs/RESULTS/collection.md` |
 | T6.1 | Interaction tables, CIs, permutation tests, transfer signs | ‖ with T6.2 | opus5-xhigh | T5.2 | `ihdm/analysis/tables.py`, `docs/RESULTS/tables/**` |
 | T6.2 | Figures: LSD vs iteration, diversity and $M$, PCA around seed, inherited band, sample grids | ‖ with T6.1 | opus5-high | T5.2 | `ihdm/analysis/figures.py`, `docs/RESULTS/figures/**` |
@@ -52,6 +53,7 @@ dead time. M3 still closes only when the full array is submitted.
 | W4 | T3.1 → T3.2 → T3.3 | sequential; queue-bound |
 | W5 | T4.1 ‖ T4.2, then T4.3 | may overlap with W4's queue wait |
 | W6 | T5.1 → T5.2 | after the training array finishes |
+| W10 (2026-09-25) | T3.4 ‖ T5.1 | array 1 failed (D19); T5.1's scripts and cost check use the queue dead time; the v2 array is submitted by `main` after T3.4 merges |
 | W7 | T6.1 ‖ T6.2 | |
 
 ## Milestone tickets not yet written in full

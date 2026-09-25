@@ -286,3 +286,50 @@ attention, not the agents' speed, was the bottleneck.
    `picasso-sbatch` skill and the notes in `docs/SPECIFICATIONS/M5-evaluation/README.md`.
 4. T5.2 collection to `~/execs/ihdm/results` and to this workstation; then T6.1/T6.2 in parallel.
 5. Before any of it, decide the FSCRATCH clean-up with Mario and pin torch in `environment.yml`.
+
+---
+
+# Session 2 — [Orchestrator-GenAI], 2026-09-25
+
+Model: Claude Opus 5.5 (`claude-opus-5-5`, 1M), effort xhigh. Skills: `parallel-agents`.
+Subagents run Opus 5.5 (`CLAUDE_CODE_SUBAGENT_MODEL=claude-opus-5-5`).
+
+## 9. The user's prompts (verbatim)
+
+```
+Gain the context needed for you to become the orchestrator of the project. Read any md file that you may need, apart from projects/GenAI/code/docs/AGENT-LOGS/ORCHESTRATOR-SESSION.md ; Re-check on the Picasso jobs and see if they succeded. If so, create a folder for the results in /media/mpascual/Sandisk2TB/research and copy them in an organized way. Results are in /mnt/home/users/tic_163_uma/mpascual/fscratch/runs while logs are in /mnt/home/users/tic_163_uma/mpascual/execs/ihdm/logs. When you have checked that the runs have correctly finished, read and understand the whole planning of the project in projects/GenAI/code/docs/SPECIFICATIONS and check where the last agents left in projects/GenAI/code/docs/AGENT-LOGS ; Using the harnesses for agents in projects/GenAI/code/docs/HARNESSES spawn maximum 2 subagents via /parallel-agents to continue with the next ticket.
+```
+
+Mid-turn addition:
+
+```
+If you need to re-submit the jobs, make sure to whipe out the current results and logs so that we free space, and exhaustively test the training/logging (metrics) procedure in loginexa (for example)
+```
+
+## 10. What was found and decided
+
+- Array 2408239 failed 30/30 (`docs/RESULTS/submissions.md` §7): 7 non-finite-loss aborts at
+  steps 1,367–1,888 (lr at 2e-4 since 1,000), 23 killed by an FSCRATCH outage on 2026-09-24.
+  Nothing to copy as results; the failed array was archived to the SanDisk and wiped on Picasso.
+- D19 (`00-overview.md`): recipe v2 = D4‴'s pre-registered fallback lr 1e-4, the skip policy,
+  pre-clip gradient norm, recipe check on resume, pre-registered stability check S. The released
+  configs use 2e-5 at ≥128 px; D4‴'s check never ran at full lr (process defect, §12).
+- loginexa: the cu130 env cannot run on the V100 (sm_70); T3.4 builds a cu126 overlay in `$HOME`
+  (FSCRATCH is at 248.8k of 250k files).
+
+## 11. Wave record (session 2)
+
+| wave | tickets | agents | base | verdicts | merged |
+|---|---|---|---|---|---|
+| W10 | T3.4 (recovery + loginexa harness) ‖ T5.1 (evaluation scripts + A100 cost) | opus55-xhigh ‖ opus55-high | see `M3-picasso/WAVE-W10.md` | — | — |
+
+## 12. Lessons added to §8
+
+- **A stability check must run at the maximum lr, not inside the warm-up.** T2.3 (525 steps)
+  and T3.2 (600 steps) both ended before step 1,000, so D4‴'s rule never had a chance to fire.
+- **Log the quantity before the transformation you care about.** A post-clip gradient norm is
+  identically the clip value.
+- **A guard's saved state is a diagnosis fixture.** The abort saved the resume checkpoint after a
+  no-op step, i.e. the exact weights that produced the non-finite loss.
+- **Exercise every cell before the array.** Array 1 never executed indices 11–29; a config error
+  in the transfer or ablation cells would have surfaced days later.

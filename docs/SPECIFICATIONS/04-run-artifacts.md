@@ -120,6 +120,21 @@ Every checkpoint: `{"step": s, "kind": "ckpt", "path": "..."}`.
 On resume: `{"step": s, "kind": "resume", "from": "..."}`. Also `nan` guard: if the loss is not
 finite, log `{"kind": "abort", ...}` and exit non-zero.
 
+**Amendment D19 (2026-09-25, implemented by T3.4).** (a) `grad_norm` is the global L2 norm of the
+*unscaled* gradients **before** clipping (the value `clip_grad_norm_` returns; `null` when
+non-finite); array 1 logged the post-clip norm, identically 1.0. Every train line also carries
+`amp_scale` (the GradScaler scale after `update()`; `null` when the scaler is disabled).
+(b) Non-finite loss with an **enabled** GradScaler: the update was already skipped by the scaler,
+so the trainer logs `{"step": s, "kind": "skip", "loss": null, "n_skipped": k, "consecutive": c}`
+and continues; it aborts with exit 3 and `{"kind": "abort", "reason": ...}` when
+`c >= training.max_consecutive_skips` (10) or `k > training.max_skips` (100). With a disabled
+scaler (no AMP, or CPU) the first non-finite loss aborts as before, because the optimiser step
+then applies the non-finite gradient. `k` survives resume and appears in the final
+`{"kind": "done", ...}` event. (c) On resume, the trainer compares the run's recipe (the
+resolved config minus `training.n_iters` and the cadence keys) with the manifest's and aborts
+with a distinct exit code, writing nothing, when they differ; extension by a larger
+`n_iters` is still allowed.
+
 ### 3.3 EMA checkpoint (`ema_iter_XXXXXX.pt`)
 
 `torch.save({"step": int, "ema_state_dict": <model state dict with EMA weights, keys without the
@@ -164,6 +179,7 @@ starts at `start_level` and does not keep intermediates; the released function i
 | manifest and metrics | `train.py` after model creation and inside the loop | `ihdm.train.manifest.write(...)`, `ihdm.train.logging.MetricsLogger` fed with `loss`, `losses_batch`, `fwd_steps_batch`, timing, memory, lr |
 | sample grids | `train.py` sampling block | replaced by `ihdm.train.grids.save_grid(...)` using 8 fixed training seeds; the released gif/video writers are not called |
 | schedule from file | `configs/spectral/arms.py` | the factory loads the array; no change in `model_code/` |
+| pre-clip norm and AMP scale (D19) | `scripts/losses.py: optimization_manager` and `get_step_fn` | keep the return value of `clip_grad_norm_` and expose it and the GradScaler's scale to `train.py` with the smallest possible edit; the optimisation itself is unchanged |
 
 Everything else in `model_code/`, `scripts/`, `sample.py`, `evaluate.py` is read-only.
 
