@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -857,3 +859,134 @@ def test_a_non_finite_draw_is_refused_before_anything_is_written(
         )
     assert not list(workdir.rglob("samples.npy"))
     assert not list(workdir.rglob("request.json"))
+
+
+# --------------------------------------------------------------------------------------------
+# The launch arithmetic of slurm/eval/ (T3.5, D22): gate pair, gate names, unpack order
+# --------------------------------------------------------------------------------------------
+
+_REPO = Path(__file__).resolve().parents[2]
+_COMMON_SH = _REPO / "slurm" / "eval" / "common.sh"
+_SUBMIT_EVAL = _REPO / "slurm" / "eval" / "submit_eval.sh"
+
+
+def _bash(script: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    """Run ``script`` in bash after sourcing ``slurm/eval/common.sh``."""
+    full_env = {"PATH": os.environ["PATH"], "HOME": os.environ.get("HOME", "/tmp")}
+    full_env.update(env or {})
+    return subprocess.run(
+        ["bash", "-c", f'set -uo pipefail; source "{_COMMON_SH}"; {script}'],
+        capture_output=True, text=True, env=full_env, check=False,
+    )
+
+
+@pytest.mark.parametrize(
+    ("n_iters", "env", "expected"),
+    [
+        (40000, {}, "35000 40000"),
+        (60000, {}, "55000 60000"),
+        (60000, {"GATE_EARLY": "35000", "GATE_LATE": "40000"}, "35000 40000"),
+        (60000, {"GATE_EARLY": "40000"}, "40000 60000"),
+    ],
+)
+def test_gate_pair_follows_n_iters_and_explicit_values_win(n_iters, env, expected):
+    result = _bash(f'ihdm_gate_steps {n_iters} && echo "$GATE_EARLY $GATE_LATE"', env)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+@pytest.mark.parametrize(
+    ("n_iters", "env"),
+    [
+        (42500, {}),
+        (0, {}),
+        ("abc", {}),
+        (60000, {"GATE_EARLY": "60000"}),
+        (60000, {"GATE_EARLY": "57500"}),
+    ],
+)
+def test_gate_pair_refuses_a_bad_length_or_order(n_iters, env):
+    result = _bash(f"ihdm_gate_steps {n_iters}", env)
+    assert result.returncode != 0
+    assert "FATAL" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("suffix", "early", "late", "expected"),
+    [
+        ("_amp-fp16", 35000, 40000, "ixi_A0_s1_amp-fp16_gate_035000_040000"),
+        ("_amp-fp16", 55000, 60000, "ixi_A0_s1_amp-fp16_gate_055000_060000"),
+        ("", 55000, 60000, "ixi_A0_s1_gate_055000_060000"),
+    ],
+)
+def test_gate_stem_is_named_by_the_step_pair(suffix, early, late, expected):
+    result = _bash(f'ihdm_gate_stem ixi_A0_s1 "{suffix}" {early} {late}')
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+def test_the_eval_worker_unpacks_every_gate_tar_of_its_run_legacy_first(tmp_path):
+    """Legacy 35k/40k name first, then the pair-named tars in step order; nothing else."""
+    names = [
+        "ixi_A0_s1_amp-fp16_gate.tar",                # gate job 2432703 (pre-T3.5 name)
+        "ixi_A0_s1_amp-fp16_gate_055000_060000.tar",
+        "ixi_A0_s1_amp-fp16_gate_035000_040000.tar",
+        "ixi_A0_s1_amp-fp16_gate.json",               # plain result, not a tar
+        "ixi_A0_s1_gate_055000_060000.tar",           # other precision
+        "ixi_A0_s2_amp-fp16_gate_055000_060000.tar",  # other run
+        "lsun_church_A0_s1_amp-fp16_gate.tar",
+    ]
+    for name in names:
+        (tmp_path / name).write_bytes(b"")
+    result = _bash(f'ihdm_gate_tars "{tmp_path}" ixi_A0_s1 _amp-fp16')
+    assert result.returncode == 0, result.stderr
+    assert [Path(line).name for line in result.stdout.split()] == [
+        "ixi_A0_s1_amp-fp16_gate.tar",
+        "ixi_A0_s1_amp-fp16_gate_035000_040000.tar",
+        "ixi_A0_s1_amp-fp16_gate_055000_060000.tar",
+    ]
+    off = _bash(f'ihdm_gate_tars "{tmp_path}" ixi_A0_s1 ""')
+    assert [Path(line).name for line in off.stdout.split()] == ["ixi_A0_s1_gate_055000_060000.tar"]
+    empty = _bash(f'ihdm_gate_tars "{tmp_path / "none"}" ixi_A0_s1 ""')
+    assert empty.returncode == 0 and empty.stdout == ""
+
+
+def test_last_ema_step_reads_the_largest_checkpoint(tmp_path):
+    (tmp_path / "checkpoints").mkdir()
+    for step in (2500, 40000, 60000):
+        (tmp_path / "checkpoints" / f"ema_iter_{step:06d}.pt").write_bytes(b"")
+    (tmp_path / "checkpoints" / "full_final.pt").write_bytes(b"")
+    assert _bash(f'ihdm_last_ema_step "{tmp_path}"').stdout.strip() == "60000"
+    assert _bash(f'ihdm_last_ema_step "{tmp_path / "absent"}"').stdout.strip() == "0"
+
+
+def _dry_run(tmp_path: Path, what: str, **env: str) -> subprocess.CompletedProcess:
+    full_env = {
+        "PATH": os.environ["PATH"],
+        "HOME": str(tmp_path),
+        "USER": "tester",
+        "IHDM_LOGS_DIR": str(tmp_path / "logs"),
+        "IHDM_EVAL_HOME": str(tmp_path / "eval"),
+        "IHDM_REPO_DIR": str(_REPO),
+        "IHDM_CELLS": str(_REPO / "slurm" / "array" / "cells.csv"),
+    }
+    full_env.update(env)
+    return subprocess.run(
+        ["bash", str(_SUBMIT_EVAL), what, "--dry-run"],
+        capture_output=True, text=True, env=full_env, check=False,
+    )
+
+
+def test_submit_eval_gate_dry_run_at_60k_names_the_55k_60k_pair(tmp_path):
+    result = _dry_run(tmp_path, "gate", N_ITERS="60000", AMP="fp16")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "gate pair:   55000 vs 60000" in result.stdout
+    assert "<run_id>_amp-fp16_gate_055000_060000.{json,tar}" in result.stdout
+    assert "GATE_EARLY=55000,GATE_LATE=60000" in result.stdout
+    assert "[DRY-RUN] nothing submitted" in result.stdout
+
+
+def test_submit_eval_refuses_an_n_iters_off_the_stride(tmp_path):
+    result = _dry_run(tmp_path, "gate", N_ITERS="42500")
+    assert result.returncode != 0
+    assert "not a positive multiple of 5000" in result.stderr
