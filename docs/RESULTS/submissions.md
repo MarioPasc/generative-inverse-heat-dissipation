@@ -416,3 +416,10 @@ rolling checkpoint; if that also fails, the cell is reported with 2 seeds, flagg
 **Decision (D21 a, Mario): stay at 40k.** This deviates from the pre-registered D10/D17 rule,
 which says extend because the IXI CI lies above zero; the report must state it. No extension array
 is submitted. The evaluation array follows once all 30 runs (with task 11's attempt 2) hold `DONE`.
+
+**Superseded the same day by D22 (Mario): extend all 30 runs to 60k by resume, no retraining.**
+Once every run is `DONE` at 40k, it is checked with `check_array` and archived to
+`…/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/training/array_2432693_40k/`. The
+runs are then extended in place with `N_ITERS=60000`, and the extension is recorded in §9. Ticket
+T3.5 (`docs/SPECIFICATIONS/M3-picasso/T3.5-extension-60k.md`) holds the procedure and the code
+changes it needs.
