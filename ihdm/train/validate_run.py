@@ -44,7 +44,7 @@ EVENT_KEYS: dict[str, frozenset[str]] = {
     "resume": frozenset({"step", "kind", "from"}),
     "skip": frozenset({"step", "kind", "loss", "n_skipped", "consecutive"}),
     "abort": frozenset({"step", "kind", "reason", "loss", "n_skipped", "consecutive",
-                        "resume_saved"}),
+                        "abort_state"}),
     "done": frozenset({"step", "kind", "n_skipped"}),
 }
 MANIFEST_KEYS = frozenset({"run_id", "dataset_id", "arm", "seed", "git_sha", "git_dirty",

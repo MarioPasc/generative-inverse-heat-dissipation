@@ -85,7 +85,8 @@ def test_disabled_scaler_aborts_at_the_first_non_finite_loss(
     (abort,) = _of(records, "abort")
     assert abort["step"] == 3
     assert "disabled" in abort["reason"]
-    assert abort["resume_saved"] is False and abort["n_skipped"] == 0
+    assert abort["abort_state"] is None and abort["n_skipped"] == 0
+    assert list((workdir / "checkpoints-meta").glob("abort_step_*.pth")) == []
     # The rolling checkpoint of step 2 (state step 3) is kept, not overwritten by NaN weights.
     state = torch.load(workdir / "checkpoints-meta" / "checkpoint.pth", map_location="cpu")
     assert int(state["step"]) == 3
@@ -128,18 +129,21 @@ def test_ten_consecutive_skips_abort_and_the_count_survives_resume(
     assert [r["step"] for r in _of(records, "skip")] == list(range(3, 13))
     (abort,) = _of(records, "abort")
     assert abort["step"] == 12 and abort["consecutive"] == 10 and abort["n_skipped"] == 10
-    assert abort["resume_saved"] is True
-    assert _saved_step(workdir) == 13  # saved after the no-op step 12
+    # D21: the state that produced the losses goes beside the rolling checkpoint, not over it.
+    abort_state = Path(abort["abort_state"])
+    assert abort_state.name == "abort_step_000012.pth" and abort_state.is_file()
+    assert int(torch.load(abort_state, map_location="cpu")["step"]) == 13
+    assert _saved_step(workdir) == 11  # the rolling save of loop step 10 (resume_every = 2)
 
     before = len(records)
     second = inject_runner(smoke_dataset.parent, workdir, [*args, "--inject", "15"])
     assert second.returncode == 0, second.stdout + second.stderr
     new = _records(workdir)[before:]
-    assert [r["step"] for r in _of(new, "resume")] == [13]
+    assert [r["step"] for r in _of(new, "resume")] == [11]
     skips = [(r["step"], r["n_skipped"], r["consecutive"]) for r in _of(new, "skip")]
-    assert skips == [(15, 11, 1)], "10 skips carried over from before the resume, plus one"
+    assert skips == [(15, 9, 1)], "the 8 skips before the rolling checkpoint carry over, plus one"
     (done,) = _of(new, "done")
-    assert done["n_skipped"] == 11
+    assert done["n_skipped"] == 9
 
 
 def test_a_resume_with_another_recipe_exits_4_and_writes_nothing(

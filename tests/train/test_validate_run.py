@@ -75,7 +75,7 @@ def test_cadence_gaps_skips_and_aborts_are_caught(run_copy):
     records = [r for r in records if not (r["kind"] == "eval" and r["step"] == 3)]
     records.append({"step": 4, "kind": "skip", "loss": None, "n_skipped": 1, "consecutive": 1})
     records.append({"step": 5, "kind": "abort", "reason": "x", "loss": "nan", "n_skipped": 1,
-                    "consecutive": 1, "resume_saved": True})
+                    "consecutive": 1, "abort_state": "checkpoints-meta/abort_step_000005.pth"})
     problems = check_metrics(records, _expectation(run_copy))
     assert any(p.startswith("eval cadence: missing [3]") for p in problems)
     assert any(p.startswith("skip at step 4") for p in problems)

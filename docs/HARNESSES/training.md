@@ -46,7 +46,8 @@ and identical loss at step 1 (CPU: exactly; GPU: to 1e-4 with AMP).
 ## 5a. D19 events and scalars (T3.4)
 
 `metrics.jsonl` also carries `skip` (non-finite loss, step skipped by the `GradScaler`),
-`abort` (with `reason`, `n_skipped`, `consecutive`, `resume_saved`) and a final
+`abort` (with `reason`, `n_skipped`, `consecutive`, `abort_state`: the path of the saved
+state, which never overwrites the rolling checkpoint, D21) and a final
 `{"kind": "done", "n_skipped": k}`; every train line carries the pre-clip `grad_norm` and
 `amp_scale`. A resume with another recipe exits 4 and writes nothing. The whole contract is
 checked line by line by `ihdm.train.validate_run` (CLI: `python slurm/loginexa/check_run.py <run>
@@ -104,7 +105,7 @@ ssh picasso 'ssh loginexa "rm -rf /tmp/ihdm_T3.4 /tmp/ihdm_pycache_h2_*"'
 | H2 | for every one of the 30 cells: the worker's `CELL` line decodes the right row, `END TASK … status=ok exit=0`, and `H2[i] check_run PASS` (manifest schedule hash = file = `schedules.json`, data hash = `meta.json`, lr 1e-4, finite loss at batch 16, every artefact) |
 | H3 | `H3 check_run PASS` on both cells: H-TRAIN §2–§3, the line-by-line schema of every kind, no `NaN` token, a varying pre-clip `grad_norm`, `amp_scale` on every train line, lr 1e-4 after warm-up, `full_final.pt`, `DONE`; look at `grids/iter_000300.png` |
 | H4 | the resumed run logs exactly one `resume` at the rolling checkpoint's step and passes `check_run`; the extension to 400 passes; each recipe mismatch exits 4 with `run_dir=identical` |
-| H5 | skips at the injected steps with `amp_scale` halved and `done n_skipped=2`; ten consecutive skips exit 3 with `resume_saved: true`; the resume carries `n_skipped=10`; the disabled scaler exits 3 at once with `resume_saved: false` and a finite rolling checkpoint |
+| H5 | skips at the injected steps with `amp_scale` halved and `done n_skipped=2`; ten consecutive skips exit 3 with the abort state in `abort_step_<step>.pth` and the rolling checkpoint untouched (D21; the loginexa run of 2026-09-25 predates D21 and shows the old `resume_saved: true`); the resume carries the skips before the rolling checkpoint; the disabled scaler exits 3 at once with `abort_state: null` and a finite rolling checkpoint |
 | H6 | `load_ema_model` loads both checkpoints; `evaluate_run` and `evaluate_run --gate` exit 0 and every result file is strict JSON with no `null`/`NaN` leaf |
 | H7 | the V100's `it_per_s` and `gpu_mem_peak_gb` at batch 16, read from the S and H3 `metrics.jsonl` |
 

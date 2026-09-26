@@ -169,18 +169,18 @@ def _step_scalars(state, scaler, scaler_enabled):
 
 
 def _abort(workdir, state, metrics, step, loss, decision, save_state):
-    """Log the ``abort`` event, keep the resume checkpoint when it is still valid, exit 3.
+    """Log the ``abort`` event and exit 3; the rolling checkpoint is never overwritten (D21).
 
     With an enabled scaler every skipped step was a no-op, so the weights are those that produced
-    the non-finite losses and are saved for diagnosis (array 1's fixtures came from exactly this).
-    With a disabled scaler the optimiser has just applied non-finite gradients, so the last
-    rolling checkpoint is the only good state left and is not overwritten.
+    the non-finite losses: they go to ``abort_step_<step>.pth`` for diagnosis (array 1's fixtures
+    came from exactly this state). ``checkpoint.pth`` stays the last good rolling state, so the
+    run can be retried from it (array 2's run 11 lost that option when the abort overwrote it).
+    With a disabled scaler the optimiser has just applied non-finite gradients, so nothing is saved.
     """
+    abort_state = ckpt_utils.save_abort_state(workdir, state, step) if save_state else None
     metrics.log_event("abort", step, reason=decision.reason, loss=repr(float(loss.item())),
                       n_skipped=decision.n_skipped, consecutive=decision.consecutive,
-                      resume_saved=bool(save_state))
-    if save_state:
-        ckpt_utils.save_resume(workdir, state)
+                      abort_state=None if abort_state is None else str(abort_state))
     metrics.close()
     logging.error("Aborting at step %d: %s", step, decision.reason)
     sys.exit(ABORT_EXIT_CODE)
