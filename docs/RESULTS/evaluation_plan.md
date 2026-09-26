@@ -71,7 +71,7 @@ The first array task's log checks this estimate. The 30 % margin covers it sever
 
 | mode | sampling h/run | total h/run | `--time` (× 1.3, rounded up to 15 min) | campaign A100-h (30 runs) | makespan at 8 concurrent tasks (4 rounds) |
 |---|---|---|---|---|---|
-| `off` | 7.185 | **7.43** | **10:00:00** | **223** | 29.7 h |
+| `off` | 7.185 | **7.43** | **09:45:00**² | **223** | 29.7 h |
 | `fp16` | 5.389 | **5.64** | **07:30:00** | **169** | 22.6 h |
 | `bf16` | 5.387 | **5.64** | **07:30:00** | **169** | 22.6 h |
 
@@ -79,8 +79,14 @@ The gate job costs 2 × 1,000 chains, which is 1.80 A100-h in `off` (`--time 03:
 array reuses its four LSD sets through the gate tar, so the gate adds nothing net to the
 campaign. The prepare job took 35 s and the timing job 2 h.
 
-`--time` is set on the command line by `submit_eval.sh` (`TIME_LIMIT`, default `10:00:00` for
-`off`). Under `fp16` or `bf16`, submit with `TIME_LIMIT=07:30:00`.
+`--time` is set on the command line by `submit_eval.sh`. Since T3.5 its default is **computed**
+from `N_ITERS` and `AMP` with the rule of this table (`common.sh` `ihdm_eval_time_limit`), and an
+explicit `TIME_LIMIT` still wins. At 40k: `07:30:00` for `fp16`/`bf16`, `09:45:00` for `off`.
+The 60k sizing is in §9.
+
+² Until T3.5 this row said `10:00:00`, which was also the launcher's fixed default. The table's own
+rule (7.43 h × 1.3 = 9.66 h, rounded up to 15 min) gives `09:45:00`; `main` ruled on 2026-09-26
+that the one rule applies everywhere. The 15 min difference sits inside the × 1.3 margin.
 
 No count cut is needed: the D16 plan fits the QOS `medium_uma` wall (3 days) with room to spare,
 and 223 A100-h is D16's 214 A100-h plus the Inception and bookkeeping overhead.
@@ -150,18 +156,18 @@ cd /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-d
 # 1. plateau gate on cells 0 and 3, as soon as the v2 training array <TRAIN> is queued:
 TRAIN_ARRAY=<TRAIN> bash slurm/eval/submit_eval.sh gate --test-only
 TRAIN_ARRAY=<TRAIN> bash slurm/eval/submit_eval.sh gate
-#    -> ~/execs/ihdm/eval/gate/{ixi_A0_s1,lsun_church_A0_s1}_gate.json ; main decides D10.
-# 2. the evaluation array, after main's decision (AMP and TIME_LIMIT per §3/§4):
+#    -> ~/execs/ihdm/eval/gate/<run_id><amp>_gate_<early>_<late>.json (6-digit steps; the files
+#       of job 2432703 keep the pre-T3.5 name <run_id>_amp-fp16_gate.json = 35k/40k); main decides.
+# 2. the evaluation array, after main's decision (AMP per §4; --time computed from N_ITERS, AMP):
 TRAIN_ARRAY=<TRAIN> bash slurm/eval/submit_eval.sh array --test-only
-TRAIN_ARRAY=<TRAIN> bash slurm/eval/submit_eval.sh array                          # AMP=off, 10:00:00
-#   or, if main picks fp16:
-AMP=fp16 TIME_LIMIT=07:30:00 TRAIN_ARRAY=<TRAIN> bash slurm/eval/submit_eval.sh array
+AMP=fp16 TRAIN_ARRAY=<TRAIN> bash slurm/eval/submit_eval.sh array                 # 07:30:00 at 40k
 # 3. resubmit failed indices (each resumes from its partial tar):
 ARRAY_SPEC='6,17' bash slurm/eval/submit_eval.sh array
 ```
 
-If the runs are extended past 40,000 (D10), submit the array with `N_ITERS=<n>`. The worker then
-checks `ema_iter_<n>.pt`. Use `aftercorr` on the extension array, not on the original one.
+If the runs are extended past 40,000 (D10, D22), submit the array with `N_ITERS=<n>` (§9). The
+worker then requires `ema_iter_<n>.pt` to be the largest EMA checkpoint. Use `aftercorr` on the
+extension array, not on the original one.
 
 ## 7. File budget
 
@@ -177,16 +183,71 @@ checks `ema_iter_<n>.pt`. Use `aftercorr` on the extension array, not on the ori
 Per run: `~/execs/ihdm/eval/<run_id>[_amp-<mode>]_summary.json` (plain) and the tar
 `<run_id>[_amp-<mode>].tar`. The tar holds the shadow run:
 
-- `metrics[_amp-<mode>]/` with `ckpt_<step>.json` × 8, `final.json`, `summary.json`, the `.npy`
+- `metrics[_amp-<mode>]/` with `ckpt_<step>.json` × 8 (× 12 at 60k), `final.json`, `summary.json`, the `.npy`
   sidecars (memorisation per sample, PCA components) and, for cells 0 and 3, `gate.json`;
 - `samples[_amp-<mode>]/<step>/{lsd,final,heldout}/` with `samples.npy`, `seeds.npy`,
   `seed_idx.npy` and `request.json`;
 - links to the run's `config.json`, `manifest.json`, `checkpoints/`, `grids/` and
   `metrics.jsonl`.
 
-Gate: `~/execs/ihdm/eval/gate/<run_id>_gate.json`.
+Gate: `~/execs/ihdm/eval/gate/<run_id>[_amp-<mode>]_gate_<early:06d>_<late:06d>.json`; the 35k/40k
+gate of job 2432703 is `<run_id>_amp-fp16_gate.json` (pre-T3.5 name).
 
 T_tau is not computed in the array, because `--a0-final-lsd` is unknown while the other arms
 run. T5.2/T6.1 compute it from `lsd_by_step` and the A0 run's `final.lsd` in the summaries.
-T5.2 should check that every summary has `checkpoint_steps` equal to the eight D16 steps,
+T5.2 should check that every summary has `checkpoint_steps` equal to every 5,000 up to the run
+length (the eight D16 steps at 40k, twelve at 60k),
 `sampling.amp` equal to the decided mode, and seed-list digests equal to §5.
+
+## 9. Sizing at 60,000 iterations (D22, T3.5)
+
+The runs are extended from 40k to 60k by resume (D22). The evaluated checkpoints become every
+5,000 up to the run length (`run_eval.evaluated_steps`), so a 60k run is evaluated at 12
+checkpoints. The per-checkpoint counts of D16 do not change: 500 LSD samples per checkpoint, and
+the final 2,000 set and the 40 × 50 held-out set at the largest checkpoint only.
+
+Chains per run: 12 × 500 + 2,000 + 40 × 50 = **10,000** (8,000 at 40k). Rule, as in §3: measured
+s/chain × chains + 0.25 h fixed, × 1.3, rounded up to 15 min (`common.sh` `ihdm_eval_time_limit`,
+pinned by `tests/metrics/test_run_eval.py::test_eval_time_limit_follows_the_counts`).
+
+| run length | mode | chains | sampling h/run | total h/run | `--time` | campaign A100-h (30 runs) | makespan at 8 concurrent (4 rounds) |
+|---|---|---|---|---|---|---|---|
+| 40k | `off` | 8,000 | 7.184 | 7.43 | `09:45:00` (was `10:00:00`) | 223 | 29.7 h |
+| 40k | `fp16` | 8,000 | 5.389 | 5.64 | `07:30:00` | 169 | 22.6 h |
+| **60k** | `off` | 10,000 | 8.981 | **9.23** | **`12:00:00`** | **277** | 36.9 h |
+| **60k** | **`fp16`** (D20) | 10,000 | 6.736 | **6.99** | **`09:15:00`** | **210** | 27.9 h |
+| 60k | `bf16` | 10,000 | 6.733 | 6.98 | `09:15:00` | 209 | 27.9 h |
+
+`9.23 h × 1.3 = 11.9997 h` for 60k `off` rounds up to exactly `12:00:00`, with no slack beyond the
+margin itself. The array reuses the LSD sets of the gate tars it unpacks (35k/40k and 55k/60k on
+cells 0 and 3), 4 × 500 chains on 2 of 30 runs. The table ignores that saving.
+
+**Training extension.** 20,000 more steps per run at 1.69–1.71 it/s take ≈ 3.3 h. That is
+**≈ 98 A100-h** for the 30 runs, submitted with `TIME_LIMIT=05:00:00` (× 1.5).
+
+**Gate 55k vs 60k (informational, D22).** It draws 2 × 500 chains per cell, 0.67 h in `fp16`
+(`--time 03:00:00`, unchanged). The output is named by its step pair, so it never overwrites the
+35k/40k gate.
+
+**Campaign after D22 (fp16).** Extension ≈ 98 A100-h, plus the evaluation ≈ 210 A100-h, plus the
+55k/60k gate, ≈ 1.4 A100-h (the 35k/40k gate, job 2432703, took 1 h 21 m).
+
+**Commands (`main`, after the 40k archive).**
+
+```bash
+cd /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-dissipation
+export PYTHONPYCACHEPREFIX=/tmp/ihdm_pyc_$$
+PY=/mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm/bin/python
+RUNS=/mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm
+# extend in place
+N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh --test-only
+N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh              # -> <EXT>
+# health at 60k, once every task has COMPLETED
+$PY -m ihdm.cli.check_array --run-root $RUNS --cells slurm/array/cells.csv --n-iters 60000
+# informational gate 55k vs 60k (writes ..._gate_055000_060000.{json,tar})
+N_ITERS=60000 AMP=fp16 TRAIN_ARRAY=<EXT> bash slurm/eval/submit_eval.sh gate --test-only
+N_ITERS=60000 AMP=fp16 TRAIN_ARRAY=<EXT> bash slurm/eval/submit_eval.sh gate
+# evaluation array at 60k (--time 09:15:00 computed)
+N_ITERS=60000 AMP=fp16 TRAIN_ARRAY=<EXT> bash slurm/eval/submit_eval.sh array --test-only
+N_ITERS=60000 AMP=fp16 TRAIN_ARRAY=<EXT> bash slurm/eval/submit_eval.sh array
+```

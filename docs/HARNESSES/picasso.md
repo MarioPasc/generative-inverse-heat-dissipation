@@ -43,6 +43,7 @@ ssh picasso 'for r in $(cut -d, -f2 <cells.csv> | tail -n +2); do test -f /mnt/h
 ```
 Expected over time: tasks move PENDING → RUNNING → COMPLETED; every finished run has `DONE`,
 8 EMA checkpoints, no `abort` line; a `TIMEOUT` task is resubmitted by index and resumes.
+The whole-array health check is `check_array` (§8).
 
 ## 6. Plateau gate (D10)
 
@@ -82,3 +83,49 @@ run directories on loginexa's local `/tmp` or in `$HOME`, never on FSCRATCH.
 V100 figures at batch 16 (production recipe, fp16 autocast): 0.88 it/s (A100 1.71), 28.5 GiB
 peak allocated of 31.7 GiB — it fits, with `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
 set by `common.sh` against fragmentation (an allocator OOM-and-retry was logged once without it).
+
+## 8. Array health: `check_array` (T3.5)
+
+`python -m ihdm.cli.check_array` is the health harness of the whole training array. It prints one
+row per cell of `cells.csv`, in file order, then the problems under each flagged run id, then a
+verdict. It exits 0 only if every cell is healthy; 1 otherwise; 2 if the cell table is unusable.
+It writes nothing. Run it on the login node with the cluster env and `PYTHONPYCACHEPREFIX` set
+(otherwise the imports write ≈ 1k `.pyc` into the env on FSCRATCH, §6):
+
+```bash
+cd /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/generative-inverse-heat-dissipation
+PYTHONPYCACHEPREFIX=/tmp/ihdm_pyc_$$ PYTHONPATH=$PWD \
+  /mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/ihdm/bin/python -m ihdm.cli.check_array \
+  --run-root /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm \
+  --cells slurm/array/cells.csv --n-iters 40000 \
+  --data-root /mnt/home/users/tic_163_uma/mpascual/fscratch/datasets/spectral_allocation_heat_diffusion_project
+```
+
+A cell is healthy when all of the following hold:
+
+- **Finished at `N`.** `DONE` is present and empty, the last `done` event is at `N`, and the
+  largest EMA checkpoint is `N`. `config.json` has `training.n_iters = N`.
+- **Files.** Every `ema_iter_*.pt` exists every `ckpt_every` (2,500) up to `N`: 16 at 40k, 24 at
+  60k. `checkpoints/full_final.pt` and `checkpoints-meta/checkpoint.pth` exist, and so do the
+  grids.
+- **Metrics.** `metrics.jsonl` passes `ihdm.train.validate_run`'s strict schema, value and cadence
+  checks. There is no `abort` event, and no `skip` event unless `--allow-skips` is given. `abort`
+  is never tolerated.
+- **Recipe.** `optim.lr` = 1e-4 (D19). The manifest's `recipe_sha256` is the hash of
+  `config.json`'s recipe, and the schedule hashes agree (validate_run). The manifest names the cell
+  of its row.
+- **Across cells.** The recipe is identical apart from `arm`, `dataset_id`, `data.dataset`,
+  `seed` and the arm keys `model.blur_schedule{,_name,_sha256}` and `model.blur_sigma_max`. The
+  arm keys are equal within each arm.
+
+The table also shows, per cell, the skip count and the last train line (step, loss, `grad_norm`,
+`amp_scale`). The status column reads `ok`, `FAIL`, `running` (no `DONE`) or `absent` (no folder).
+
+By default the check is **light**: checkpoint files are counted, never loaded, and a run costs a
+few MB of reads. `--deep` instead calls `validate_run.check_run_dir`, which loads the `N`-step
+EMA checkpoint and `full_final.pt` (≈ 1.2 GB per run, ≈ 36 GB for the array). Use it on a compute
+node or accept the login-node I/O.
+
+When to run it (D22): once all 30 runs are `DONE` at 40k (`--n-iters 40000`), before the archive
+and the extension; again after the extension (`--n-iters 60000`). The output goes into
+`docs/RESULTS/submissions.md`.
