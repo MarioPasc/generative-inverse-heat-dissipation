@@ -5,7 +5,8 @@ runs once per training run:
 
 ``python -m ihdm.cli.evaluate_run --run <workdir> [--ckpts all|final|<list>] [--gate 35000,40000]``
 
-``--ckpts all`` evaluates the eight steps of D16 (5 000, 10 000, …, 40 000) that the run holds;
+``--ckpts all`` evaluates every multiple of 5 000 up to the run's largest checkpoint that the run
+holds (D16, D22): the eight steps 5 000, …, 40 000 of a 40k run, twelve on a 60k run;
 ``--gate a,b`` writes the paired plateau statistic of D10/D17 to ``metrics/gate.json``.
 """
 
@@ -45,7 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--ckpts",
         default="all",
-        help="'all' (the eight evaluated steps), 'final', or a comma-separated list of steps",
+        help="'all' (every multiple of 5000 up to the largest checkpoint: 8 steps at 40k, "
+        "12 at 60k), 'final', or a comma-separated list of steps",
     )
     parser.add_argument(
         "--n-lsd", type=int, default=N_SEEDS_INTERMEDIATE,

@@ -29,11 +29,13 @@ from ihdm.metrics.errors import MetricError
 from ihdm.metrics.io import read_json
 from ihdm.metrics.run_eval import (
     AMP_MODES,
+    EVAL_STRIDE,
     EVALUATED_STEPS,
     EvalRequest,
     checkpoint_table,
     ensure_seed_lists,
     evaluate_run,
+    evaluated_steps,
     load_views,
     metrics_dirname,
     samples_dirname,
@@ -310,6 +312,81 @@ def test_select_checkpoints_all_picks_the_eight_evaluated_steps():
     steps, selection = select_checkpoints(table, "all")
     assert steps == list(EVALUATED_STEPS)
     assert selection == "all-evaluated"
+
+
+def _table(steps) -> dict[int, Path]:
+    return {int(step): Path(f"ema_iter_{int(step):06d}.pt") for step in steps}
+
+
+#: The D16 tuple as it was written before D22, pinned verbatim.
+_D16_TUPLE = (5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000)
+
+
+def _old_all(table: dict[int, Path]) -> list[int]:
+    """The pre-D22 ``--ckpts all`` rule: the D16 tuple intersected with the run's steps."""
+    chosen = [step for step in _D16_TUPLE if step in table]
+    return chosen or sorted(table)
+
+
+def test_evaluated_steps_constant_is_the_d16_tuple():
+    """``EVALUATED_STEPS`` keeps the eight D16 steps exactly (T3.5 pin)."""
+    assert EVALUATED_STEPS == _D16_TUPLE
+    assert EVAL_STRIDE == 5000
+    assert evaluated_steps(40000) == _D16_TUPLE
+
+
+@pytest.mark.parametrize(
+    ("last", "expected"),
+    [(4999, ()), (5000, (5000,)), (42500, _D16_TUPLE), (60000, tuple(range(5000, 60001, 5000)))],
+)
+def test_evaluated_steps_are_every_stride_up_to_the_last_step(last, expected):
+    assert evaluated_steps(last) == expected
+
+
+def test_select_checkpoints_all_picks_twelve_steps_on_a_60k_run():
+    """D22: an extended run is evaluated at 5k, 10k, ..., 60k."""
+    steps, selection = select_checkpoints(_table(range(2500, 60001, 2500)), "all")
+    assert steps == list(range(5000, 60001, 5000))
+    assert len(steps) == 12
+    assert selection == "all-evaluated"
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        pytest.param(range(2500, 40001, 2500), id="40k-full"),
+        pytest.param([s for s in range(2500, 40001, 2500) if s != 20000], id="40k-missing-20k"),
+        pytest.param(range(2500, 42501, 2500), id="42.5k"),
+        pytest.param((2500, 5000, 7500), id="pilot-7.5k"),
+        pytest.param((250, 750), id="pilot-no-stride"),
+        pytest.param((5000,), id="single-5k"),
+    ],
+)
+def test_select_checkpoints_all_is_unchanged_up_to_40k(steps):
+    """Byte-identical to the pre-D22 rule on every run whose largest step is below 45k."""
+    table = _table(steps)
+    chosen, _ = select_checkpoints(table, "all")
+    assert chosen == _old_all(table)
+
+
+def test_select_checkpoints_all_skips_and_warns_about_a_missing_step(caplog):
+    """A missing multiple of 5k is skipped with a warning; the rest are still evaluated."""
+    table = _table([s for s in range(2500, 60001, 2500) if s != 45000])
+    with caplog.at_level("WARNING", logger="ihdm.metrics.run_eval"):
+        steps, selection = select_checkpoints(table, "all")
+    assert 45000 not in steps
+    assert steps == [s for s in range(5000, 60001, 5000) if s != 45000]
+    assert selection == "all-evaluated"
+    assert "45000" in caplog.text
+
+
+def test_select_checkpoints_all_falls_back_on_a_pilot_without_any_stride_step(caplog):
+    """No multiple of 5k: every checkpoint, labelled ``all-available``, with a warning."""
+    with caplog.at_level("WARNING", logger="ihdm.metrics.run_eval"):
+        steps, selection = select_checkpoints(_table((1000, 2000, 2500)), "all")
+    assert steps == [1000, 2000, 2500]
+    assert selection == "all-available"
+    assert "falling back" in caplog.text
 
 
 @pytest.mark.parametrize("spec", ["", "   ", "nonsense", "1234"])
