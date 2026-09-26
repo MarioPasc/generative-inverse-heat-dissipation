@@ -188,7 +188,7 @@ for line in open(sys.argv[1] + "/metrics.jsonl"):
     r = json.loads(line)
     if r["kind"] in ("skip", "abort", "done", "resume") or (r["kind"] == "train" and r["step"] >= 15):
         keep = {k: r[k] for k in ("step", "kind", "loss", "grad_norm", "amp_scale", "n_skipped",
-                                   "consecutive", "reason", "resume_saved") if k in r}
+                                   "consecutive", "reason", "abort_state") if k in r}
         print("  ", json.dumps(keep))
 EOF
     }

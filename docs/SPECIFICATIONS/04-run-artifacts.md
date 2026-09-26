@@ -94,6 +94,7 @@ tensorboard/                       # the same scalars, for eyeballing
 checkpoints/ema_iter_002500.pt     # every ckpt_every iterations, and at n_iters; see §3.3
 checkpoints/full_final.pt          # model + optimizer + ema + step at the end
 checkpoints-meta/checkpoint.pth    # rolling resume checkpoint (released format), every resume_every
+checkpoints-meta/abort_step_XXXXXX.pth  # only after a guard abort (D21): the state that produced the non-finite losses
 grids/iter_002500.png              # 8 samples (EMA) from 8 fixed training seeds, with the seeds row
 grids/seeds.npy                    # the 8 seed images used for the grids (uint8), fixed by config.seed
 DONE                               # empty file written after the final checkpoint
@@ -130,7 +131,9 @@ and continues; it aborts with exit 3 and `{"kind": "abort", "reason": ...}` when
 `c >= training.max_consecutive_skips` (10) or `k > training.max_skips` (100). With a disabled
 scaler (no AMP, or CPU) the first non-finite loss aborts as before, because the optimiser step
 then applies the non-finite gradient. `k` survives resume and appears in the final
-`{"kind": "done", ...}` event. (c) On resume, the trainer compares the run's recipe (the
+`{"kind": "done", ...}` event. **D21:** an abort under an enabled scaler writes the state that produced the
+losses to `checkpoints-meta/abort_step_<step>.pth` and records it as `abort_state` in the `abort` line;
+`checkpoint.pth` is never overwritten by an abort, so a retry resumes from the last good rolling state. (c) On resume, the trainer compares the run's recipe (the
 resolved config minus `training.n_iters` and the cadence keys) with the manifest's and aborts
 with a distinct exit code, writing nothing, when they differ; extension by a larger
 `n_iters` is still allowed.

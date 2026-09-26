@@ -20,6 +20,7 @@ __all__ = [
     "optimizer_state_dict",
     "ema_state_dict",
     "resume_path",
+    "save_abort_state",
     "save_ema",
     "save_full_final",
     "save_resume",
@@ -206,7 +207,35 @@ def save_resume(workdir: Path, state: dict[str, Any]) -> Path:
     Path
         The path written.
     """
-    path = resume_path(workdir)
+    return _write_state(resume_path(workdir), state)
+
+
+def save_abort_state(workdir: Path, state: dict[str, Any], step: int) -> Path:
+    """Write the state of an aborted run beside, never over, the rolling checkpoint (D21).
+
+    The weights that produced the non-finite losses are kept for diagnosis, while
+    ``checkpoint.pth`` stays the last good rolling state, so the run can be retried from it.
+
+    Parameters
+    ----------
+    workdir : Path
+        The run directory.
+    state : dict[str, Any]
+        The released training state ``{"optimizer", "model", "step", "ema"}``.
+    step : int
+        The loop step of the abort.
+
+    Returns
+    -------
+    Path
+        ``<workdir>/checkpoints-meta/abort_step_<step:06d>.pth``.
+    """
+    path = Path(workdir) / "checkpoints-meta" / f"abort_step_{int(step):06d}.pth"
+    return _write_state(path, state)
+
+
+def _write_state(path: Path, state: dict[str, Any]) -> Path:
+    """Save ``state`` at ``path`` in the released four-key format and return ``path``."""
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
