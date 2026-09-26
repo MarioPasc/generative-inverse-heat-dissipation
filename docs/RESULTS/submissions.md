@@ -386,3 +386,33 @@ LSD(35k) − LSD(40k) lies above zero; the evaluation array (T5.1, `AMP=fp16 TIM
 - **Cell decoding.** Each `CELL index=… run_id=…` line matches `cells.csv`.
 - **Throughput and memory.** 1.69–1.70 it/s, 28.54 GB peak.
 - **Gradient norm and loss scale.** The pre-clip `grad_norm` at step 2,000 was 135–829, and `amp_scale` was 32–128.
+
+**State on 2026-09-26 09:15.** 16 tasks COMPLETED, all with zero skips. 8 were running (7 near
+step 34k, `lsun_bedroom_A0_s1` at 4k); 25–29 were pending. Task 11 had FAILED. FSCRATCH stood at
+249.8k files.
+
+**Task 11 (`lsun_church_A3_s3`), attempt 1: FAILED, exit 3, after 5 h 10 m.**
+
+- **Before the abort.** Sporadic fp16 forward overflows from step 27,883 on: 6 skips up to 28,091.
+  Each skip halved `amp_scale` (128 → 2), while the loss stayed healthy (eval 0.2965 at 28k).
+- **The abort.** From 30,111 the overflow became persistent: 29 skips in 26 steps, then an abort
+  at 30,136 after 10 consecutive skips (`resume_saved: true`, the pre-D21 behaviour).
+- **Why it cannot be resumed.** The rolling checkpoint now holds step 30,137, i.e. the weights
+  that overflow on ≈ 88 % of batches. The EMA checkpoints up to 30,000 survive.
+- **Where it is.** The folder was moved to `fscratch/runs/ihdm_failed/lsun_church_A3_s3_attempt1/`.
+
+**Attempt 2.** Job **2454461** (`ARRAY_SPEC=11 N_ITERS=40000`), submitted 2026-09-26. It runs
+from scratch with the same recipe and seed on cluster commit `2d55143`, whose abort no longer
+overwrites the rolling checkpoint (D21 c). If it aborts, it is retried once from its last good
+rolling checkpoint; if that also fails, the cell is reported with 2 seeds, flagged.
+
+**Gate (job 2432703, fp16, 500 seeds, COMPLETED 1 h 21 m):**
+
+| run | LSD 35k | LSD 40k | LSD₃₅ₖ − LSD₄₀ₖ | 95 % CI | rule says |
+|---|---|---|---|---|---|
+| `ixi_A0_s1` | 0.2671 | 0.2576 | +0.0095 | [+0.0076, +0.0114] | extend |
+| `lsun_church_A0_s1` | 1.3496 | 1.5047 | −0.1551 | [−0.1673, −0.1429] | no |
+
+**Decision (D21 a, Mario): stay at 40k.** This deviates from the pre-registered D10/D17 rule,
+which says extend because the IXI CI lies above zero; the report must state it. No extension array
+is submitted. The evaluation array follows once all 30 runs (with task 11's attempt 2) hold `DONE`.
