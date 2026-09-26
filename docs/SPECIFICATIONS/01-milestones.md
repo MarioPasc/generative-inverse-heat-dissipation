@@ -34,6 +34,7 @@ dead time. M3 still closes only when the full array is submitted.
 | T3.2 | Picasso probe: 3 epochs of `lsun_church` and `ixi`, resume test, artefact check | single | opus5-high | T3.1 | `slurm/probe/**`, `docs/RESULTS/picasso_probe.md` |
 | T3.3 | Full array submission through the `picasso-sbatch` skill | single | opus5-high (+ skill) | T3.2 | `slurm/array/**`, `docs/RESULTS/submissions.md` |
 | T3.4 | Training recovery after array 1 (D19): NaN diagnosis, recipe v2 (lr 1e-4), skip policy, exhaustive loginexa harness | ‖ with T5.1 | opus55-xhigh | T3.3 | see `M3-picasso/T3.4-training-recovery-loginexa.md` |
+| T3.5 | Extension of the 30 runs to 60k by resume (D22): evaluated steps follow the run length, gate by N_ITERS, time limits from counts, `check_array` health check; archive-then-extend procedure run by `main` | single | opus55-high | T3.4, T5.1 | see `M3-picasso/T3.5-extension-60k.md` |
 | T4.1 | Spectral metrics: LSD, octave profile, $T_\tau$, inherited band | ‖ with T4.2 | opus5-xhigh | T2.2 | `ihdm/metrics/spectral.py`, `tests/metrics/test_spectral.py` |
 | T4.2 | Memorisation ratio $M$, within-seed diversity, PCA-around-seed | ‖ with T4.1 | opus5-xhigh | T2.2 | `ihdm/metrics/memorisation.py`, `ihdm/metrics/diversity.py`, `tests/metrics/test_mem*.py` |
 | T4.3 | `evaluate_run` CLI, statistics (bootstrap over seeds, permutation test), result schema | single | opus5-high | T4.1, T4.2 | `ihdm/cli/evaluate_run.py`, `ihdm/stats/**`, `tests/stats/**` |
@@ -54,6 +55,7 @@ dead time. M3 still closes only when the full array is submitted.
 | W5 | T4.1 ‖ T4.2, then T4.3 | may overlap with W4's queue wait |
 | W6 | T5.1 → T5.2 | after the training array finishes |
 | W10 (2026-09-25) | T3.4 ‖ T5.1 | array 1 failed (D19); T5.1's scripts and cost check use the queue dead time; the v2 array is submitted by `main` after T3.4 merges |
+| W11 (2026-09-26) | T3.5 | while array 2 finishes its 40k; the archive and the extension are `main`'s steps |
 | W7 | T6.1 ‖ T6.2 | |
 
 ## Milestone tickets not yet written in full
