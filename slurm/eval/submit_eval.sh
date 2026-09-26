@@ -122,8 +122,15 @@ case "${WHAT}" in
                  }' SPEC="${ARRAY_SPEC}" "${CELLS}"
         )
         [[ -z "${BAD// /}" ]] || { echo "FATAL: --array=${ARRAY_SPEC} names indices absent from ${CELLS}:${BAD}" >&2; exit 1; }
-        # --time: measured per-run cost x 1.3, docs/RESULTS/evaluation_plan.md §3.
-        ARGS=(--array="${ARRAY_SPEC}" --job-name=ihdm-eval --time="${TIME_LIMIT:-10:00:00}"
+        # --time: computed from N_ITERS and AMP (measured s/chain x chains + 0.25 h, x 1.3, up to
+        # 15 min; docs/RESULTS/evaluation_plan.md §3, §9); an explicit TIME_LIMIT wins.
+        if [[ -z "${TIME_LIMIT:-}" ]]; then
+            TIME_LIMIT=$(ihdm_eval_time_limit "${N_ITERS}" "${AMP}") || exit 2
+            TIME_SOURCE="computed: $(ihdm_eval_chains "${N_ITERS}") chains, amp=${AMP}"
+        else
+            TIME_SOURCE="explicit TIME_LIMIT"
+        fi
+        ARGS=(--array="${ARRAY_SPEC}" --job-name=ihdm-eval --time="${TIME_LIMIT}"
               --mem="${MEM:-48G}"
               --output="${LOGS_DIR}/eval_%A_%a.out" --error="${LOGS_DIR}/eval_%A_%a.err")
         ARRAY_DEP=""
@@ -146,6 +153,7 @@ echo "worker:      ${WORKER}"
 echo "repo:        ${IHDM_REPO_DIR}  ($(git -C "${IHDM_REPO_DIR}" rev-parse --short HEAD 2>/dev/null || cat "${IHDM_REPO_DIR}/.git_sha" 2>/dev/null || echo n/a))"
 echo "amp:         ${AMP}"
 echo "n_iters:     ${N_ITERS}"
+[[ "${WHAT}" == "array" ]] && echo "time limit:  ${TIME_LIMIT} (${TIME_SOURCE})"
 [[ "${WHAT}" == "gate" ]] && echo "gate pair:   ${GATE_EARLY} vs ${GATE_LATE} -> $(ihdm_gate_stem '<run_id>' "$(ihdm_amp_suffix "${AMP}")" "${GATE_EARLY}" "${GATE_LATE}").{json,tar}"
 echo "eval home:   ${IHDM_EVAL_HOME}"
 echo "dependency:  ${DEPS[*]:-none}"

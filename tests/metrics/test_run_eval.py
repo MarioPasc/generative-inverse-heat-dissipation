@@ -990,3 +990,53 @@ def test_submit_eval_refuses_an_n_iters_off_the_stride(tmp_path):
     result = _dry_run(tmp_path, "gate", N_ITERS="42500")
     assert result.returncode != 0
     assert "not a positive multiple of 5000" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("n_iters", "amp", "chains", "expected"),
+    [
+        (40000, "fp16", 8000, "07:30:00"),   # D20 value, unchanged
+        (40000, "off", 8000, "09:45:00"),    # was 10:00:00 before the rule was applied uniformly
+        (40000, "bf16", 8000, "07:30:00"),
+        (60000, "fp16", 10000, "09:15:00"),  # D22
+        (60000, "off", 10000, "12:00:00"),
+        (60000, "bf16", 10000, "09:15:00"),
+    ],
+)
+def test_eval_time_limit_follows_the_counts(n_iters, amp, chains, expected):
+    assert _bash(f"ihdm_eval_chains {n_iters}").stdout.strip() == str(chains)
+    result = _bash(f"ihdm_eval_time_limit {n_iters} {amp}")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+@pytest.mark.parametrize("n_iters", [40000, 45000, 60000, 80000])
+@pytest.mark.parametrize(("amp", "s_per_chain"), [("off", 3.233), ("fp16", 2.425)])
+def test_eval_time_limit_matches_the_python_rule(n_iters, amp, s_per_chain):
+    """The shell arithmetic equals the plan's rule on the Python checkpoint selection."""
+    chains = len(evaluated_steps(n_iters)) * 500 + 2000 + 40 * 50
+    hours = (chains * s_per_chain / 3600 + 0.25) * 1.3
+    quarters = int(np.ceil(hours * 4 - 1e-9))
+    want = f"{quarters // 4:02d}:{(quarters % 4) * 15:02d}:00"
+    assert _bash(f"ihdm_eval_chains {n_iters}").stdout.strip() == str(chains)
+    assert _bash(f"ihdm_eval_time_limit {n_iters} {amp}").stdout.strip() == want
+
+
+def test_eval_time_limit_refuses_an_unknown_mode():
+    result = _bash("ihdm_eval_time_limit 60000 fp8")
+    assert result.returncode != 0
+
+
+@pytest.mark.parametrize(
+    ("env", "expected"),
+    [
+        ({"N_ITERS": "60000", "AMP": "fp16"}, "--time=09:15:00"),
+        ({"N_ITERS": "40000", "AMP": "fp16"}, "--time=07:30:00"),
+        ({"N_ITERS": "60000", "AMP": "fp16", "TIME_LIMIT": "10:30:00"}, "--time=10:30:00"),
+    ],
+)
+def test_submit_eval_array_dry_run_uses_the_computed_or_explicit_time(tmp_path, env, expected):
+    result = _dry_run(tmp_path, "array", **env)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert expected in result.stdout
+    assert "--array=0-29%8" in result.stdout

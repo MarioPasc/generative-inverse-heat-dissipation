@@ -174,6 +174,42 @@ ihdm_gate_tars() {
     return 0
 }
 
+# Sizing of one evaluation task (docs/RESULTS/evaluation_plan.md §2, §3, §9).  s/chain at sampling
+# batch 32 on the A100 (timing job 2432221); fixed cost per run (Inception, loads, bootstrap,
+# tar); margin; the D16 counts of the final (2,000) and held-out (40 x 50) sets.
+IHDM_S_PER_CHAIN_off=3.233
+IHDM_S_PER_CHAIN_fp16=2.425
+IHDM_S_PER_CHAIN_bf16=2.424
+IHDM_EVAL_FIXED_H=0.25
+IHDM_EVAL_MARGIN=1.3
+IHDM_EVAL_N_LSD=500
+IHDM_EVAL_N_FINAL=2000
+IHDM_EVAL_N_HELDOUT=2000
+
+ihdm_eval_chains() {
+    # Chains per run at N_ITERS: one 500-seed LSD set per evaluated step (every 5k up to
+    # N_ITERS), plus the final and held-out sets.  8,000 at 40k, 10,000 at 60k.
+    local n="$1"
+    ihdm_check_n_iters "${n}" || return 1
+    echo $(( (n / IHDM_EVAL_STRIDE) * IHDM_EVAL_N_LSD + IHDM_EVAL_N_FINAL + IHDM_EVAL_N_HELDOUT ))
+}
+
+ihdm_eval_time_limit() {
+    # The array's default --time (HH:MM:SS) for N_ITERS and AMP: (chains x s/chain + fixed) x
+    # margin, rounded UP to 15 min.  40k: off 09:45:00, fp16 07:30:00; 60k: off 12:00:00, fp16
+    # 09:15:00.  The 1e-9 guard keeps an exact quarter hour from rounding up by float noise.
+    local n="$1" amp="$2" chains spc var
+    chains=$(ihdm_eval_chains "${n}") || return 1
+    var="IHDM_S_PER_CHAIN_${amp}"
+    spc="${!var:-}"
+    [[ -n "${spc}" ]] || { echo "[FATAL] no s/chain for AMP='${amp}'" >&2; return 1; }
+    awk -v c="${chains}" -v s="${spc}" -v f="${IHDM_EVAL_FIXED_H}" -v m="${IHDM_EVAL_MARGIN}" 'BEGIN {
+        h = (c * s / 3600 + f) * m
+        q = int(h * 4 - 1e-9); if (q < h * 4 - 1e-9) q++
+        printf "%02d:%02d:00\n", int(q / 4), (q % 4) * 15
+    }'
+}
+
 ihdm_last_ema_step() {
     # The largest step among <run>/checkpoints/ema_iter_*.pt (0 when none); mirrors
     # slurm/array/train_array.sbatch.
