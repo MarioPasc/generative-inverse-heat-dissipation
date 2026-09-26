@@ -322,6 +322,7 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
 | wave | tickets | agents | base | verdicts | merged |
 |---|---|---|---|---|---|
 | W10 | T3.4 (recovery + loginexa harness) ‖ T5.1 (evaluation scripts + A100 cost) | opus55-xhigh ‖ opus55-high | `368fdde` | T5.1 ACCEPT (606 tests; prepare 2432211 + timing 2432221; fp16 1.33×, ΔLSD 5e-5) · T3.4 ACCEPT (diagnosis: fp16 forward overflow in the decoder upsampling during an lr-2e-4 spike; S passed at 1e-4 with 0 skips; H1–H7 PASS, 30/30 cells) | `integration/W10`: `7afe5ee` (T5.1), `cd07dbd` (T3.4); detail in `M3-picasso/WAVE-W10.md` |
+| W11 (2026-09-26) | T3.5 (extension to 60k: evaluated steps by run length, gate by N_ITERS, computed eval `--time`, `check_array`) | opus55-high | `e47a8f6` | ACCEPT (765 tests re-run by main; the helpers checked by hand: 60k fp16 09:15, off 12:00, 40k off 09:45; `check_array` on the real run root: 16/16 finished runs healthy; one mid-run stop by a safety interruption, resumed with explicit steps, no recurrence) | `033d243` on main; D21 (c) abort fix `2d55143` done by main directly |
 
 ## 12. Lessons added to §8
 

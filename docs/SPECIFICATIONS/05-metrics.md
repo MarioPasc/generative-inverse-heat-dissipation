@@ -126,11 +126,11 @@ Measured on the A100: 3.2 s per 200-step chain per image at sampling batch 32–
 
 | set | seeds | samples | chains | used for |
 |---|---|---|---|---|
-| intermediate LSD | training, 500 distinct, `rng_seed` = checkpoint step | 1 per seed | 8 × 500 = 4,000 | LSD at 5k, 10k, …, 40k; $T_\tau$ at 5k resolution; the plateau gate (35k vs 40k) |
+| intermediate LSD | training, 500 distinct, `rng_seed` = checkpoint step | 1 per seed | (N/5,000) × 500 = 4,000 at 40k, 6,000 at 60k | LSD at every multiple of 5,000 up to the run length N (`run_eval.evaluated_steps`, D22); $T_\tau$ at 5k resolution; the plateau gate compares N − 5k with N (35k vs 40k for the gate that triggered D22; 55k vs 60k, informational, after the extension) |
 | final shared | training, 2,000 with replacement, `rng_seed` 0 | 1 per seed | 2,000 | final LSD, KID (headline) and FID, recall/coverage, $M$ and $M_{\text{lp}}$, `seed_nn_fraction` |
 | held-out | the 40 seed subjects (slice 5) | 50 per seed | 2,000 | within-seed diversity, inherited band, PCA figure |
 
-Total 8,000 chains ≈ 7.1 A100-hours per run (≈ 214 A100-h for 30 runs) against 669 A100-h for the
+Total 8,000 chains at 40k, 10,000 at 60k (D22; ≈ 7.0 A100-h per run in fp16, D20) — at 40k ≈ 7.1 A100-hours per run (≈ 214 A100-h for 30 runs) against 669 A100-h for the
 plan as first written. Sampling batch 32 (18 GB) or 64 (36 GB); the batch is recorded in
 `request.json` and pinned per run because samples are reproducible only at a fixed batch.
 
