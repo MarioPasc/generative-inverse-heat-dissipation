@@ -5,22 +5,25 @@
 # `--dependency` and the log paths on the command line.
 #
 # Per task:
-#   1. decode the cell; refuse a run without `DONE` or without its last EMA checkpoint;
+#   1. decode the cell; refuse a run without `DONE`, or whose largest EMA checkpoint is not
+#      N_ITERS (T3.5: the evaluated steps follow the run length, 5k..N_ITERS every 5k);
 #   2. refuse a dataset without the six one-writer files of `prepare_eval` (the task never writes
 #      a seed list or a reference feature matrix);
 #   3. stage clean-fid's weights to /tmp;
 #   4. build a shadow run on $LOCALSCRATCH (links to config.json, manifest.json, checkpoints/,
 #      grids/, metrics.jsonl of the real run), so `samples*/` and `metrics*/` land on local disk;
-#      unpack any earlier partial tar of this run and the gate job's tar, so a resubmission after
-#      a TIMEOUT reuses every sample set already drawn (the cache is signature-checked);
+#      unpack every gate tar of this run (the legacy 35k/40k name and every pair-named one, T3.5)
+#      and any earlier partial tar, so a resubmission after a TIMEOUT reuses every sample set
+#      already drawn (the cache is signature-checked);
 #   5. `evaluate_run --ckpts all` with the D16 counts (the CLI defaults) and `--amp ${AMP}`;
 #   6. return ONE tar of the shadow run to ~/execs/ihdm/eval/<run_id><amp>.tar plus a plain copy
 #      of its summary.json at ~/execs/ihdm/eval/<run_id><amp>_summary.json, both atomically.
 # The tar is also written on TIMEOUT/SIGTERM (trap), so the next submission resumes.  Nothing per
 # run is written on FSCRATCH.
 #
-# Sizing (docs/RESULTS/evaluation_plan.md): 8 x 500 + 2,000 + 40 x 50 = 8,000 chains per run plus
-# the Inception pass; --time comes from the A100 timing job, 30 % margin, set by submit_eval.sh.
+# Sizing (docs/RESULTS/evaluation_plan.md §3, §9): (N_ITERS / 5000) x 500 + 2,000 + 40 x 50 chains
+# per run (8,000 at 40k, 10,000 at 60k) plus the Inception pass; --time is computed from those
+# counts by submit_eval.sh (measured s/chain, + 0.25 h, x 1.3, rounded up to 15 min).
 #
 #SBATCH -J ihdm-eval
 #SBATCH --time=10:00:00
@@ -87,7 +90,7 @@ RUN_DIR="${IHDM_RUN_ROOT}/${RUN_ID}"
 SHADOW="${MYLOCALSCRATCH}/${RUN_ID}"
 TAR_DEST="${EVAL_HOME}/${RUN_ID}${SUFFIX}.tar"
 SUMMARY_DEST="${EVAL_HOME}/${RUN_ID}${SUFFIX}_summary.json"
-GATE_TAR="${EVAL_HOME}/gate/${RUN_ID}${SUFFIX}_gate.tar"
+GATE_DIR="${EVAL_HOME}/gate"
 echo "Run dir:     ${RUN_DIR}"
 echo "Returns:     ${TAR_DEST} + ${SUMMARY_DEST}"
 
@@ -97,10 +100,14 @@ if [[ -f "${SUMMARY_DEST}" && "${FORCE_EVAL}" != "1" ]]; then
     exit 0
 fi
 
-# The run must be finished: DONE, and the EMA checkpoint of N_ITERS present.
+# The run must be finished at N_ITERS: DONE, the EMA checkpoint of N_ITERS present, and no later
+# one (an extended run evaluated with a stale N_ITERS would silently score a different range).
+ihdm_check_n_iters "${N_ITERS}" || exit 1
 LAST_CKPT="${RUN_DIR}/checkpoints/ema_iter_$(printf '%06d' "${N_ITERS}").pt"
 [[ -f "${RUN_DIR}/DONE" ]] || { echo "[FATAL] ${RUN_DIR}/DONE is missing; the run has not finished" >&2; exit 1; }
 [[ -f "${LAST_CKPT}" ]] || { echo "[FATAL] ${LAST_CKPT} is missing" >&2; exit 1; }
+LAST_STEP=$(ihdm_last_ema_step "${RUN_DIR}")
+(( LAST_STEP == N_ITERS )) || { echo "[FATAL] largest EMA checkpoint is ${LAST_STEP}, not N_ITERS=${N_ITERS}" >&2; exit 1; }
 ihdm_check_eval_caches "${IHDM_DATA_ROOT}/${DATASET_ID}" || exit 1
 
 mkdir -p "${MYLOCALSCRATCH}" "${EVAL_HOME}"
@@ -128,7 +135,9 @@ ihdm_env_setup || exit 1
 ihdm_stage_inception || exit 1
 
 # ---- shadow run, resumed from earlier partial results ----------------------------------------
-for previous in "${GATE_TAR}" "${TAR_DEST}"; do
+# Gate tars first (legacy name, then pair-named in step order), this run's partial tar last.
+mapfile -t GATE_TARS < <(ihdm_gate_tars "${GATE_DIR}" "${RUN_ID}" "${SUFFIX}")
+for previous in "${GATE_TARS[@]}" "${TAR_DEST}"; do
     if [[ -f "${previous}" ]]; then
         tar -xf "${previous}" -C "${MYLOCALSCRATCH}" && echo "resume:      unpacked ${previous}"
     fi

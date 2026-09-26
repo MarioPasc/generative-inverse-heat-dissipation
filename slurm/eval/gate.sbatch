@@ -6,14 +6,19 @@
 #
 # Per cell, sequentially:
 #   evaluate_run --ckpts ${GATE_EARLY} --gate ${GATE_EARLY},${GATE_LATE} --n-lsd 500 --skip-inception
+# The pair follows the run length (T3.5, D22): GATE_EARLY = N_ITERS - 5000 and GATE_LATE = N_ITERS
+# by default (35k/40k at N_ITERS=40000, 55k/60k at 60000); GATE_EARLY/GATE_LATE set in the
+# environment win.
 # Naming ONLY the earlier step in --ckpts is deliberate and pinned by
 # tests/metrics/test_run_eval.py::test_the_gate_command_draws_only_the_two_lsd_sets: the final and
 # held-out sets belong to the largest available checkpoint and are drawn whenever that step is in
 # --ckpts, so `--ckpts all` or `--ckpts 35000,40000` would cost 5,000 chains instead of 1,000.
 #
-# Returns per cell, in ~/execs/ihdm/eval/gate/: `<run_id><amp>_gate.json` (plain) and
-# `<run_id><amp>_gate.tar` (the shadow run: both 500-sample LSD sets, ckpt_035000.json, gate.json),
-# which the evaluation array unpacks so it does not redraw those two sets.
+# Returns per cell, in ~/execs/ihdm/eval/gate/, named by the step pair so no gate overwrites
+# another: `<run_id><amp>_gate_<early:06d>_<late:06d>.json` (plain) and `.tar` (the shadow run:
+# both 500-sample LSD sets, ckpt_<early>.json, gate.json), which the evaluation array unpacks so it
+# does not redraw those two sets.  The files of gate job 2432703 keep their pre-T3.5 names
+# `<run_id><amp>_gate.{json,tar}` (35k/40k); the array reads both forms (common.sh ihdm_gate_tars).
 #
 #SBATCH -J ihdm-eval-gate
 #SBATCH --time=03:00:00
@@ -41,8 +46,9 @@ export IHDM_RUN_ROOT="${IHDM_RUN_ROOT:-${USER_ROOT}/fscratch/runs/ihdm}"
 EVAL_HOME="${IHDM_EVAL_HOME:-${USER_ROOT}/execs/ihdm/eval}"
 CELLS="${IHDM_CELLS:-${REPO_DIR}/slurm/array/cells.csv}"
 GATE_CELLS="${GATE_CELLS:-0:3}"
-GATE_EARLY="${GATE_EARLY:-35000}"
-GATE_LATE="${GATE_LATE:-40000}"
+N_ITERS="${N_ITERS:-40000}"
+GATE_EARLY="${GATE_EARLY:-}"
+GATE_LATE="${GATE_LATE:-}"
 GATE_N_LSD="${GATE_N_LSD:-500}"
 AMP="${AMP:-off}"
 PY="${ENV_PREFIX}/bin/python"
@@ -60,15 +66,16 @@ echo "Git commit:  $(git -C "${REPO_DIR}" rev-parse HEAD 2>/dev/null || cat "${R
 echo "Env prefix:  ${ENV_PREFIX}"
 echo "Run root:    ${IHDM_RUN_ROOT}  (read only)"
 echo "Cells:       ${GATE_CELLS//:/,} of ${CELLS}"
-echo "Gate:        ${GATE_EARLY} vs ${GATE_LATE}, n_lsd=${GATE_N_LSD}, amp=${AMP}"
 echo "Returns:     ${GATE_HOME}"
-echo "=========================================="
 
 [[ -x "${PY}" ]] || { echo "[FATAL] no interpreter at ${PY}" >&2; exit 1; }
 [[ -f "${CELLS}" ]] || { echo "[FATAL] no cell table at ${CELLS}" >&2; exit 1; }
 # shellcheck source=slurm/eval/common.sh
 source "${REPO_DIR}/slurm/eval/common.sh" || { echo "[FATAL] cannot source common.sh" >&2; exit 1; }
 SUFFIX=$(ihdm_amp_suffix "${AMP}") || exit 1
+ihdm_gate_steps "${N_ITERS}" || exit 1
+echo "Gate:        ${GATE_EARLY} vs ${GATE_LATE} (N_ITERS=${N_ITERS}), n_lsd=${GATE_N_LSD}, amp=${AMP}"
+echo "=========================================="
 
 mkdir -p "${MYLOCALSCRATCH}" "${GATE_HOME}"
 cleanup() { [[ -n "${MYLOCALSCRATCH}" && -d "${MYLOCALSCRATCH}" ]] && rm -rf --one-file-system "${MYLOCALSCRATCH}"; }
@@ -100,14 +107,15 @@ for idx in ${GATE_CELLS//:/ }; do
     echo "gate ${RUN_ID}: exit ${rc} in $(( $(date +%s) - T0 )) s"
     (( rc != 0 )) && RC=${rc}
 
+    STEM=$(ihdm_gate_stem "${RUN_ID}" "${SUFFIX}" "${GATE_EARLY}" "${GATE_LATE}")
     GATE_JSON="${SHADOW}/metrics${SUFFIX}/gate.json"
     if [[ -f "${GATE_JSON}" ]]; then
-        ihdm_copy_atomic "${GATE_JSON}" "${GATE_HOME}/${RUN_ID}${SUFFIX}_gate.json" \
-            && echo "gate.json:   ${GATE_HOME}/${RUN_ID}${SUFFIX}_gate.json"
+        ihdm_copy_atomic "${GATE_JSON}" "${GATE_HOME}/${STEM}.json" \
+            && echo "gate.json:   ${GATE_HOME}/${STEM}.json"
     fi
-    if tar -cf "${MYLOCALSCRATCH}/${RUN_ID}_gate.tar" -C "${MYLOCALSCRATCH}" "${RUN_ID}"; then
-        ihdm_copy_atomic "${MYLOCALSCRATCH}/${RUN_ID}_gate.tar" "${GATE_HOME}/${RUN_ID}${SUFFIX}_gate.tar" \
-            && echo "gate tar:    ${GATE_HOME}/${RUN_ID}${SUFFIX}_gate.tar"
+    if tar -cf "${MYLOCALSCRATCH}/${STEM}.tar" -C "${MYLOCALSCRATCH}" "${RUN_ID}"; then
+        ihdm_copy_atomic "${MYLOCALSCRATCH}/${STEM}.tar" "${GATE_HOME}/${STEM}.tar" \
+            && echo "gate tar:    ${GATE_HOME}/${STEM}.tar"
     fi
 done
 

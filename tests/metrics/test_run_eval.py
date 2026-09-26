@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -29,11 +31,13 @@ from ihdm.metrics.errors import MetricError
 from ihdm.metrics.io import read_json
 from ihdm.metrics.run_eval import (
     AMP_MODES,
+    EVAL_STRIDE,
     EVALUATED_STEPS,
     EvalRequest,
     checkpoint_table,
     ensure_seed_lists,
     evaluate_run,
+    evaluated_steps,
     load_views,
     metrics_dirname,
     samples_dirname,
@@ -310,6 +314,81 @@ def test_select_checkpoints_all_picks_the_eight_evaluated_steps():
     steps, selection = select_checkpoints(table, "all")
     assert steps == list(EVALUATED_STEPS)
     assert selection == "all-evaluated"
+
+
+def _table(steps) -> dict[int, Path]:
+    return {int(step): Path(f"ema_iter_{int(step):06d}.pt") for step in steps}
+
+
+#: The D16 tuple as it was written before D22, pinned verbatim.
+_D16_TUPLE = (5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000)
+
+
+def _old_all(table: dict[int, Path]) -> list[int]:
+    """The pre-D22 ``--ckpts all`` rule: the D16 tuple intersected with the run's steps."""
+    chosen = [step for step in _D16_TUPLE if step in table]
+    return chosen or sorted(table)
+
+
+def test_evaluated_steps_constant_is_the_d16_tuple():
+    """``EVALUATED_STEPS`` keeps the eight D16 steps exactly (T3.5 pin)."""
+    assert EVALUATED_STEPS == _D16_TUPLE
+    assert EVAL_STRIDE == 5000
+    assert evaluated_steps(40000) == _D16_TUPLE
+
+
+@pytest.mark.parametrize(
+    ("last", "expected"),
+    [(4999, ()), (5000, (5000,)), (42500, _D16_TUPLE), (60000, tuple(range(5000, 60001, 5000)))],
+)
+def test_evaluated_steps_are_every_stride_up_to_the_last_step(last, expected):
+    assert evaluated_steps(last) == expected
+
+
+def test_select_checkpoints_all_picks_twelve_steps_on_a_60k_run():
+    """D22: an extended run is evaluated at 5k, 10k, ..., 60k."""
+    steps, selection = select_checkpoints(_table(range(2500, 60001, 2500)), "all")
+    assert steps == list(range(5000, 60001, 5000))
+    assert len(steps) == 12
+    assert selection == "all-evaluated"
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        pytest.param(range(2500, 40001, 2500), id="40k-full"),
+        pytest.param([s for s in range(2500, 40001, 2500) if s != 20000], id="40k-missing-20k"),
+        pytest.param(range(2500, 42501, 2500), id="42.5k"),
+        pytest.param((2500, 5000, 7500), id="pilot-7.5k"),
+        pytest.param((250, 750), id="pilot-no-stride"),
+        pytest.param((5000,), id="single-5k"),
+    ],
+)
+def test_select_checkpoints_all_is_unchanged_up_to_40k(steps):
+    """Byte-identical to the pre-D22 rule on every run whose largest step is below 45k."""
+    table = _table(steps)
+    chosen, _ = select_checkpoints(table, "all")
+    assert chosen == _old_all(table)
+
+
+def test_select_checkpoints_all_skips_and_warns_about_a_missing_step(caplog):
+    """A missing multiple of 5k is skipped with a warning; the rest are still evaluated."""
+    table = _table([s for s in range(2500, 60001, 2500) if s != 45000])
+    with caplog.at_level("WARNING", logger="ihdm.metrics.run_eval"):
+        steps, selection = select_checkpoints(table, "all")
+    assert 45000 not in steps
+    assert steps == [s for s in range(5000, 60001, 5000) if s != 45000]
+    assert selection == "all-evaluated"
+    assert "45000" in caplog.text
+
+
+def test_select_checkpoints_all_falls_back_on_a_pilot_without_any_stride_step(caplog):
+    """No multiple of 5k: every checkpoint, labelled ``all-available``, with a warning."""
+    with caplog.at_level("WARNING", logger="ihdm.metrics.run_eval"):
+        steps, selection = select_checkpoints(_table((1000, 2000, 2500)), "all")
+    assert steps == [1000, 2000, 2500]
+    assert selection == "all-available"
+    assert "falling back" in caplog.text
 
 
 @pytest.mark.parametrize("spec", ["", "   ", "nonsense", "1234"])
@@ -780,3 +859,184 @@ def test_a_non_finite_draw_is_refused_before_anything_is_written(
         )
     assert not list(workdir.rglob("samples.npy"))
     assert not list(workdir.rglob("request.json"))
+
+
+# --------------------------------------------------------------------------------------------
+# The launch arithmetic of slurm/eval/ (T3.5, D22): gate pair, gate names, unpack order
+# --------------------------------------------------------------------------------------------
+
+_REPO = Path(__file__).resolve().parents[2]
+_COMMON_SH = _REPO / "slurm" / "eval" / "common.sh"
+_SUBMIT_EVAL = _REPO / "slurm" / "eval" / "submit_eval.sh"
+
+
+def _bash(script: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    """Run ``script`` in bash after sourcing ``slurm/eval/common.sh``."""
+    full_env = {"PATH": os.environ["PATH"], "HOME": os.environ.get("HOME", "/tmp")}
+    full_env.update(env or {})
+    return subprocess.run(
+        ["bash", "-c", f'set -uo pipefail; source "{_COMMON_SH}"; {script}'],
+        capture_output=True, text=True, env=full_env, check=False,
+    )
+
+
+@pytest.mark.parametrize(
+    ("n_iters", "env", "expected"),
+    [
+        (40000, {}, "35000 40000"),
+        (60000, {}, "55000 60000"),
+        (60000, {"GATE_EARLY": "35000", "GATE_LATE": "40000"}, "35000 40000"),
+        (60000, {"GATE_EARLY": "40000"}, "40000 60000"),
+    ],
+)
+def test_gate_pair_follows_n_iters_and_explicit_values_win(n_iters, env, expected):
+    result = _bash(f'ihdm_gate_steps {n_iters} && echo "$GATE_EARLY $GATE_LATE"', env)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+@pytest.mark.parametrize(
+    ("n_iters", "env"),
+    [
+        (42500, {}),
+        (0, {}),
+        ("abc", {}),
+        (60000, {"GATE_EARLY": "60000"}),
+        (60000, {"GATE_EARLY": "57500"}),
+    ],
+)
+def test_gate_pair_refuses_a_bad_length_or_order(n_iters, env):
+    result = _bash(f"ihdm_gate_steps {n_iters}", env)
+    assert result.returncode != 0
+    assert "FATAL" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("suffix", "early", "late", "expected"),
+    [
+        ("_amp-fp16", 35000, 40000, "ixi_A0_s1_amp-fp16_gate_035000_040000"),
+        ("_amp-fp16", 55000, 60000, "ixi_A0_s1_amp-fp16_gate_055000_060000"),
+        ("", 55000, 60000, "ixi_A0_s1_gate_055000_060000"),
+    ],
+)
+def test_gate_stem_is_named_by_the_step_pair(suffix, early, late, expected):
+    result = _bash(f'ihdm_gate_stem ixi_A0_s1 "{suffix}" {early} {late}')
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+def test_the_eval_worker_unpacks_every_gate_tar_of_its_run_legacy_first(tmp_path):
+    """Legacy 35k/40k name first, then the pair-named tars in step order; nothing else."""
+    names = [
+        "ixi_A0_s1_amp-fp16_gate.tar",                # gate job 2432703 (pre-T3.5 name)
+        "ixi_A0_s1_amp-fp16_gate_055000_060000.tar",
+        "ixi_A0_s1_amp-fp16_gate_035000_040000.tar",
+        "ixi_A0_s1_amp-fp16_gate.json",               # plain result, not a tar
+        "ixi_A0_s1_gate_055000_060000.tar",           # other precision
+        "ixi_A0_s2_amp-fp16_gate_055000_060000.tar",  # other run
+        "lsun_church_A0_s1_amp-fp16_gate.tar",
+    ]
+    for name in names:
+        (tmp_path / name).write_bytes(b"")
+    result = _bash(f'ihdm_gate_tars "{tmp_path}" ixi_A0_s1 _amp-fp16')
+    assert result.returncode == 0, result.stderr
+    assert [Path(line).name for line in result.stdout.split()] == [
+        "ixi_A0_s1_amp-fp16_gate.tar",
+        "ixi_A0_s1_amp-fp16_gate_035000_040000.tar",
+        "ixi_A0_s1_amp-fp16_gate_055000_060000.tar",
+    ]
+    off = _bash(f'ihdm_gate_tars "{tmp_path}" ixi_A0_s1 ""')
+    assert [Path(line).name for line in off.stdout.split()] == ["ixi_A0_s1_gate_055000_060000.tar"]
+    empty = _bash(f'ihdm_gate_tars "{tmp_path / "none"}" ixi_A0_s1 ""')
+    assert empty.returncode == 0 and empty.stdout == ""
+
+
+def test_last_ema_step_reads_the_largest_checkpoint(tmp_path):
+    (tmp_path / "checkpoints").mkdir()
+    for step in (2500, 40000, 60000):
+        (tmp_path / "checkpoints" / f"ema_iter_{step:06d}.pt").write_bytes(b"")
+    (tmp_path / "checkpoints" / "full_final.pt").write_bytes(b"")
+    assert _bash(f'ihdm_last_ema_step "{tmp_path}"').stdout.strip() == "60000"
+    assert _bash(f'ihdm_last_ema_step "{tmp_path / "absent"}"').stdout.strip() == "0"
+
+
+def _dry_run(tmp_path: Path, what: str, **env: str) -> subprocess.CompletedProcess:
+    full_env = {
+        "PATH": os.environ["PATH"],
+        "HOME": str(tmp_path),
+        "USER": "tester",
+        "IHDM_LOGS_DIR": str(tmp_path / "logs"),
+        "IHDM_EVAL_HOME": str(tmp_path / "eval"),
+        "IHDM_REPO_DIR": str(_REPO),
+        "IHDM_CELLS": str(_REPO / "slurm" / "array" / "cells.csv"),
+    }
+    full_env.update(env)
+    return subprocess.run(
+        ["bash", str(_SUBMIT_EVAL), what, "--dry-run"],
+        capture_output=True, text=True, env=full_env, check=False,
+    )
+
+
+def test_submit_eval_gate_dry_run_at_60k_names_the_55k_60k_pair(tmp_path):
+    result = _dry_run(tmp_path, "gate", N_ITERS="60000", AMP="fp16")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "gate pair:   55000 vs 60000" in result.stdout
+    assert "<run_id>_amp-fp16_gate_055000_060000.{json,tar}" in result.stdout
+    assert "GATE_EARLY=55000,GATE_LATE=60000" in result.stdout
+    assert "[DRY-RUN] nothing submitted" in result.stdout
+
+
+def test_submit_eval_refuses_an_n_iters_off_the_stride(tmp_path):
+    result = _dry_run(tmp_path, "gate", N_ITERS="42500")
+    assert result.returncode != 0
+    assert "not a positive multiple of 5000" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("n_iters", "amp", "chains", "expected"),
+    [
+        (40000, "fp16", 8000, "07:30:00"),   # D20 value, unchanged
+        (40000, "off", 8000, "09:45:00"),    # was 10:00:00 before the rule was applied uniformly
+        (40000, "bf16", 8000, "07:30:00"),
+        (60000, "fp16", 10000, "09:15:00"),  # D22
+        (60000, "off", 10000, "12:00:00"),
+        (60000, "bf16", 10000, "09:15:00"),
+    ],
+)
+def test_eval_time_limit_follows_the_counts(n_iters, amp, chains, expected):
+    assert _bash(f"ihdm_eval_chains {n_iters}").stdout.strip() == str(chains)
+    result = _bash(f"ihdm_eval_time_limit {n_iters} {amp}")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+@pytest.mark.parametrize("n_iters", [40000, 45000, 60000, 80000])
+@pytest.mark.parametrize(("amp", "s_per_chain"), [("off", 3.233), ("fp16", 2.425)])
+def test_eval_time_limit_matches_the_python_rule(n_iters, amp, s_per_chain):
+    """The shell arithmetic equals the plan's rule on the Python checkpoint selection."""
+    chains = len(evaluated_steps(n_iters)) * 500 + 2000 + 40 * 50
+    hours = (chains * s_per_chain / 3600 + 0.25) * 1.3
+    quarters = int(np.ceil(hours * 4 - 1e-9))
+    want = f"{quarters // 4:02d}:{(quarters % 4) * 15:02d}:00"
+    assert _bash(f"ihdm_eval_chains {n_iters}").stdout.strip() == str(chains)
+    assert _bash(f"ihdm_eval_time_limit {n_iters} {amp}").stdout.strip() == want
+
+
+def test_eval_time_limit_refuses_an_unknown_mode():
+    result = _bash("ihdm_eval_time_limit 60000 fp8")
+    assert result.returncode != 0
+
+
+@pytest.mark.parametrize(
+    ("env", "expected"),
+    [
+        ({"N_ITERS": "60000", "AMP": "fp16"}, "--time=09:15:00"),
+        ({"N_ITERS": "40000", "AMP": "fp16"}, "--time=07:30:00"),
+        ({"N_ITERS": "60000", "AMP": "fp16", "TIME_LIMIT": "10:30:00"}, "--time=10:30:00"),
+    ],
+)
+def test_submit_eval_array_dry_run_uses_the_computed_or_explicit_time(tmp_path, env, expected):
+    result = _dry_run(tmp_path, "array", **env)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert expected in result.stdout
+    assert "--array=0-29%8" in result.stdout

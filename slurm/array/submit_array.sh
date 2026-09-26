@@ -6,7 +6,11 @@
 #   bash slurm/array/submit_array.sh                    # --test-only, then the real submission
 #
 #   ARRAY_SPEC='6' bash slurm/array/submit_array.sh     # resubmit one index (resumes that run)
-#   N_ITERS=60000 bash slurm/array/submit_array.sh      # extend every run to 60k (D10)
+#   N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh
+#                                                       # extend every run 40k -> 60k (D22, T3.5)
+#
+# TIME_LIMIT (default 11:00:00, the full 40k run) sets --time.  An extension of 20k steps takes
+# ~3.3 h at 1.69-1.71 it/s, so 05:00:00 leaves x1.5 and backfills sooner than 11 h.
 #
 # Run from the login node, inside the Picasso checkout.  The worker carries its own `#SBATCH`
 # header; every resource flag is repeated on the `sbatch` command line so the submission is
@@ -113,6 +117,7 @@ echo "worker:      ${WORKER}"
 echo "cells:       ${CELLS} (${N_CELLS} rows, indices 0-${MAX_INDEX})"
 echo "array:       ${ARRAY_SPEC}"
 echo "n_iters:     ${N_ITERS}"
+echo "time limit:  ${TIME_LIMIT}"
 echo "repo:        ${IHDM_REPO_DIR}  ($(git -C "${IHDM_REPO_DIR}" rev-parse --short HEAD 2>/dev/null || echo n/a) on $(git -C "${IHDM_REPO_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo n/a))"
 echo "run root:    ${IHDM_RUN_ROOT}"
 echo "logs:        ${LOGS_DIR}/train_<arrayjobid>_<task>.{out,err}"
@@ -175,7 +180,7 @@ done
 ARRAY_SPEC='6' bash slurm/array/submit_array.sh          # one index; the run resumes
 ARRAY_SPEC="\$(sacct -j ${JOB_ID} -n -X -o JobID,State | awk '\$2 != "COMPLETED" {split(\$1, a, "_"); print a[2]}' | paste -sd, -)%${MAX_CONCURRENT}" \\
     bash slurm/array/submit_array.sh                     # every task that did not COMPLETE
-N_ITERS=60000 bash slurm/array/submit_array.sh           # extend all 30 runs (D10)
+N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh   # extend all 30 runs (D22)
 scancel ${JOB_ID}                                        # cancel the whole array
 scancel ${JOB_ID}_22                                     # cancel one task
 EOF

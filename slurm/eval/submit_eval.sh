@@ -7,7 +7,12 @@
 #   PREPARE_JOB=<id> [TRAIN_ARRAY=<id>] bash slurm/eval/submit_eval.sh array [--dry-run|--test-only]
 #
 #   ARRAY_SPEC='6,17' PREPARE_JOB=<id> bash slurm/eval/submit_eval.sh array   # resubmit indices
-#   AMP=fp16 ... submit_eval.sh array                                         # only if main decides
+#   AMP=fp16 ... submit_eval.sh array                                         # the D20 mode
+#   N_ITERS=60000 AMP=fp16 ... submit_eval.sh gate|array                      # extended runs (D22)
+#
+# N_ITERS (default 40000) is the run length: the gate compares N_ITERS - 5000 with N_ITERS unless
+# GATE_EARLY/GATE_LATE are set, and the array's default --time is computed from N_ITERS and AMP
+# (common.sh ihdm_eval_time_limit); an explicit TIME_LIMIT always wins.
 #
 # Order (slurm/eval/README.md): prepare -> gate -> main's extension decision -> array.
 #
@@ -22,6 +27,8 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=slurm/eval/common.sh
+source "${SCRIPT_DIR}/common.sh" || { echo "FATAL: cannot source ${SCRIPT_DIR}/common.sh" >&2; exit 1; }
 USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 LOGS_DIR="${IHDM_LOGS_DIR:-${USER_ROOT}/execs/ihdm/logs}"
 export IHDM_REPO_DIR="${IHDM_REPO_DIR:-${USER_ROOT}/fscratch/repos/generative-inverse-heat-dissipation}"
@@ -48,6 +55,7 @@ case "${2:-}" in
     *) echo "usage: $0 {prepare|timing|gate|array} [--dry-run|--test-only]" >&2; exit 2 ;;
 esac
 case "${AMP}" in off|fp16|bf16) ;; *) echo "FATAL: AMP must be off, fp16 or bf16" >&2; exit 2 ;; esac
+ihdm_check_n_iters "${N_ITERS}" || exit 2
 for kv in IHDM_REPO_DIR IHDM_ENV_PREFIX IHDM_DATA_ROOT IHDM_RUN_ROOT IHDM_EVAL_HOME IHDM_CELLS; do
     [[ "${!kv}" == *","* ]] && { echo "FATAL: ${kv} contains a comma; --export would truncate it" >&2; exit 1; }
 done
@@ -74,7 +82,10 @@ case "${WHAT}" in
               --output="${LOGS_DIR}/eval_gate_%j.out" --error="${LOGS_DIR}/eval_gate_%j.err")
         # The gate cells are the index column of cells.csv (0 = ixi_A0_s1, 3 = lsun_church_A0_s1).
         GATE_CELLS="${GATE_CELLS:-0:3}"
-        EXPORTS="${EXPORTS},GATE_CELLS=${GATE_CELLS}"
+        # Resolved here as well as in the worker, so the pair is printed and validated before
+        # anything is queued and the worker receives exactly this pair.
+        ihdm_gate_steps "${N_ITERS}" || exit 2
+        EXPORTS="${EXPORTS},GATE_CELLS=${GATE_CELLS},GATE_EARLY=${GATE_EARLY},GATE_LATE=${GATE_LATE}"
         COMMON=(--qos="${QOS}" --ntasks=1 --cpus-per-task="${CPUS}" --constraint=a100
                 --gres=gpu:1 --account=tic_163_uma --export="${EXPORTS}")
         UPSTREAM=()
@@ -111,8 +122,15 @@ case "${WHAT}" in
                  }' SPEC="${ARRAY_SPEC}" "${CELLS}"
         )
         [[ -z "${BAD// /}" ]] || { echo "FATAL: --array=${ARRAY_SPEC} names indices absent from ${CELLS}:${BAD}" >&2; exit 1; }
-        # --time: measured per-run cost x 1.3, docs/RESULTS/evaluation_plan.md §3.
-        ARGS=(--array="${ARRAY_SPEC}" --job-name=ihdm-eval --time="${TIME_LIMIT:-10:00:00}"
+        # --time: computed from N_ITERS and AMP (measured s/chain x chains + 0.25 h, x 1.3, up to
+        # 15 min; docs/RESULTS/evaluation_plan.md §3, §9); an explicit TIME_LIMIT wins.
+        if [[ -z "${TIME_LIMIT:-}" ]]; then
+            TIME_LIMIT=$(ihdm_eval_time_limit "${N_ITERS}" "${AMP}") || exit 2
+            TIME_SOURCE="computed: $(ihdm_eval_chains "${N_ITERS}") chains, amp=${AMP}"
+        else
+            TIME_SOURCE="explicit TIME_LIMIT"
+        fi
+        ARGS=(--array="${ARRAY_SPEC}" --job-name=ihdm-eval --time="${TIME_LIMIT}"
               --mem="${MEM:-48G}"
               --output="${LOGS_DIR}/eval_%A_%a.out" --error="${LOGS_DIR}/eval_%A_%a.err")
         ARRAY_DEP=""
@@ -134,6 +152,9 @@ echo "what:        ${WHAT}"
 echo "worker:      ${WORKER}"
 echo "repo:        ${IHDM_REPO_DIR}  ($(git -C "${IHDM_REPO_DIR}" rev-parse --short HEAD 2>/dev/null || cat "${IHDM_REPO_DIR}/.git_sha" 2>/dev/null || echo n/a))"
 echo "amp:         ${AMP}"
+echo "n_iters:     ${N_ITERS}"
+[[ "${WHAT}" == "array" ]] && echo "time limit:  ${TIME_LIMIT} (${TIME_SOURCE})"
+[[ "${WHAT}" == "gate" ]] && echo "gate pair:   ${GATE_EARLY} vs ${GATE_LATE} -> $(ihdm_gate_stem '<run_id>' "$(ihdm_amp_suffix "${AMP}")" "${GATE_EARLY}" "${GATE_LATE}").{json,tar}"
 echo "eval home:   ${IHDM_EVAL_HOME}"
 echo "dependency:  ${DEPS[*]:-none}"
 echo "sbatch:      sbatch ${SBATCH_ARGS[*]} ${DEPS[*]:-} ${WORKER}"

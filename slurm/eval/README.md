@@ -21,10 +21,11 @@ Submit in this order. Each step says what it waits for.
 2. **gate**, on the first finished A0 runs of `ixi` (cell 0) and `lsun_church` (cell 3):
    `PREPARE_JOB=<prep> TRAIN_ARRAY=<train> bash slurm/eval/submit_eval.sh gate`.
    It gets `afterok:<train>_0:<train>_3:<prep>` and writes
-   `~/execs/ihdm/eval/gate/<run_id>_gate.json`.
-3. **main decides** from the two `gate.json` files whether to extend the campaign (D10). The
-   decision stays with `main`. If the runs are extended, the array waits for the extended runs.
-   The worker accepts `N_ITERS=<n>` and checks for `ema_iter_<n>.pt` and `DONE`.
+   `~/execs/ihdm/eval/gate/<run_id><amp>_gate_<early:06d>_<late:06d>.{json,tar}`.
+3. **main decides** from the two gate files whether to extend the campaign (D10). The decision
+   stays with `main`; it was taken in D22 (extend to 60k). If the runs are extended, the array waits
+   for the extended runs. The worker takes `N_ITERS=<n>` and requires `DONE` and `ema_iter_<n>.pt`
+   as the run's largest EMA checkpoint (see "Run length" below).
 4. **array**, one task per row of `slurm/array/cells.csv`:
    `PREPARE_JOB=<prep> TRAIN_ARRAY=<train> bash slurm/eval/submit_eval.sh array`.
    It gets `afterok:<prep>,aftercorr:<train>`, so eval task *i* starts when training task *i*
@@ -47,8 +48,8 @@ two gate LSD sets are never drawn twice.
 | job | reads | writes | wall |
 |---|---|---|---|
 | `prepare_eval` | the 4 datasets; `~/execs/ihdm/cache/inception-2015-12-05.pt` | per dataset: `eval_seeds_500.{npy,json}`, `eval_seeds_final_2000.{npy,json}`, `_features_inception_ref.{npy,json}`, 24 files in total and nothing else on FSCRATCH; `~/execs/ihdm/eval/prepare_<job>.json` | 1 h |
-| `gate` | cells 0 and 3 (read only), the seed lists | `~/execs/ihdm/eval/gate/<run_id>_gate.{json,tar}` | 3 h |
-| `eval_array` | one run (read only), the 6 cache files of its dataset | `~/execs/ihdm/eval/<run_id>.tar` and `<run_id>_summary.json` | see plan |
+| `gate` | cells 0 and 3 (read only), the seed lists | `~/execs/ihdm/eval/gate/<run_id><amp>_gate_<early>_<late>.{json,tar}` | 3 h |
+| `eval_array` | one run (read only), the 6 cache files of its dataset, every gate tar of the run | `~/execs/ihdm/eval/<run_id>.tar` and `<run_id>_summary.json` | computed (below) |
 | `timing` | the fixture `~/execs/ihdm/fixtures/array_2408239/ixi_A0_s2` (read only), `ixi` | `~/execs/ihdm/eval/timing_<job>/` (JSON records, one tar of samples) | 2 h |
 
 **One writer.** The torchscript Inception is not bitwise deterministic across calls (T4.3
@@ -75,6 +76,45 @@ renames it into place.
 python starts. The env on FSCRATCH ships no `.pyc` files, and the first import would otherwise
 write about 900 of them into the env (T3.4). `ihdm_env_setup` refuses to continue when the
 prefix is unset or points into FSCRATCH.
+
+## Run length (`N_ITERS`), the gate pair and the time limit (T3.5, D22)
+
+`N_ITERS` (default `40000`; a positive multiple of 5,000) is the length the runs were trained to.
+Three things follow from it:
+
+- **Evaluated checkpoints.** `evaluate_run --ckpts all` scores every multiple of 5,000 up to the
+  run's largest checkpoint: 8 at 40k, 12 at 60k. The final and held-out sets are drawn at the
+  largest checkpoint only. The worker refuses a run whose largest EMA checkpoint is not `N_ITERS`,
+  so a stale `N_ITERS` cannot score a different range without anyone noticing.
+- **Gate pair.** `GATE_EARLY = N_ITERS − 5000` and `GATE_LATE = N_ITERS` (35k/40k, 55k/60k).
+  `GATE_EARLY`/`GATE_LATE` set in the environment win. The launcher prints the pair and passes it
+  to the worker.
+- **`--time` of the array**, when `TIME_LIMIT` is not set:
+  `(chains × s/chain + 0.25 h) × 1.3`, rounded up to 15 min, where chains
+  `= (N_ITERS / 5000) × 500 + 2000 + 40 × 50` (`common.sh` `ihdm_eval_time_limit`):
+
+| `N_ITERS` | chains | `off` | `fp16` / `bf16` |
+|---|---|---|---|
+| 40000 | 8,000 | `09:45:00` (the old fixed default was `10:00:00`) | `07:30:00` |
+| 60000 | 10,000 | `12:00:00` | `09:15:00` |
+
+The gate job keeps `--time 03:00:00` at any length.
+
+**Gate file names.** Each gate result is named by its step pair,
+`~/execs/ihdm/eval/gate/<run_id><amp>_gate_<early:06d>_<late:06d>.{json,tar}`, so the 55k/60k gate
+never overwrites the 35k/40k one. The files of gate job 2432703 keep their pre-T3.5 name
+`<run_id>_amp-fp16_gate.{json,tar}`, which means 35k/40k. They are **not renamed**: the eval worker
+unpacks the legacy tar first, then every pair-named tar of its run and precision in step order
+(`common.sh` `ihdm_gate_tars`), then its own partial tar. The sample cache is signature-checked
+(checkpoint sha256, seeds, rng, batch, amp), so a set from any gate is reused only where it is
+valid.
+
+At 60k (after the extension):
+
+```bash
+N_ITERS=60000 AMP=fp16 TRAIN_ARRAY=<ext> bash slurm/eval/submit_eval.sh gate    # 55k vs 60k
+N_ITERS=60000 AMP=fp16 TRAIN_ARRAY=<ext> bash slurm/eval/submit_eval.sh array   # --time 09:15:00
+```
 
 ## The gate command, and why `--ckpts` names only the earlier step
 
@@ -108,4 +148,4 @@ Change the mode only on `main`'s decision; see `docs/RESULTS/evaluation_plan.md`
 | where | files |
 |---|---|
 | FSCRATCH | 24 (prepare), once; nothing per run |
-| `$HOME` | 2 per run (tar + summary) + 2 logs per task = 120 for 30 runs; 4 for the gate + 2 logs; prepare and timing about 15 |
+| `$HOME` | 2 per run (tar + summary) + 2 logs per task = 120 for 30 runs; 4 per gate pair + 2 logs; prepare and timing about 15 |

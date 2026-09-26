@@ -163,18 +163,31 @@ A blanket `bash slurm/array/submit_array.sh` is also safe: the worker skips, in 
 python starts, any cell whose `DONE` marker exists and whose highest `ema_iter_XXXXXX.pt` is at
 least `N_ITERS`.
 
-## Extend every run (the plateau gate, D10)
+## Extend every run to 60k (the plateau gate D10/D17; decided in D22, T3.5)
 
-When the first A0 runs finish, compare their LSD at 35,000 and 40,000 iterations. If the relative
-change exceeds 5% on either dataset, extend the whole array — no cell is ever retrained from
-scratch with a different count:
+The gate (35k vs 40k, `slurm/eval/`) asked for an extension and Mario decided it (D22). No cell is
+ever retrained from scratch with a different count. The procedure, run by `main`:
+
+1. All 30 runs `DONE` at 40,000, then the health check passes:
+   `python -m ihdm.cli.check_array --run-root "$IHDM_RUN_ROOT" --cells slurm/array/cells.csv --n-iters 40000`
+   (see `docs/HARNESSES/picasso.md`; set `PYTHONPYCACHEPREFIX` on the login node).
+2. The 40k folders, logs and the 35k/40k gate files are archived off Picasso.
+3. Extend in place:
 
 ```bash
-N_ITERS=60000 bash slurm/array/submit_array.sh
+N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh --test-only
+N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh
 ```
 
-Each task resumes from its rolling checkpoint and trains on to 60,000; a run already at 60,000 is
-skipped. Record the decision and the new job id in `docs/RESULTS/submissions.md`.
+4. `check_array --n-iters 60000` once every task has COMPLETED.
+
+Each task prints `EXTEND`, resumes from `checkpoints-meta/checkpoint.pth` (written by `_finalise`
+at 40k) and trains on to 60,000. The lr stays 1e-4 (the warm-up factor is `min(step/1000, 1)`), and
+the resume recipe check ignores `n_iters`. A run already at 60,000 is skipped.
+
+**`TIME_LIMIT`.** 20,000 steps at 1.69–1.71 it/s take ≈ 3.3 h, so `05:00:00` leaves × 1.5. The
+shorter wall backfills sooner than the 40k default of `11:00:00`. A task that does TIMEOUT
+resumes on resubmission like any other. Record the job id in `docs/RESULTS/submissions.md` §9.
 
 ## Cancel
 
@@ -193,7 +206,7 @@ All optional; the defaults are the Picasso paths.
 | `N_ITERS` | `40000` |
 | `ARRAY_SPEC` | `0-29%8` (derived from `cells.csv`) |
 | `MAX_CONCURRENT` | `8` |
-| `QOS` / `TIME_LIMIT` / `CPUS` / `MEM` | `medium_uma` / `11:00:00` / `8` / `32G` |
+| `QOS` / `TIME_LIMIT` / `CPUS` / `MEM` | `medium_uma` / `11:00:00` (use `05:00:00` for the 40k → 60k extension) / `8` / `32G` |
 | `IHDM_REPO_DIR` | `…/fscratch/repos/generative-inverse-heat-dissipation` |
 | `IHDM_ENV_PREFIX` | `…/fscratch/conda_envs/ihdm` |
 | `IHDM_DATA_ROOT` | `…/fscratch/datasets/spectral_allocation_heat_diffusion_project` |

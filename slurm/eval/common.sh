@@ -126,6 +126,104 @@ ihdm_copy_atomic() {
     cp "${src}" "${tmp}" && mv -f "${tmp}" "${dest}"
 }
 
+# Spacing of the evaluated checkpoints and of the gate pair (ihdm.metrics.run_eval.EVAL_STRIDE).
+IHDM_EVAL_STRIDE=5000
+
+ihdm_check_n_iters() {
+    # N_ITERS must be a positive multiple of the stride: the final and held-out sets are drawn at
+    # the largest checkpoint only when it is one of the evaluated steps (T3.5, D22).
+    local n="$1"
+    [[ "${n}" =~ ^[0-9]+$ ]] && (( n >= IHDM_EVAL_STRIDE && n % IHDM_EVAL_STRIDE == 0 )) \
+        || { echo "[FATAL] N_ITERS='${n}' is not a positive multiple of ${IHDM_EVAL_STRIDE}" >&2; return 1; }
+}
+
+ihdm_gate_steps() {
+    # Set GATE_EARLY and GATE_LATE in the caller's scope from N_ITERS (T3.5, D22): by default the
+    # last two evaluated steps, N_ITERS - 5000 and N_ITERS.  Values already set in the environment
+    # win.  Refuses a pair that is not two increasing multiples of the stride.
+    local n="$1"
+    ihdm_check_n_iters "${n}" || return 1
+    GATE_LATE="${GATE_LATE:-${n}}"
+    GATE_EARLY="${GATE_EARLY:-$(( n - IHDM_EVAL_STRIDE ))}"
+    local s
+    for s in "${GATE_EARLY}" "${GATE_LATE}"; do
+        [[ "${s}" =~ ^[0-9]+$ ]] && (( s > 0 && s % IHDM_EVAL_STRIDE == 0 )) \
+            || { echo "[FATAL] gate step '${s}' is not a positive multiple of ${IHDM_EVAL_STRIDE}" >&2; return 1; }
+    done
+    (( GATE_EARLY < GATE_LATE )) \
+        || { echo "[FATAL] gate ${GATE_EARLY} vs ${GATE_LATE}: the earlier step must come first" >&2; return 1; }
+}
+
+ihdm_gate_stem() {
+    # The file stem of one gate result: <run_id><amp>_gate_<early:06d>_<late:06d> (T3.5).  The
+    # step pair is in the name so the 55k/60k gate never overwrites the 35k/40k one.
+    local run_id="$1" suffix="$2" early="$3" late="$4"
+    printf '%s%s_gate_%06d_%06d\n' "${run_id}" "${suffix}" "${early}" "${late}"
+}
+
+ihdm_gate_tars() {
+    # Print, one per line, every gate tar of a run and precision in GATE_DIR, in unpack order:
+    # the legacy `<run_id><amp>_gate.tar` first (written by gate job 2432703 before T3.5; it holds
+    # the 35k/40k pair), then the pair-named tars in ascending step order.  Every one is
+    # unpacked: the sample cache is signature-checked, so a set from any gate is reused safely.
+    local gate_dir="$1" run_id="$2" suffix="$3" f
+    [[ -f "${gate_dir}/${run_id}${suffix}_gate.tar" ]] && echo "${gate_dir}/${run_id}${suffix}_gate.tar"
+    for f in "${gate_dir}/${run_id}${suffix}"_gate_[0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9].tar; do
+        [[ -f "${f}" ]] && echo "${f}"
+    done
+    return 0
+}
+
+# Sizing of one evaluation task (docs/RESULTS/evaluation_plan.md §2, §3, §9).  s/chain at sampling
+# batch 32 on the A100 (timing job 2432221); fixed cost per run (Inception, loads, bootstrap,
+# tar); margin; the D16 counts of the final (2,000) and held-out (40 x 50) sets.
+IHDM_S_PER_CHAIN_off=3.233
+IHDM_S_PER_CHAIN_fp16=2.425
+IHDM_S_PER_CHAIN_bf16=2.424
+IHDM_EVAL_FIXED_H=0.25
+IHDM_EVAL_MARGIN=1.3
+IHDM_EVAL_N_LSD=500
+IHDM_EVAL_N_FINAL=2000
+IHDM_EVAL_N_HELDOUT=2000
+
+ihdm_eval_chains() {
+    # Chains per run at N_ITERS: one 500-seed LSD set per evaluated step (every 5k up to
+    # N_ITERS), plus the final and held-out sets.  8,000 at 40k, 10,000 at 60k.
+    local n="$1"
+    ihdm_check_n_iters "${n}" || return 1
+    echo $(( (n / IHDM_EVAL_STRIDE) * IHDM_EVAL_N_LSD + IHDM_EVAL_N_FINAL + IHDM_EVAL_N_HELDOUT ))
+}
+
+ihdm_eval_time_limit() {
+    # The array's default --time (HH:MM:SS) for N_ITERS and AMP: (chains x s/chain + fixed) x
+    # margin, rounded UP to 15 min.  40k: off 09:45:00, fp16 07:30:00; 60k: off 12:00:00, fp16
+    # 09:15:00.  The 1e-9 guard keeps an exact quarter hour from rounding up by float noise.
+    local n="$1" amp="$2" chains spc var
+    chains=$(ihdm_eval_chains "${n}") || return 1
+    var="IHDM_S_PER_CHAIN_${amp}"
+    spc="${!var:-}"
+    [[ -n "${spc}" ]] || { echo "[FATAL] no s/chain for AMP='${amp}'" >&2; return 1; }
+    awk -v c="${chains}" -v s="${spc}" -v f="${IHDM_EVAL_FIXED_H}" -v m="${IHDM_EVAL_MARGIN}" 'BEGIN {
+        h = (c * s / 3600 + f) * m
+        q = int(h * 4 - 1e-9); if (q < h * 4 - 1e-9) q++
+        printf "%02d:%02d:00\n", int(q / 4), (q % 4) * 15
+    }'
+}
+
+ihdm_last_ema_step() {
+    # The largest step among <run>/checkpoints/ema_iter_*.pt (0 when none); mirrors
+    # slurm/array/train_array.sbatch.
+    local d="$1/checkpoints" best=0 step name f
+    for f in "${d}"/ema_iter_*.pt; do
+        [[ -e "${f}" ]] || continue
+        name="$(basename "${f}")"; name="${name#ema_iter_}"; name="${name%.pt}"
+        [[ "${name}" =~ ^[0-9]+$ ]] || continue
+        step=$((10#${name}))
+        (( step > best )) && best=${step}
+    done
+    echo "${best}"
+}
+
 ihdm_amp_suffix() {
     # "" for off, "_amp-<mode>" otherwise; mirrors ihdm.metrics.run_eval.samples_dirname.
     case "$1" in

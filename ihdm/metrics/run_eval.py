@@ -66,12 +66,14 @@ from ihdm.stats.bootstrap import paired_lsd_gate
 __all__ = [
     "AMP_MODES",
     "EVALUATED_STEPS",
+    "EVAL_STRIDE",
     "EvalRequest",
     "SeedList",
     "SeedLists",
     "checkpoint_table",
     "ensure_seed_lists",
     "evaluate_run",
+    "evaluated_steps",
     "metrics_dirname",
     "samples_dirname",
     "select_checkpoints",
@@ -79,8 +81,29 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-#: The eight checkpoints D16 evaluates, in iterations.
-EVALUATED_STEPS: tuple[int, ...] = (5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000)
+#: Spacing of the evaluated checkpoints, in iterations (D16; D22 keeps it when runs are extended).
+EVAL_STRIDE: int = 5000
+
+
+def evaluated_steps(last_step: int) -> tuple[int, ...]:
+    """Return the evaluated checkpoint steps of a run whose largest checkpoint is ``last_step``.
+
+    Parameters
+    ----------
+    last_step : int
+        The largest EMA checkpoint step of the run.
+
+    Returns
+    -------
+    tuple[int, ...]
+        Every positive multiple of :data:`EVAL_STRIDE` up to ``last_step`` inclusive: 5k…40k (8)
+        for a 40k run, 5k…60k (12) for a 60k run, empty below 5k.
+    """
+    return tuple(range(EVAL_STRIDE, int(last_step) + 1, EVAL_STRIDE))
+
+
+#: The eight checkpoints D16 evaluates on a 40k run, in iterations.
+EVALUATED_STEPS: tuple[int, ...] = evaluated_steps(40000)
 
 #: Canonical sizes of the two frozen seed lists (D17).
 N_SEEDS_INTERMEDIATE: int = 500
@@ -389,9 +412,10 @@ def select_checkpoints(table: dict[int, Path], spec: str) -> tuple[list[int], st
     table : dict[int, Path]
         The output of :func:`checkpoint_table`.
     spec : str
-        ``"all"`` (the eight evaluated steps of D16 present in the run; every available step when
-        none of them is, which is what a short pilot run has), ``"final"`` (the largest step), or
-        a comma-separated list of steps.
+        ``"all"`` (every multiple of :data:`EVAL_STRIDE` up to the run's largest checkpoint that
+        the run holds, :func:`evaluated_steps`: the eight steps of D16 on a 40k run, twelve on a
+        60k run; every available step when none of them is, which is what a short pilot run
+        has), ``"final"`` (the largest step), or a comma-separated list of steps.
 
     Returns
     -------
@@ -410,12 +434,17 @@ def select_checkpoints(table: dict[int, Path], spec: str) -> tuple[list[int], st
     if text == "final":
         return [available[-1]], "final"
     if text == "all":
-        chosen = [step for step in EVALUATED_STEPS if step in table]
+        wanted = evaluated_steps(available[-1])
+        chosen = [step for step in wanted if step in table]
         if chosen:
+            absent = [step for step in wanted if step not in table]
+            if absent:
+                logger.warning("evaluated steps %s are absent from the run; skipped", absent)
             return chosen, "all-evaluated"
         logger.warning(
-            "none of the evaluated steps %s is present; falling back to every checkpoint (%s)",
-            list(EVALUATED_STEPS),
+            "none of the evaluated steps (multiples of %d) is present; falling back to every "
+            "checkpoint (%s)",
+            EVAL_STRIDE,
             available,
         )
         return available, "all-available"
