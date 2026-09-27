@@ -110,7 +110,9 @@ def make_run(root: Path, dataset: str, arm: str, seed: int, n_iters: int = 40000
         records = _segment(workdir, 0, n_iters, lr, final=True)
     else:
         records = _segment(workdir, 0, extended_from, lr, final=True)
-        records.append({"step": extended_from, "kind": "resume", "from": "checkpoint.pth"})
+        # The trainer resumes at the rolling state's step, one past the last trained step (the
+        # state is saved after the step counter is incremented; run 11 resumed at 30,001).
+        records.append({"step": extended_from + 1, "kind": "resume", "from": "checkpoint.pth"})
         records += _segment(workdir, extended_from + 1, n_iters, lr, final=True)
     for step in range(2500, n_iters + 1, 2500):
         (workdir / "checkpoints" / f"ema_iter_{step:06d}.pt").write_bytes(b"ema")
@@ -227,6 +229,31 @@ def test_an_abort_fails_even_with_allow_skips(array):
     assert report.n_abort == 1
     assert any(p.startswith("abort at step 30136") for p in report.problems)
     assert _run(root, cells, 40000, "--allow-skips") == 1
+
+
+def test_a_segment_abandoned_by_a_resume_is_not_counted(array):
+    """Run 11's shape (D21): an abort at 30,136, then a resume from the rolling state of 30,001."""
+    root, cells = array
+    carried = {"step": 27883, "kind": "skip", "loss": None, "n_skipped": 1, "consecutive": 1}
+    abandoned = [
+        {"step": 30111, "kind": "skip", "loss": None, "n_skipped": 2, "consecutive": 1},
+        {"step": 30136, "kind": "abort", "reason": "10 consecutive skips", "loss": "nan",
+         "n_skipped": 29, "consecutive": 10,
+         "abort_state": "checkpoints-meta/abort_step_030136.pth"},
+    ]
+    resume = {"step": 30001, "kind": "resume", "from": "checkpoints-meta/checkpoint.pth"}
+
+    def splice(rs):
+        before = [r for r in rs if r["step"] < 30001]
+        after = [r for r in rs if r["step"] >= 30001]
+        return [*before, carried, *after[:3], *abandoned, resume, *after]
+
+    _rewrite_metrics(root / "lsun_church_A0_s1", splice)
+    report, _ = _report(root, cells, "lsun_church_A0_s1", allow_skips=True)
+    assert report.n_abort == 0 and report.n_skip == 1, report.problems
+    assert report.healthy, report.problems
+    report, _ = _report(root, cells, "lsun_church_A0_s1")
+    assert "skip at step 27883" in report.problems  # the carried skip still needs --allow-skips
 
 
 def test_a_skip_fails_unless_skips_are_allowed(array):
