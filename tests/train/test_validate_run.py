@@ -104,3 +104,17 @@ def test_a_wrong_data_hash_is_caught(run_copy, smoke_dataset, tmp_path):
     meta_path.write_text(json.dumps(meta))
     problems = check_run_dir(run_copy, data_root=other)
     assert any("images_sha256" in p for p in problems)
+
+
+def test_canonical_records_drops_the_segment_a_resume_abandoned():
+    from ihdm.train.validate_run import canonical_records
+
+    records = [
+        {"step": 0, "kind": "train"}, {"step": 5, "kind": "train"}, {"step": 6, "kind": "skip"},
+        {"step": 7, "kind": "abort"}, {"step": 5, "kind": "resume"},
+        {"step": 5, "kind": "train"}, {"step": 9, "kind": "done"},
+    ]
+    kept = canonical_records(records)
+    assert [(r["step"], r["kind"]) for r in kept] == [
+        (0, "train"), (5, "resume"), (5, "train"), (9, "done")]
+    assert canonical_records(records[:3]) == records[:3], "no resume, nothing dropped"

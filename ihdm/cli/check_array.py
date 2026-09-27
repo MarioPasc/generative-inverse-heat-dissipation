@@ -38,6 +38,7 @@ from ihdm.train.validate_run import (
     _check_grids,
     _check_manifest,
     _expected_steps,
+    canonical_records,
     check_metrics,
     check_run_dir,
     expectation_from_config,
@@ -280,6 +281,9 @@ def check_cell(cell: Cell, run_root: Path, n_iters: int, *, allow_skips: bool = 
     parse_problems: list[str] = []
     if metrics_path.is_file():
         records, parse_problems = read_metrics_strict(metrics_path)
+        # A resume abandons whatever was logged at or after its step (e.g. run 11's aborted
+        # segment, retried from the last good checkpoint under D21): count only the kept history.
+        records = canonical_records(records)
         _facts_from_metrics(report, records)
     if missing:
         report.problems.append(f"missing top-level entries {missing}")

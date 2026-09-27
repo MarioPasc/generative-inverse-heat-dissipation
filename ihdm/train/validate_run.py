@@ -29,6 +29,7 @@ __all__ = [
     "EVENT_KEYS",
     "RunExpectation",
     "TRAIN_KEYS",
+    "canonical_records",
     "check_metrics",
     "check_run_dir",
     "expectation_from_config",
@@ -136,6 +137,33 @@ def read_metrics_strict(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
         except ValueError as error:
             problems.append(f"metrics.jsonl:{number}: {error}")
     return records, problems
+
+
+def canonical_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop the segments of a run that a later resume abandoned, keeping the history it trained.
+
+    A ``resume`` at step ``r`` restarts training from the rolling checkpoint of step ``r``, so every
+    record logged *before* that line with ``step >= r`` belongs to a segment whose weights were
+    discarded (a crash, a timeout, or a D19 abort retried from the last good checkpoint, D21). Those
+    records are removed; the ``resume`` line itself is kept. File order is preserved.
+
+    Parameters
+    ----------
+    records : list[dict[str, Any]]
+        The parsed ``metrics.jsonl`` lines in file order.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        The records of the history that produced the final weights.
+    """
+    kept: list[dict[str, Any]] = []
+    for record in records:
+        if record.get("kind") == "resume":
+            start = int(record["step"])
+            kept = [r for r in kept if int(r.get("step", -1)) < start]
+        kept.append(record)
+    return kept
 
 
 def _is_num(value: Any) -> bool:
@@ -374,7 +402,7 @@ def check_run_dir(workdir: Path, exp: RunExpectation | None = None,
     config = json.loads((workdir / "config.json").read_text())
     exp = exp or expectation_from_config(config)
     records, problems = read_metrics_strict(workdir / "metrics.jsonl")
-    problems += check_metrics(records, exp)
+    problems += check_metrics(canonical_records(records), exp)
     problems += _check_manifest(workdir, config, exp, data_root)
     manifest = json.loads((workdir / "manifest.json").read_text())
     problems += _check_checkpoints(workdir, manifest, exp)
