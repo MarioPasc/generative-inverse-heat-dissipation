@@ -443,3 +443,42 @@ changes it needs.
   extension adds ≈ 240 files; the count must be brought under 250k before the grace ends.
 - **Archive.** The copy of the 29 healthy runs, the logs and the 35k/40k gate to
   `…/training/array_2432693_40k/` has started. Run 11 follows when it holds `DONE` at 40k.
+
+---
+
+## 9. The 40k state, archived, and the extension to 60k (2026-09-27, `main`)
+
+**Run 11, attempt 3 (job 2474491): COMPLETED in 1 h 46 m.** It resumed from the rolling state at
+30,001 and reached 40,000 with **no skip or abort after the resume**. The `done` event carries
+`n_skipped` 6, the isolated skips before 30,001. The abandoned segment 30,002–30,136 of attempt 2
+stays in `metrics.jsonl` before the `resume` line. `check_array` and `check_run_dir` drop it
+(`validate_run.canonical_records`, commit `0f6500c`), and T5.2/T6.2 must do the same.
+
+**Health at 40k.** `check_array --n-iters 40000 --allow-skips`: **HEALTHY 30/30**. All 30 runs are
+`DONE` at 40,000 with 16/16 EMA checkpoints and `full_final.pt`. The 29 other runs have 0 aborts
+and 0 skips; run 11 has 6 skips before its resume and 0 aborts. lr is 1e-4 everywhere and the
+recipe is consistent across cells.
+
+**Archive** at
+`/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/training/array_2432693_40k/`,
+verified against Picasso by file name and size:
+
+- `runs/`: 30 folders, 1,202 files, 166 GB.
+- `failed_attempts/lsun_church_A3_s3_attempt1/`: 30 files, 3.7 GB.
+- `gate/`: 4 files, the 35k/40k gate.
+- `logs/`: every file of `~/execs/ihdm/logs`.
+- Spot check: the sha256 of `ixi_A0_s1/checkpoints/ema_iter_040000.pt` and of
+  `lsun_church_A3_s3/checkpoints-meta/checkpoint.pth` match.
+
+**Extension (D22): job 2475478**, submitted 2026-09-27 14:46.
+
+| field | value |
+|---|---|
+| command | `N_ITERS=60000 TIME_LIMIT=05:00:00 bash slurm/array/submit_array.sh` |
+| array | `0-29%8`, `--time 05:00:00` |
+| cluster commit | `0f6500c` |
+| start | tasks 0–7 started 14:47 on `exa01`; the worker printed `EXTEND … is DONE at step 40000 < N_ITERS=60000; resuming to extend` |
+| where it writes | the run folders in place; Picasso keeps only the latest state, and the 40k state is the archive above |
+| FSCRATCH at submission | 235.9k of 250.0k files (Mario freed space; no grace running) |
+
+**Outcome:** _running._
