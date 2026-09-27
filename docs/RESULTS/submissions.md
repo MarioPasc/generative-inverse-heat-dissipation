@@ -423,3 +423,23 @@ Once every run is `DONE` at 40k, it is checked with `check_array` and archived t
 runs are then extended in place with `N_ITERS=60000`, and the extension is recorded in §9. Ticket
 T3.5 (`docs/SPECIFICATIONS/M3-picasso/T3.5-extension-60k.md`) holds the procedure and the code
 changes it needs.
+
+**2026-09-27, 10:45 — the 40k state.**
+
+- **The other 29 runs.** 29/30 COMPLETED. `check_array --n-iters 40000` (light) reports every run
+  except run 11 healthy: `DONE` at 40,000, 16/16 EMA checkpoints, `full_final.pt`, **0 aborts and
+  0 skips in all 29**, lr 1e-4, recipe hashes consistent across cells.
+- **Task 11, attempt 2 (job 2454461): FAILED, exit 3, after 5 h 09 m.** The failure reproduced
+  attempt 1 exactly: skips at the identical steps (27,883 … 28,091, then 30,111–30,136) and the
+  abort at 30,136. With the same seed and data order the A100 run is deterministic, so a
+  from-scratch retry can never pass.
+- **What the D21 fix preserved.** `checkpoint.pth` holds step 30,001, the last good rolling state,
+  and the overflowing state is in `abort_step_030136.pth`.
+- **Attempt 3, the pre-registered fallback (D21 b).** It is job **2474491** (`ARRAY_SPEC=11
+  N_ITERS=40000 TIME_LIMIT=03:00:00`), started 10:44 on exa01. It resumes once from 30,001. A
+  resume restarts the data order and the RNG, so its path differs from the one that failed. If it
+  aborts, the cell is reported with 2 seeds, flagged.
+- **FSCRATCH quota.** 250.3k files against the 250.0k soft limit, with a grace of **6 days**. The
+  extension adds ≈ 240 files; the count must be brought under 250k before the grace ends.
+- **Archive.** The copy of the 29 healthy runs, the logs and the 35k/40k gate to
+  `…/training/array_2432693_40k/` has started. Run 11 follows when it holds `DONE` at 40k.
