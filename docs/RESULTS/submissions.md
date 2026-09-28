@@ -481,4 +481,23 @@ verified against Picasso by file name and size:
 | where it writes | the run folders in place; Picasso keeps only the latest state, and the 40k state is the archive above |
 | FSCRATCH at submission | 235.9k of 250.0k files (Mario freed space; no grace running) |
 
-**Outcome:** _running._
+**Outcome: COMPLETED 30/30** (by 2026-09-28 08:20).
+
+- **Resume.** All tasks resumed at 40,001 with lr 1e-4 and no new warm-up.
+- **Health at 60k.** `check_array --n-iters 60000 --allow-skips`: **HEALTHY 30/30**, each run with
+  `DONE` at 60,000, 24/24 EMA checkpoints, `full_final.pt` and 0 aborts.
+- **Skips.** None during the extension in any run; the only skips are run 11's 6 from before 30,001.
+- **Final train losses.** IXI 0.19–0.26, OASIS-1 0.26–0.28, Churches 0.26–0.41, Bedrooms 0.22–0.25.
+- **Disk.** `fscratch/runs/ihdm` holds 220 GB; FSCRATCH is at 236.4k files.
+
+**Gate 55k vs 60k (informational, D22):** job **2486891**, `N_ITERS=60000 AMP=fp16 bash
+slurm/eval/submit_eval.sh gate`, with no dependency because the runs are done. Its outputs are
+`~/execs/ihdm/eval/gate/<run_id>_amp-fp16_gate_055000_060000.{json,tar}`. Any further extension
+is Mario's decision; the evaluation array at 60k (`AMP=fp16`, computed `--time 09:15:00`) waits
+for it.
+
+**Archive of the 60k state:**
+`/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/training/array_2475478_60k/`,
+written with `rsync --link-dest` against the 40k archive. Files unchanged since 40k (the EMA
+checkpoints up to 40k) are hard links, so only the new and changed files take space
+(≈ 105 GB of the 220 GB).
