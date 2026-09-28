@@ -500,7 +500,7 @@ for it.
 `/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/training/array_2475478_60k/`,
 written with `rsync --link-dest` against the 40k archive. Files unchanged since 40k (the EMA
 checkpoints up to 40k) are hard links, so only the new and changed files take space
-(≈ 105 GB of the 220 GB).
+(≈ 105 GB of the 220 GB). **Verified 2026-09-28:** 1,712/1,712 files match Picasso by name and size, and the sha256 of `ixi_A0_s1/checkpoints/ema_iter_060000.pt` and `lsun_church_A3_s3/checkpoints/full_final.pt` match. The copy needed two passes: the first hit its 5.5 h limit at ≈ 10 GB/h.
 
 **Gate outcome (job 2486891, COMPLETED 09:46, fp16, 500 seeds):**
 

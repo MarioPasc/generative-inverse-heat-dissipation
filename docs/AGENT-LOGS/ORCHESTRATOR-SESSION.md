@@ -376,7 +376,7 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
   |---|---|---|
   | `training/array_2408239_failed/` | array 1 | yes |
   | `training/array_2432693_40k/` | the full 40k state | yes: 1,202 files by name and size, 2 hashes |
-  | `training/array_2475478_60k/` | the 60k state, hard-linked to the 40k archive for unchanged files | see §13.2 item 3 |
+  | `training/array_2475478_60k/` | the 60k state, hard-linked to the 40k archive for unchanged files | yes: 1,712 files by name and size, 2 hashes |
 
 - **The code is on `main`,** pushed (`MarioPasc/generative-inverse-heat-dissipation`), and the
   cluster clone is at `0f6500c`. Decisions D1–D22 are in `docs/SPECIFICATIONS/00-overview.md`; the
@@ -414,7 +414,7 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
    collection on the login node (commands in `docs/RESULTS/collection.md` once written) and copy
    `results/` to the workstation (`$IHDM_DATA_ROOT/../results/`) and to the SanDisk
    (`…/results/`). Also archive `~/execs/ihdm/eval/` (tars) to `…/evaluation/`.
-3. **Verify the 60k archive** if session 2 did not. Compare the file list and sizes of
+3. **(Done in session 2.)** The 60k archive was verified: 1,712/1,712 files, 2 hashes, hard links confirmed. The procedure is kept for later archives. Compare the file list and sizes of
    `training/array_2475478_60k/runs/` with `fscratch/runs/ihdm/`, exactly as for 40k
    (`find -type f -printf '%P %s\n' | sort` on both sides, then compare in python, never through
    `rtk`), plus two sha256 spot checks. Then update the SanDisk README.
