@@ -39,7 +39,7 @@ dead time. M3 still closes only when the full array is submitted.
 | T4.2 | Memorisation ratio $M$, within-seed diversity, PCA-around-seed | ‖ with T4.1 | opus5-xhigh | T2.2 | `ihdm/metrics/memorisation.py`, `ihdm/metrics/diversity.py`, `tests/metrics/test_mem*.py` |
 | T4.3 | `evaluate_run` CLI, statistics (bootstrap over seeds, permutation test), result schema | single | opus5-high | T4.1, T4.2 | `ihdm/cli/evaluate_run.py`, `ihdm/stats/**`, `tests/stats/**` |
 | T5.1 | Evaluation array on Picasso: scripts, one-writer caches, gate job, measured A100 cost (submission by `main` after training) | ‖ with T3.4 | opus55-high (+ skill) | T4.3 | see `M5-evaluation/T5.1-evaluation-array.md` |
-| T5.2 | Collect results, copy to `$HOME`, integrity check | single | sonnet5-high | T5.1 | `ihdm/cli/collect_results.py`, `docs/RESULTS/collection.md` |
+| T5.2 | Collect the 30 evaluated runs into one checked `results/` folder (`collect_results`; canonical metrics, gates by pair, integrity checks) | single | opus55-high | T5.1, T3.5 | see `M5-evaluation/T5.2-collect-results.md` |
 | T6.1 | Interaction tables, CIs, permutation tests, transfer signs | ‖ with T6.2 | opus5-xhigh | T5.2 | `ihdm/analysis/tables.py`, `docs/RESULTS/tables/**` |
 | T6.2 | Figures: LSD vs iteration, diversity and $M$, PCA around seed, inherited band, sample grids | ‖ with T6.1 | opus5-high | T5.2 | `ihdm/analysis/figures.py`, `docs/RESULTS/figures/**` |
 
@@ -56,6 +56,7 @@ dead time. M3 still closes only when the full array is submitted.
 | W6 | T5.1 → T5.2 | after the training array finishes |
 | W10 (2026-09-25) | T3.4 ‖ T5.1 | array 1 failed (D19); T5.1's scripts and cost check use the queue dead time; the v2 array is submitted by `main` after T3.4 merges |
 | W11 (2026-09-26) | T3.5 | while array 2 finishes its 40k; the archive and the extension are `main`'s steps |
+| W12 (2026-09-28) | T5.2 | while the 55k/60k gate runs and Mario decides on the evaluation array |
 | W7 | T6.1 ‖ T6.2 | |
 
 ## Milestone tickets not yet written in full
