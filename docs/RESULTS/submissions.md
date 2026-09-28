@@ -532,5 +532,7 @@ made.
 | expected makespan | ≈ 28–30 h at 8 concurrent tasks (≈ 7 h per run) |
 | fallback (D20) | if a run's fp16 draw is refused as non-finite, re-evaluate that run entirely with `AMP=off ARRAY_SPEC=<i>` and flag it |
 
+**Round 1 (2026-09-28 20:23):** tasks 0–7 COMPLETED with `status=ok`. Eval time was 24,530–24,690 s (≈ 6.8 h; the estimate was 6.99 h and `--time` is 9.25 h). Tasks 0 and 3 took ≈ 19,660 s (5.5 h) because they reused the four 500-sample sets of the 35k/40k and 55k/60k gate tars. 8 summaries are in `~/execs/ihdm/eval/`. The remaining 22 tasks run in 3 more rounds, ≈ 20 h, so the array ends ≈ 2026-09-29 afternoon.
+
 **Outcome:** _running._ Next: T5.2 collection (branch `ticket/T5.2-collect-results`, unfinished;
 see `ORCHESTRATOR-SESSION.md` §13).
