@@ -501,3 +501,36 @@ for it.
 written with `rsync --link-dest` against the 40k archive. Files unchanged since 40k (the EMA
 checkpoints up to 40k) are hard links, so only the new and changed files take space
 (≈ 105 GB of the 220 GB).
+
+**Gate outcome (job 2486891, COMPLETED 09:46, fp16, 500 seeds):**
+
+| run | LSD 55k | LSD 60k | LSD₅₅ₖ − LSD₆₀ₖ | 95 % CI | extend |
+|---|---|---|---|---|---|
+| `ixi_A0_s1` | 0.2476 | 0.2497 | −0.0021 | [−0.0036, −0.0007] | no |
+| `lsun_church_A0_s1` | 1.3653 | 1.4454 | −0.0801 | [−0.0909, −0.0705] | no |
+
+Neither CI lies above zero, so **60k is the final training length** and no further extension is
+made.
+
+- IXI improved from 0.2576 at 40k to 0.2476 at 55k and then levelled off: the extension helped.
+- Churches oscillates between 1.35 and 1.50 over 35k/40k/55k/60k without converging, consistent
+  with its blurry grid samples. The models are undertrained at this budget; this is a limitation
+  for the report.
+
+---
+
+## 10. Evaluation array (T5.1/T3.5), 2026-09-28
+
+| field | value |
+|---|---|
+| job id | **2488269**, submitted 2026-09-28 ≈ 09:50 (Mario approved) |
+| command | `N_ITERS=60000 AMP=fp16 bash slurm/eval/submit_eval.sh array` (`--test-only` accepted first) |
+| array / time | `0-29%8`, `--time 09:15:00`, computed as 10,000 chains at 2.425 s + 0.25 h, × 1.3 |
+| what each task does | `evaluate_run --ckpts all --amp fp16`: LSD at the 12 checkpoints 5k…60k with 500 samples each; at 60k a final set of 2,000 (LSD, KID/FID, recall/coverage, $M$) and a held-out 40 × 50 set (diversity, inherited band, PCA) |
+| outputs | `~/execs/ihdm/eval/<run_id>_amp-fp16.tar` + `<run_id>_amp-fp16_summary.json` in `$HOME`; nothing on FSCRATCH |
+| cluster commit | `0f6500c` |
+| expected makespan | ≈ 28–30 h at 8 concurrent tasks (≈ 7 h per run) |
+| fallback (D20) | if a run's fp16 draw is refused as non-finite, re-evaluate that run entirely with `AMP=off ARRAY_SPEC=<i>` and flag it |
+
+**Outcome:** _running._ Next: T5.2 collection (branch `ticket/T5.2-collect-results`, unfinished;
+see `ORCHESTRATOR-SESSION.md` §13).

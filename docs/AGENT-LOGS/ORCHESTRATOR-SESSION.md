@@ -334,3 +334,113 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
   no-op step, i.e. the exact weights that produced the non-finite loss.
 - **Exercise every cell before the array.** Array 1 never executed indices 11–29; a config error
   in the transfer or ablation cells would have surfaced days later.
+- **A seeded A100 run is deterministic.** Run 11's attempt 2 failed at exactly the same steps as
+  attempt 1 (27,883 … 30,136). Retrying from scratch with the same seed cannot help. Only a
+  resume from an earlier good state changes the path, because the data order and RNG restart.
+- **An abort must never overwrite the last good checkpoint** (D21 c). The pre-D21 abort cost run 11
+  its 30,000 rolling state; the fix (`abort_step_<n>.pth`) is what made attempt 3 possible.
+- **Every reader of `metrics.jsonl` must apply `canonical_records`.** A resume abandons whatever
+  was logged at or after its step, and `check_array` first reported run 11 as FAIL because of it.
+- **Agents can be stopped by the harness itself.** When auto mode's safety verdicts are unavailable
+  or an interruption fires, the agent stops mid-step. Resume it with explicit steps (T3.5, which
+  worked), or preserve its worktree as a WIP commit (T5.2) and resume later. Never let
+  uncommitted agent work sit in a worktree.
+- **The workstation is Mario's desktop.** Agents get at most one heavy local process at
+  `nice 19`, `OMP_NUM_THREADS=2`, and no GPU, because the RTX 3060 drives his display. Every
+  Picasso python process exports `PYTHONPYCACHEPREFIX` to node-local `/tmp`.
+- **Deletions on Picasso are blocked for the orchestrator.** Hand Mario the exact command with the
+  `!` prefix; moving a folder (`mv`) is allowed.
+
+| W12 (2026-09-28) | T5.2 (collect_results) | opus55-high | `0ec8703` | **INCOMPLETE**: the agent was stopped by the harness (auto mode returned no safety verdict 10 times in a row) at its testing stage. Its uncommitted work is preserved by `main` as WIP commit `b8c93bd` on `ticket/T5.2-collect-results` (9 files, ≈ 2.4k lines, unverified) | not merged |
+
+## 13. Handoff at the close of session 2 (2026-09-28, ≈ 10:00) — start here
+
+### 13.1 State
+
+- **Training is done.** Array 2 (2432693, recipe v2, lr 1e-4) reached 40k; run 11
+  (`lsun_church_A3_s3`) needed three attempts (D21 b). All 30 runs were then extended to 60k by
+  resume (job 2475478, D22). `check_array --n-iters 60000 --allow-skips` reports **HEALTHY 30/30**:
+  24/24 EMA checkpoints each, 0 aborts, and no skipped step during the extension. The only skips
+  in the project are run 11's 6 isolated ones before its resume at 30,001.
+- **60k is final.** The gate 55k/60k (job 2486891) did not extend on either dataset: IXI
+  plateaued at LSD ≈ 0.248; Churches oscillates between 1.35 and 1.50 (undertrained, blurry
+  samples). See `docs/RESULTS/submissions.md` §9.
+- **The evaluation array 2488269 is running** (`0-29%8`, fp16 per D20, `--time 09:15:00`,
+  submitted ≈ 09:50, ≈ 28–30 h makespan). Outputs go to `~/execs/ihdm/eval/<run_id>_amp-fp16.{tar,_summary.json}`.
+  Record: `submissions.md` §10.
+- **Archives** on Mario's disk,
+  `/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/` (its
+  `README.md` describes the layout):
+
+  | folder | content | verified against Picasso |
+  |---|---|---|
+  | `training/array_2408239_failed/` | array 1 | yes |
+  | `training/array_2432693_40k/` | the full 40k state | yes: 1,202 files by name and size, 2 hashes |
+  | `training/array_2475478_60k/` | the 60k state, hard-linked to the 40k archive for unchanged files | see §13.2 item 3 |
+
+- **The code is on `main`,** pushed (`MarioPasc/generative-inverse-heat-dissipation`), and the
+  cluster clone is at `0f6500c`. Decisions D1–D22 are in `docs/SPECIFICATIONS/00-overview.md`; the
+  ones taken in session 2 are:
+  - D19: recipe v2 and the skip policy;
+  - D20: fp16 evaluation;
+  - D21: stay at 40k (superseded by D22), run 11's recovery, the abort fix;
+  - D22: extension to 60k by resume.
+- **FSCRATCH** is at ≈ 236.4k of 250k files (Mario freed space on 2026-09-27); `$HOME` has
+  headroom.
+
+### 13.2 What is left, in order
+
+1. **Watch eval array 2488269.** Commands:
+   - `sacct -j 2488269 -X -n -P -o JobID,State,Elapsed`;
+   - each task's log `~/execs/ihdm/logs/eval_*_2488269_<i>.out`, whose last lines give
+     `END TASK … status`, `Eval time` and `copy-back`.
+
+   Recovery:
+   - A TIMEOUT or node failure: `ARRAY_SPEC=<i> N_ITERS=60000 AMP=fp16 bash slurm/eval/submit_eval.sh array`.
+     The task resumes from its partial tar.
+   - An fp16 draw refused as non-finite (D20): re-evaluate that run entirely with `AMP=off` and
+     flag it.
+
+   Check the first task's `Eval time` against the 0.25 h fixed-cost estimate (T5.1).
+2. **Finish T5.2.** The branch is `ticket/T5.2-collect-results`, worktree `projects/GenAI/code/wt/T5.2`,
+   head `b8c93bd` (WIP). The ticket is `docs/SPECIFICATIONS/M5-evaluation/T5.2-collect-results.md`,
+   and the agent log in that branch holds the full prompt and the plan. Spawn one agent (opus55-high):
+   - verify the WIP;
+   - finish the tests;
+   - do the read-only dry run on Picasso;
+   - complete the log.
+
+   Then merge `--no-ff` via `rtk proxy git merge`. When the eval array has finished, run the
+   collection on the login node (commands in `docs/RESULTS/collection.md` once written) and copy
+   `results/` to the workstation (`$IHDM_DATA_ROOT/../results/`) and to the SanDisk
+   (`…/results/`). Also archive `~/execs/ihdm/eval/` (tars) to `…/evaluation/`.
+3. **Verify the 60k archive** if session 2 did not. Compare the file list and sizes of
+   `training/array_2475478_60k/runs/` with `fscratch/runs/ihdm/`, exactly as for 40k
+   (`find -type f -printf '%P %s\n' | sort` on both sides, then compare in python, never through
+   `rtk`), plus two sha256 spot checks. Then update the SanDisk README.
+4. **Write and run T6.1 ‖ T6.2** (sketches in `docs/SPECIFICATIONS/M6-analysis/README.md`). They
+   must:
+   - read only `results/`;
+   - use `canonical_records` for loss curves;
+   - compute $T_\tau$ from the summaries' `lsd_by_step` and the A0 run's final LSD;
+   - report the 12-step LSD curves (5k…60k), the interaction tables with bootstrap CIs and the
+     exact permutation p (floor 0.1 at 3 seeds, `PermutationResult.p_min`);
+   - state these limitations: Churches undertrained (LSD ≈ 1.4, blurry samples); the
+     right-edge stripe artefact in `lsun_church_A3_s1`'s samples; run 11's three attempts; the
+     training length (40k → 60k by the pre-registered gate, D22); the FID bootstrap bias; fp16
+     sampling (D20).
+5. **Cleanup** (deletions on Picasso are Mario's `!` commands):
+   - `fscratch/runs/ihdm_failed/` and `~/execs/ihdm/fixtures/array_2408239/`, if still present
+     (both archived);
+   - `abort_step_030136.pth` inside run 11's folder (archived in the 40k archive);
+   - `~/execs/ihdm/wt/T5.2`, if the next agent leaves it.
+
+   Kept on purpose: the loginexa overlay `~/execs/ihdm/overlay/ihdm-v100` and
+   `~/execs/ihdm/loginexa_runs`.
+6. **Still [ask Mario]** from session 1:
+   - the proposal's Fig. 1 caption numbers (`docs/RESULTS/data_profile.md`, N4 row);
+   - pinning torch in `environment.yml`;
+   - the items listed in §7.
+7. **Close each session** with the TFM `session-log` skill (worklog) and keep
+   `~/.claude/projects/-home-mpascual-research-code-TFM/memory/genai-code-orchestration.md`
+   current.
