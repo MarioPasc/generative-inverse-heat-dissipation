@@ -534,5 +534,15 @@ made.
 
 **Round 1 (2026-09-28 20:23):** tasks 0–7 COMPLETED with `status=ok`. Eval time was 24,530–24,690 s (≈ 6.8 h; the estimate was 6.99 h and `--time` is 9.25 h). Tasks 0 and 3 took ≈ 19,660 s (5.5 h) because they reused the four 500-sample sets of the 35k/40k and 55k/60k gate tars. 8 summaries are in `~/execs/ihdm/eval/`. The remaining 22 tasks run in 3 more rounds, ≈ 20 h, so the array ends ≈ 2026-09-29 afternoon.
 
-**Outcome:** _running._ Next: T5.2 collection (branch `ticket/T5.2-collect-results`, unfinished;
+**Outcome: COMPLETED 30/30** (the last task finished ≈ 13:15 on 2026-09-29).
+
+- **Collection.** `collect_results` on the Picasso login node (cluster `cff6585`) reported **VERDICT: COMPLETE**: checks C1–C9 all PASS, 0 problems, 0 missing, 52 MB. The log is `~/execs/ihdm/logs/collect_results_2026-09-29.log`.
+- **Copies of `results/`:**
+  - Picasso `~/execs/ihdm/results/` (canonical);
+  - the workstation `$IHDM_DATA_ROOT/_results/`, on exFAT, so the Unix permissions are not kept; a content checksum shows 0 differing files;
+  - the SanDisk `…/spectral_allocation_heat_diffusion_project/results/` (checksum identical).
+- **Final analysis.** `analyse` and `figures` were rerun on the 30-run collection; both report VERDICT: COMPLETE. The outputs are committed as `docs/RESULTS/tables/` and `docs/RESULTS/figures/` (`d2b3e2f`).
+- **Evaluation tars.** Archived to `…/evaluation/eval_2488269/` on the SanDisk.
+
+**Superseded:** _running._ Next: T5.2 collection (branch `ticket/T5.2-collect-results`, unfinished;
 see `ORCHESTRATOR-SESSION.md` §13).
