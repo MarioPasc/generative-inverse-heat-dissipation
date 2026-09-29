@@ -761,8 +761,8 @@ def fig_grids(results: Results, out_dir: Path, pdf: bool = True,
         f"Training sample grids at the last iteration ({_n_iters(results) // 1000}k, EMA weights) "
         f"of training seed {GRID_SEED}, for A0 (left) and A3 (right) on each dataset. In each "
         "grid the top row holds 8 training images used as seeds and the bottom row the sample "
-        "each seed produces from its prior state (the seed blurred to the terminal level), "
-        "drawn with the EMA weights. The seeds are fixed by the run seed, so the A0 and A3 "
+        "each seed produces from its prior state (the seed blurred to the terminal level). "
+        "The seeds are fixed by the run seed, so the A0 and A3 "
         "grids of a dataset share their top row. These are the trainer's monitoring grids "
         "(`ihdm/train/grids.py`), not the evaluation sets." + stripe_note +
         f" n = {len(used)}/{len(expected)} runs.{_missing_clause(missing)}")
