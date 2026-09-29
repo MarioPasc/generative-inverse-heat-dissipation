@@ -317,7 +317,8 @@ def test_a_curve_that_never_reaches_the_threshold_makes_the_contrast_not_computa
     # Churches A2 seed 1 sits +0.02 above A0 at every step
     assert math.isinf(results.frame.at["lsun_church_A2_s1", "t_tau"])
     c = compute_contrast(results, "lsun_church", "A2", "t_tau")
-    assert not c.ok and "not reached" in c.status and "lsun_church_A2_s1" in c.status
+    assert c.status == "not computable: T_τ not reached (A2 s1)"
+    assert not c.ok and "lsun_church_A2_s1" in c.required
     assert math.isnan(c.ci_low)
     inter = compute_interaction(results, "t_tau")
     assert inter.status.startswith("not computable")

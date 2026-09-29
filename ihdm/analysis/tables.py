@@ -646,15 +646,16 @@ def compute_contrast(
                                                          len(required)))
     a = {s: results.value(run_id(dataset, arm, s), endpoint) for s in paired}
     b = {s: results.value(run_id(dataset, reference, s), endpoint) for s in paired}
-    not_reached = [run_id(dataset, arm_, s) for arm_, values in ((arm, a), (reference, b))
+    # short "A2 s1" names keep the reason inside a table cell; the run ids are in ``required``
+    not_reached = [f"{arm_label(arm_)} s{s}" for arm_, values in ((arm, a), (reference, b))
                    for s, v in values.items() if math.isinf(v)]
     if not_reached:
-        return ContrastResult(**base, status=f"not computable: T_τ not reached in "
-                                             f"{', '.join(not_reached)}")
-    absent = [run_id(dataset, arm_, s) for arm_, values in ((arm, a), (reference, b))
+        return ContrastResult(**base, status=f"not computable: T_τ not reached "
+                                             f"({', '.join(not_reached)})")
+    absent = [f"{arm_label(arm_)} s{s}" for arm_, values in ((arm, a), (reference, b))
               for s, v in values.items() if math.isnan(v)]
     if absent:
-        return ContrastResult(**base, status=f"not computable: no value in {', '.join(absent)}")
+        return ContrastResult(**base, status=f"not computable: no value ({', '.join(absent)})")
 
     deltas = tuple(a[s] - b[s] for s in paired)
     reference_mean = float(np.mean([b[s] for s in paired]))
