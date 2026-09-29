@@ -29,6 +29,7 @@ from ihdm.analysis.tables import (
     ENDPOINTS,
     EXPLORATORY_LABEL,
     NOT_DETECTABLE,
+    PREREGISTERED_LABEL,
     AnalysisError,
     ResultsNotFound,
     analyse,
@@ -46,6 +47,7 @@ from ihdm.analysis.tables import (
 from ihdm.metrics.io import write_json
 from ihdm.metrics.spectral import t_tau
 from tests.analysis.synthetic_eval import Campaign, copy_campaign
+from tests.analysis.test_inherited import synthetic_constants
 
 STEPS = tuple(range(5000, 60001, 5000))
 FLOAT_ENDPOINTS = ("lsd_final", "kid", "fid", "recall", "coverage", "M", "M_lp",
@@ -338,7 +340,8 @@ def test_the_settling_step_differs_from_the_first_crossing_on_a_non_monotone_cur
 def test_every_table_is_built_and_complete_on_the_full_folder(results):
     tables = build_tables(results)
     names = [t.name for t in tables]
-    assert names == ["t1a_cells_fidelity", "t1b_cells_mechanism", "t2a_contrasts_ixi",
+    assert names == ["t1a_cells_fidelity", "t1b_cells_mechanism", "t1c_cells_inherited",
+                     "t2a_contrasts_ixi",
                      "t2b_contrasts_lsun_church", "t3_interaction", "t4_decomposition",
                      "t5_a2p_control", "t6_transfer", "t7_t_tau", "t8_gates",
                      "t9_settle_exploratory"]
@@ -422,12 +425,14 @@ def test_the_gate_table_holds_both_pairs_of_both_gate_runs(results):
         ("lsun_church_A0_s1", 55000)}
 
 
-def test_the_partial_folder_marks_tables_incomplete_and_drops_no_row(partial):
-    res = load_results(partial)
+def test_the_partial_folder_marks_tables_incomplete_and_drops_no_row(partial, tmp_path):
+    # With matching D23 constants, every row's status is about missing runs only.
+    res = load_results(partial, synthetic_constants(partial, tmp_path / "constants.json"))
     t = _tables(res)
     expected = {
         "t1a_cells_fidelity": "incomplete: 24/30 runs",
         "t1b_cells_mechanism": "incomplete: 24/30 runs",
+        "t1c_cells_inherited": "incomplete: 24/30 runs",
         "t6_transfer": "incomplete: 14/20 runs",
         "t7_t_tau": "incomplete: 24/30 runs",
         "t9_settle_exploratory": "incomplete: 24/30 runs",
@@ -483,6 +488,99 @@ def test_a_partial_folder_is_bannered_in_every_file(partial, tmp_path):
     document = json.loads((tmp_path / "tables" / "tables.json").read_text())
     assert document["complete"] is False and sorted(document["missing_runs"]) == sorted(TIER_3)
     assert document["tables"]["t7_t_tau"]["rows"][-1]["t_tau"] is None
+
+
+# ---- the D23 inherited-band reading -------------------------------------------------------------
+
+SUM_POWER, N_PIX, MEAN_TERM = 20000.0, 96, 0.3
+
+
+@pytest.fixture(scope="module")
+def d23(planted, tmp_path_factory):
+    """The planted folder read against constants that match its runs."""
+    path = synthetic_constants(planted, tmp_path_factory.mktemp("t64") / "constants.json",
+                               SUM_POWER, N_PIX, MEAN_TERM)
+    return load_results(planted, path)
+
+
+def _summary(root: Path, rid: str) -> dict:
+    return json.loads((root / "runs" / rid / "summary.json").read_text())
+
+
+def test_the_within_seed_share_is_exact_on_a_synthetic_results_tree(d23, planted):
+    frame = d23.frame
+    assert d23.inherited_notes == ()
+    for rid in frame.index:
+        final = _summary(planted, rid)["final"]
+        m, d_pix = final["n_per_seed"], final["diversity_pix"]
+        g_w = d_pix * (N_PIX**2 - 1) / SUM_POWER
+        assert frame.at[rid, "inherited_within"] == pytest.approx(1 - m / (m - 1) * g_w,
+                                                                 rel=1e-12)
+        assert frame.at[rid, "inherited_bias"] == pytest.approx(
+            1 - final["inherited_measured"] - g_w, rel=1e-12)
+        share = final["inherited_predicted"]
+        assert frame.at[rid, "inherited_bias_expected"] == pytest.approx(
+            MEAN_TERM + (1 - share) / m, rel=1e-12)
+        assert frame.at[rid, "inherited_expected"] == pytest.approx(share - MEAN_TERM, rel=1e-12)
+    # The planted D_pix effect maps linearly onto I_w: ΔI_w = −M/(M−1)(W²−1)/ΣP · ΔD_pix.
+    m = _summary(planted, "ixi_A0_s1")["final"]["n_per_seed"]
+    contrast = compute_contrast(d23, "ixi", "A3", "inherited_within")
+    delta_d = -0.10 + np.mean([0.005, -0.005, 0.002])
+    assert contrast.ok and contrast.p_min == pytest.approx(0.1)
+    assert contrast.mean == pytest.approx(-m / (m - 1) * (N_PIX**2 - 1) / SUM_POWER * delta_d,
+                                          rel=1e-4)
+
+
+def test_the_d23_endpoints_are_tested_like_every_other_endpoint(d23):
+    t = _tables(d23)
+    for name in ("t2a_contrasts_ixi", "t3_interaction", "t4_decomposition", "t6_transfer"):
+        endpoints = {r["endpoint"] for r in t[name].rows}
+        assert {"inherited_measured", "inherited_within", "inherited_bias"} <= endpoints, name
+    rows = {r["endpoint"]: r for r in t["t3_interaction"].rows}
+    assert rows["inherited_within"]["status"] == "ok"
+    assert rows["inherited_bias"]["verdict"] in {DETECTABLE, NOT_DETECTABLE}
+    assert math.isnan(rows["inherited_within"]["relative_mri"])
+
+
+def test_the_inherited_cell_table_renders_with_the_pre_registered_label(d23, tmp_path):
+    t = _tables(d23)
+    table = t["t1c_cells_inherited"]
+    assert len(table.rows) == 30 and table.complete
+    row = next(r for r in table.rows if r["run_id"] == "ixi_A0_s1")
+    assert row["inherited_within"] == pytest.approx(d23.frame.at["ixi_A0_s1", "inherited_within"])
+    written = write_tables(d23, [table, t["t2a_contrasts_ixi"]], tmp_path)
+    md = (tmp_path / "t1c_cells_inherited.md").read_text()
+    for header in ("pre-reg. share (biased)", "expected I − T", "I_w", "expected I", "G_b",
+                   "expected T + (1−I)/M"):
+        assert header in md, header
+    tex = (tmp_path / "t1c_cells_inherited.tex").read_text()
+    assert r"\label{tab:t1c-cells-inherited}" in tex and "$I_w$" in tex
+    contrasts = (tmp_path / "t2a_contrasts_ixi.md").read_text()
+    assert f"inherited share {PREREGISTERED_LABEL}" in contrasts
+    assert "within-seed share I_w (D23)" in contrasts
+    assert len(written) == 5
+
+
+def test_constants_of_another_dataset_version_leave_the_columns_blank_with_a_note(planted,
+                                                                                  tmp_path):
+    path = synthetic_constants(planted, tmp_path / "constants.json", datasets=("ixi",))
+    document = json.loads(path.read_text())
+    document["datasets"]["ixi"]["sha256"] = "0" * 64
+    path.write_text(json.dumps(document))
+    res = load_results(planted, path)
+    assert np.isnan(res.frame["inherited_within"]).all()
+    assert any("ixi: dataset_sha256" in note for note in res.inherited_notes)
+    assert any("lsun_church: no constants" in note for note in res.inherited_notes)
+    notes = _tables(res)["t1c_cells_inherited"].notes
+    assert any(n.startswith("No D23 value: ixi") for n in notes)
+    contrast = compute_contrast(res, "ixi", "A3", "inherited_within")
+    assert contrast.status.startswith("not computable: no value")
+
+
+def test_an_unreadable_constants_file_is_refused(planted, tmp_path):
+    (tmp_path / "bad.json").write_text("{")
+    with pytest.raises(AnalysisError):
+        load_results(planted, tmp_path / "bad.json")
 
 
 # ---- formatting ---------------------------------------------------------------------------------

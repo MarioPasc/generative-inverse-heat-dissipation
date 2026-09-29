@@ -7,8 +7,10 @@ mean exactly ``mu``: ``sum P``, ``I`` and ``T`` then have closed forms to compar
 
 from __future__ import annotations
 
+import csv
 import json
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -34,6 +36,37 @@ from tests.metrics.test_run_eval import _build_dataset
 
 SIZE = 64
 N_REF = 16
+
+#: The corrected radial curve of :func:`synthetic_constants`; figure tests look for it.
+SYNTHETIC_CORRECTED: tuple[float, ...] = (4.0, 1.2, 1.0)
+
+
+def synthetic_constants(results_root: Path, out: Path, sum_power: float = 20000.0,
+                        n_pix: int = 96, mean_term: float = 0.3,
+                        datasets: tuple[str, ...] | None = None) -> Path:
+    """A constants file matching the evaluated runs of a synthetic ``results/`` folder.
+
+    Every dataset (or only ``datasets``) gets the ``dataset_sha256`` and ``sigma_max`` its runs
+    record, with the given ``sum P_ref``, ``W`` and ``T``; used by the table and figure tests.
+    """
+    blocks: dict[str, dict] = {}
+    with (results_root / "index.csv").open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for row in rows:
+        path = results_root / "runs" / row["run_id"] / "summary.json"
+        if not path.is_file() or (datasets is not None and row["dataset"] not in datasets):
+            continue
+        summary = json.loads(path.read_text())
+        sigma = float(summary["final"]["sigma_max"])
+        block = blocks.setdefault(row["dataset"], {
+            "sha256": summary["dataset_sha256"], "n_pix": n_pix, "sum_power": sum_power,
+            "sigmas": {}})
+        block["sigmas"][f"{sigma:g}"] = {
+            "sigma_max": sigma, "share_predicted": 0.05, "mean_term": mean_term,
+            "radial": {"centres": [0.7, 3.0, 20.0], "predicted": [0.5, 0.99, 1.0],
+                       "corrected": list(SYNTHETIC_CORRECTED)}}
+    out.write_text(json.dumps({"datasets": blocks}))
+    return out
 
 
 def _mean_image(power: np.ndarray) -> np.ndarray:

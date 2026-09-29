@@ -470,6 +470,16 @@ class InheritedConstants:
     path: Path | None
     entries: dict[tuple[str, str], BandConstants]
 
+    @property
+    def label(self) -> str:
+        """The file, relative to the repository when it lives there; ``"none given"`` if absent."""
+        if self.path is None:
+            return "none given"
+        try:
+            return self.path.resolve().relative_to(repo_root()).as_posix()
+        except ValueError:
+            return str(self.path)
+
     def lookup(self, dataset: str, sha256: str, sigma_max: float
                ) -> tuple[BandConstants | None, str]:
         """The constants of a run, or ``None`` and the reason they do not apply.
@@ -493,6 +503,8 @@ class InheritedConstants:
         entry = self.entries.get((dataset, _sigma_key(sigma_max)))
         if entry is None:
             return None, f"{dataset}: no constants at sigma_max {sigma_max:g}"
+        if not sha256:
+            return None, f"{dataset}: the run records no dataset_sha256"
         if entry.sha256 != sha256:
             return None, (f"{dataset}: dataset_sha256 {str(sha256)[:12]} differs from the "
                           f"constants' {entry.sha256[:12]}")

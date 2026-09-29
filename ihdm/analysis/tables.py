@@ -27,6 +27,14 @@ A table that needs a run the collection lacks is written anyway and marked
 
 Table 9, the settling step of the LSD curve, is exploratory: defined after seeing the data
 (2026-09-29), not pre-registered, and reported descriptively without CI or p-value.
+
+The inherited band is read as D23 prescribes (``docs/RESULTS/inherited_band_audit.md``): the
+pre-registered ``inherited_measured`` stays, labelled biased under a non-zero mean image, and two
+endpoints are added from the stored scalars and the reference constants of
+``docs/RESULTS/inherited_band_constants.json`` (:mod:`ihdm.analysis.inherited`): the within-seed
+share ``I_w`` (read against ``inherited_predicted``) and the seed-mean bias fraction ``G_b`` (read
+against ``T + (1 - I) / M``). Table 1c sets them side by side per run; tables 2-6 test them like
+every other endpoint.
 """
 
 from __future__ import annotations
@@ -46,13 +54,24 @@ import pandas as pd
 
 from configs.spectral.arms import EXPERIMENT_CELLS
 from ihdm.analysis.collect import strict_json
+from ihdm.analysis.inherited import (
+    DEFAULT_CONSTANTS_PATH,
+    InheritedConstants,
+    InheritedError,
+    bias_expected,
+    bias_fraction,
+    load_constants,
+    within_seed_share,
+)
 from ihdm.metrics.io import write_json
 from ihdm.metrics.spectral import t_tau
 from ihdm.paths import repo_root
 from ihdm.stats import cell_table, interaction, paired_delta, permutation_test
 
 __all__ = [
+    "D23_COLUMNS",
     "ENDPOINTS",
+    "PREREGISTERED_LABEL",
     "AnalysisError",
     "Column",
     "ContrastResult",
@@ -121,11 +140,17 @@ _SUMMARY_KEYS: dict[str, str] = {
     "inherited_measured": "final.inherited_measured",
     "inherited_predicted": "final.inherited_predicted",
 }
-#: Columns only the summaries hold (the low-band inherited shares of ``05-metrics.md`` §5).
+#: Columns only the summaries hold (the low-band inherited shares of ``05-metrics.md`` §5, and
+#: the terminal blur and samples per seed that the D23 reading needs).
 _SUMMARY_ONLY: dict[str, str] = {
     "inherited_measured_low": "final.inherited_measured_low_band",
     "inherited_predicted_low": "final.inherited_predicted_low_band",
+    "sigma_max": "final.sigma_max",
+    "n_per_seed": "final.n_per_seed",
 }
+#: Columns of the D23 reading (``inherited_band_audit.md`` §3.3, §5), added by the loader.
+D23_COLUMNS: tuple[str, ...] = ("inherited_within", "inherited_bias", "inherited_bias_expected",
+                                "inherited_mean_term", "inherited_expected")
 _INDEX_REQUIRED: tuple[str, ...] = ("index", "run_id", "dataset", "arm", "seed", "n_skipped",
                                     *_SUMMARY_KEYS)
 _GATE_FILE = re.compile(r"^(?P<run_id>.+)_gate_(?P<early>\d{6})_(?P<late>\d{6})\.json$")
@@ -175,7 +200,12 @@ class Endpoint:
     ratio: bool = True
 
 
-#: The endpoints of tables 2-6 (``00-overview.md`` §1, ``05-metrics.md`` §2-§7), in report order.
+#: How the pre-registered inherited share is labelled since D23.
+PREREGISTERED_LABEL: str = ("as pre-registered (biased under a non-zero mean image; see "
+                            "inherited_band_audit.md)")
+
+#: The endpoints of tables 2-6 (``00-overview.md`` §1, ``05-metrics.md`` §2-§7), in report order;
+#: the two D23 inherited-band endpoints follow the pre-registered share.
 ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("lsd_final", "LSD (final, 2k set)", "LSD (final)", "lower is better"),
     Endpoint("t_tau", "T_τ (steps)", r"$T_\tau$ (steps)", "lower is earlier", "step"),
@@ -189,8 +219,13 @@ ENDPOINTS: tuple[Endpoint, ...] = (
              "share of samples whose nearest training image is their own seed", ratio=False),
     Endpoint("D_pix", "D_pix", r"$D_{\mathrm{pix}}$", "higher = more within-seed diversity"),
     Endpoint("D_lp", "D_lp", r"$D_{\mathrm{lp}}$", "as D_pix, after the low-pass"),
-    Endpoint("inherited_measured", "inherited share (measured)", "inherited (meas.)",
-             "read against the predicted share of table 1b", ratio=False),
+    Endpoint("inherited_measured",
+             f"inherited share {PREREGISTERED_LABEL}", "inherited (pre-reg., biased)",
+             "model expectation I − T, not I (table 1c; D23)", ratio=False),
+    Endpoint("inherited_within", "within-seed share I_w (D23)", r"$I_w$ (D23)",
+             "read against the predicted share I (table 1c)", ratio=False),
+    Endpoint("inherited_bias", "seed-mean bias fraction G_b (D23)", r"$G_b$ (D23)",
+             "read against T + (1 − I)/M (table 1c)", ratio=False),
     Endpoint("t_tau_2k", "T_τ, 2k-set threshold (sensitivity)",
              r"$T_\tau$, 2k threshold (sens.)", "lower is earlier", "step"),
 )
@@ -249,6 +284,11 @@ class Results:
         The gate records of ``gates/``, each with ``run_id``, ``early`` and ``late`` added.
     steps : tuple[int, ...]
         The evaluated checkpoint steps.
+    constants_label : str
+        The D23 constants file the inherited-band columns were read against (repository-relative
+        when it lives in the repository).
+    inherited_notes : tuple[str, ...]
+        Why a present run has no D23 value (no constants for its dataset, sigma or sha256).
     """
 
     root: Path
@@ -256,6 +296,8 @@ class Results:
     collection: dict[str, Any]
     gates: tuple[dict[str, Any], ...]
     steps: tuple[int, ...]
+    constants_label: str = "none given"
+    inherited_notes: tuple[str, ...] = ()
 
     @property
     def present(self) -> frozenset[str]:
@@ -325,6 +367,9 @@ def _summary_frame(root: Path, present: Sequence[str], steps: Sequence[int]) -> 
     for key in wanted:
         if key not in frame.columns:
             frame[key] = math.nan
+    # cell_table keeps numbers only; the D23 constants are matched on this string.
+    frame["dataset_sha256"] = [str(summaries[rid].get("dataset_sha256") or "")
+                               for rid in frame.index]
     return frame
 
 
@@ -357,13 +402,59 @@ def _read_gates(root: Path) -> tuple[dict[str, Any], ...]:
     return tuple(gates)
 
 
-def load_results(root: str | Path) -> Results:
+def _d23_columns(frame: pd.DataFrame, summaries: pd.DataFrame,
+                 constants: InheritedConstants) -> tuple[pd.DataFrame, tuple[str, ...]]:
+    """Add the D23 inherited-band columns (audit §3.3) to the analysis frame.
+
+    ``inherited_within`` is ``I_w = 1 - M/(M-1) D_pix (W^2-1) / sum P_ref``;
+    ``inherited_bias`` is ``G_b = 1 - inherited_measured - D_pix (W^2-1) / sum P_ref``;
+    ``inherited_bias_expected`` is ``T + (1 - I)/M``; ``inherited_expected`` is ``I - T``, the
+    model expectation of the pre-registered share. ``I`` is the run's own
+    ``inherited_predicted``. A run whose dataset, ``sigma_max`` or ``dataset_sha256`` has no
+    matching constants gets ``NaN`` and a note.
+    """
+    values: dict[str, list[float]] = {c: [] for c in D23_COLUMNS}
+    notes: list[str] = []
+    for rid in frame.index:
+        row = frame.loc[rid]
+        record = dict.fromkeys(D23_COLUMNS, math.nan)
+        if bool(row["present"]):
+            sha = str(summaries.at[rid, "dataset_sha256"])
+            entry, reason = constants.lookup(str(row["dataset"]), sha, float(row["sigma_max"]))
+            if entry is None:
+                notes.append(reason)
+            else:
+                share, m = float(row["inherited_predicted"]), float(row["n_per_seed"])
+                d_pix, measured = float(row["D_pix"]), float(row["inherited_measured"])
+                record = {
+                    "inherited_within": within_seed_share(d_pix, m, entry.n_pix, entry.sum_power),
+                    "inherited_bias": bias_fraction(measured, d_pix, entry.n_pix,
+                                                    entry.sum_power),
+                    "inherited_bias_expected": bias_expected(share, entry.mean_term, m),
+                    "inherited_mean_term": entry.mean_term,
+                    "inherited_expected": share - entry.mean_term,
+                }
+        for column in D23_COLUMNS:
+            values[column].append(record[column])
+    for column in D23_COLUMNS:
+        frame[column] = values[column]
+    unique = tuple(dict.fromkeys(notes))
+    for note in unique:
+        logger.warning("inherited band (D23): %s; its columns are left blank", note)
+    return frame, unique
+
+
+def load_results(root: str | Path,
+                 inherited_constants: str | Path | None = DEFAULT_CONSTANTS_PATH) -> Results:
     """Load and check one ``results/`` folder.
 
     Parameters
     ----------
     root : str or Path
         The folder written by ``python -m ihdm.cli.collect_results``.
+    inherited_constants : str, Path or None
+        The D23 constants file (:mod:`ihdm.analysis.inherited`); default the committed
+        ``docs/RESULTS/inherited_band_constants.json``. ``None`` leaves the D23 columns blank.
 
     Returns
     -------
@@ -377,9 +468,14 @@ def load_results(root: str | Path) -> Results:
     AnalysisError
         If the collection's verdict is ``FAIL``, a row is outside the design or carries the
         wrong identity, a run is evaluated in ``index.csv`` but has no ``summary.json`` (or the
-        reverse), or ``index.csv`` disagrees with a run's ``summary.json``.
+        reverse), ``index.csv`` disagrees with a run's ``summary.json``, or the constants file
+        cannot be read.
     """
     root = Path(root)
+    try:
+        constants = load_constants(inherited_constants)
+    except InheritedError as error:
+        raise AnalysisError(str(error)) from error
     for name in ("collection.json", "index.csv"):
         if not (root / name).is_file():
             raise ResultsNotFound(f"{root} is not a results folder: no {name}")
@@ -414,9 +510,10 @@ def load_results(root: str | Path) -> Results:
     for column, key in _SUMMARY_ONLY.items():
         frame[column] = [float(summaries.at[r, key]) if r in summaries.index else math.nan
                          for r in frame.index]
+    frame, notes = _d23_columns(frame, summaries, constants)
     frame = pd.concat([frame, t_tau_frame(frame, steps)], axis=1)
     return Results(root=root, frame=frame, collection=collection, gates=_read_gates(root),
-                   steps=steps)
+                   steps=steps, constants_label=constants.label, inherited_notes=notes)
 
 
 # --------------------------------------------------------------------------------------------
@@ -1173,9 +1270,11 @@ def build_cell_tables(results: Results) -> list[Table]:
                  _col_num("seed_nn_fraction", "seed-NN frac.", "seed-NN"),
                  _col_num("D_pix", "D_pix", r"$D_{\mathrm{pix}}$"),
                  _col_num("D_lp", "D_lp", r"$D_{\mathrm{lp}}$"),
-                 _col_num("inherited_measured", "inherited meas.", "inh. meas."),
+                 _col_num("inherited_measured", "inherited meas. (pre-reg., biased)",
+                          "inh. meas. (pre-reg.)"),
                  _col_num("inherited_predicted", "inherited pred.", "inh. pred."),
-                 _col_num("inherited_measured_low", "low-band meas.", "low meas."),
+                 _col_num("inherited_measured_low", "low-band meas. (pre-reg., biased)",
+                          "low meas. (pre-reg.)"),
                  _col_num("inherited_predicted_low", "low-band pred.", "low pred."),
                  Column("n_skipped", "n_skipped", r"$n_{\mathrm{skip}}$"),
                  STATUS_COLUMN),
@@ -1184,13 +1283,60 @@ def build_cell_tables(results: Results) -> list[Table]:
             "M and M_lp: median nearest-training-image distance of the 2,000 training-seeded "
             "samples over that of held-out real images (05 §4); 1 means as far as new data.",
             "D_pix / D_lp: within-seed diversity over 40 held-out seeds × 50 samples (05 §3).",
-            "Inherited share over all non-DC modes, measured 1 − ΣV/ΣP_ref against the "
-            "linear-Gaussian prediction; the low-band columns mask both to σ_n ≥ 8 px (05 §5).",
+            "Inherited share over all non-DC modes, measured 1 − ΣV/ΣP_ref "
+            f"{PREREGISTERED_LABEL}, beside the linear-Gaussian prediction I; the low-band "
+            "columns mask both to σ_n ≥ 8 px (05 §5). The corrected reading is table 1c.",
             "n_skipped counts the no-op fp16 overflow steps kept in the canonical history "
             "(run 11, lsun_church_A3_s3: 6, all before its resume at 30,001).",
         ),
     )
-    return [table_a, table_b]
+    return [table_a, table_b, _build_inherited_cell_table(results, required)]
+
+
+#: The D23 note shared by every table that shows an inherited-band endpoint.
+_D23_NOTE = ("Inherited band (D23, inherited_band_audit.md): the pre-registered share "
+             "1 − ΣV/ΣP_ref is biased under a non-zero mean image, its model expectation is "
+             "I − T with T = Σ(1−d)²μ²/ΣP_ref. I_w = 1 − M/(M−1)·D_pix(W²−1)/ΣP_ref is the "
+             "within-seed share (expectation I whatever the mean image) and G_b = 1 − "
+             "pre-registered share − D_pix(W²−1)/ΣP_ref the seed-mean bias fraction "
+             "(expectation T + (1−I)/M). ΣP_ref and T come from the ref split "
+             "(inherited_band_constants.json).")
+
+
+def _build_inherited_cell_table(results: Results, required: tuple[str, ...]) -> Table:
+    """Table 1c: the D23 reading of the inherited band, one row per run."""
+    rows = _run_rows(results, ("inherited_measured", "inherited_expected", "inherited_within",
+                               "inherited_predicted", "inherited_bias",
+                               "inherited_bias_expected", "inherited_mean_term", "n_per_seed"))
+    notes = [
+        _D23_NOTE,
+        "Read each measured column against the expectation on its right: pre-registered share "
+        "against I − T, I_w against I, G_b against T + (1−I)/M. The model is the "
+        "linear-Gaussian one of 05 §5 written with a mean image; an I_w above I means the "
+        "samples of one seed vary less than the variance the blur removed (under-dispersion), "
+        "not that more of the seed is inherited.",
+        f"M = n_per_seed samples per seed (final.json); W² − 1 non-DC modes; constants file: "
+        f"{results.constants_label}.",
+    ]
+    notes += [f"No D23 value: {note}." for note in results.inherited_notes]
+    return Table(
+        name="t1c_cells_inherited", number="1c",
+        title="Cell table, one row per run: the inherited band read as D23 prescribes",
+        columns=(DATASET_COLUMN, ARM_COLUMN, SEED_COLUMN,
+                 _col_num("inherited_measured", "pre-reg. share (biased)",
+                          "pre-reg. (biased)", signed=True),
+                 _col_num("inherited_expected", "expected I − T", r"exp.\ $I-T$", signed=True),
+                 _col_num("inherited_within", "I_w", "$I_w$"),
+                 _col_num("inherited_predicted", "expected I", r"exp.\ $I$"),
+                 _col_num("inherited_bias", "G_b", "$G_b$"),
+                 _col_num("inherited_bias_expected", "expected T + (1−I)/M",
+                          r"exp.\ $T+(1-I)/M$"),
+                 _col_num("inherited_mean_term", "T", "$T$"),
+                 Column("n_per_seed", "M", "$M$",
+                        lambda v, r: MISSING if _missing(v) else str(int(v))),
+                 STATUS_COLUMN),
+        rows=rows, required=required, available=results.present, notes=tuple(notes),
+    )
 
 
 # ---- table 2: paired contrasts against A0 -----------------------------------------------------
@@ -1249,6 +1395,7 @@ _CONTRAST_NOTES: tuple[str, ...] = (
     "LSD CIs resample seeds only: the samples themselves are not in results/, so the "
     "sample-level resampling of 05 §8 is not applied.",
     "T_τ rows are 'not computable' when a seed never reaches the threshold; nothing is imputed.",
+    _D23_NOTE,
 )
 _CHURCHES_NOTE = ("Churches is undertrained (final LSD ≈ 1.0–1.45, oscillating across "
                   "checkpoints, blurry samples); its contrasts are reported with that caveat.")
@@ -1310,6 +1457,8 @@ def build_interaction_table(results: Results) -> Table:
             "(C(6,3) = 20 assignments), so p cannot fall below p_min = 0.1.",
             "Only the development pair enters: OASIS-1 and Bedrooms (2 seeds, A0/A3 only) are "
             "in the transfer table 6, without p-values.",
+            _D23_NOTE + " On the pre-registered share the interaction mixes ΔI with ΔT, which "
+            "moves with σ_B,max on MRI (a property of the data, audit §3.5).",
             _CHURCHES_NOTE,
         ),
     )
@@ -1485,6 +1634,7 @@ def build_transfer_table(results: Results) -> Table:
             "The development Δ uses the 3 seeds of IXI or Churches; the transfer Δ the 2 seeds "
             "of OASIS-1 or Bedrooms. The A3 schedule is the IXI-matched one on every dataset, "
             "transferred frozen (D12).",
+            _D23_NOTE,
         ),
     )
 
@@ -1700,7 +1850,7 @@ def _required_gates(results: Results) -> tuple[tuple[str, ...], frozenset[str]]:
 
 
 def build_tables(results: Results) -> list[Table]:
-    """Every table of the ticket in report order (1a, 1b, 2a, 2b, 3-8), then exploratory 9."""
+    """Every table in report order (1a, 1b, 1c, 2a, 2b, 3-8), then exploratory 9."""
     return [
         *build_cell_tables(results),
         *build_contrast_tables(results),
@@ -1736,6 +1886,11 @@ def provenance(results: Results) -> dict[str, Any]:
         "n_runs_present": len(results.present),
         "n_runs_design": len(results.frame),
         "missing_runs": list(results.missing),
+        "inherited_constants": {
+            "path": results.constants_label,
+            "decision": "D23 (docs/RESULTS/inherited_band_audit.md)",
+            "runs_without_constants": list(results.inherited_notes),
+        },
         "statistics": {
             "bootstrap": f"percentile, {N_BOOT} draws over seeds, alpha {ALPHA}, "
                          f"rng_seed {RNG_SEED} (ihdm.stats.paired_delta / interaction)",
@@ -1825,7 +1980,8 @@ class AnalysisReport:
         return "\n".join(lines)
 
 
-def analyse(results_dir: str | Path, out: str | Path) -> AnalysisReport:
+def analyse(results_dir: str | Path, out: str | Path,
+            inherited_constants: str | Path | None = DEFAULT_CONSTANTS_PATH) -> AnalysisReport:
     """Load a results folder, build every table and write it.
 
     Parameters
@@ -1834,13 +1990,15 @@ def analyse(results_dir: str | Path, out: str | Path) -> AnalysisReport:
         The collected ``results/`` folder.
     out : str or Path
         Where the tables go.
+    inherited_constants : str, Path or None
+        The D23 constants file; default the committed one.
 
     Returns
     -------
     AnalysisReport
         The results, the tables and the files written.
     """
-    results = load_results(results_dir)
+    results = load_results(results_dir, inherited_constants)
     tables = build_tables(results)
     written = write_tables(results, tables, out)
     return AnalysisReport(results=results, tables=tuple(tables), written=tuple(written))
