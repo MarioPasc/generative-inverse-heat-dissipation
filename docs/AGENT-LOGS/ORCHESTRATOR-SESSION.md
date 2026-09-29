@@ -351,6 +351,7 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
 - **Deletions on Picasso are blocked for the orchestrator.** Hand Mario the exact command with the
   `!` prefix; moving a folder (`mv`) is allowed.
 
+| W12b (2026-09-29) | T5.2 resumed from WIP `b8c93bd` | opus55-high | `b8c93bd` | ACCEPT: the WIP's tests errored at setup (the fixture knew only A0/A3), fixed; C1 check cells.csv == EXPERIMENT_CELLS; 74 T5.2 tests, 841 total; partial real collection 24/30 runs + 4 gates, 0 problems; main moved the workstation copy target to `$IHDM_DATA_ROOT/_results/` | merged on main, pushed |
 | W12 (2026-09-28) | T5.2 (collect_results) | opus55-high | `0ec8703` | **INCOMPLETE**: the agent was stopped by the harness (auto mode returned no safety verdict 10 times in a row) at its testing stage. Its uncommitted work is preserved by `main` as WIP commit `b8c93bd` on `ticket/T5.2-collect-results` (9 files, ≈ 2.4k lines, unverified) | not merged |
 
 ## 13. Handoff at the close of session 2 (2026-09-28, ≈ 10:00) — start here
@@ -402,7 +403,8 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
      flag it.
 
    Check the first task's `Eval time` against the 0.25 h fixed-cost estimate (T5.1).
-2. **Finish T5.2.** The branch is `ticket/T5.2-collect-results`, worktree `projects/GenAI/code/wt/T5.2`,
+2. **(Done 2026-09-29.)** T5.2 was finished by a second agent from the WIP. The first one's tests all errored at setup, because the fixture knew only arms A0 and A3. It is merged on `main` as `9fb5c84` and after (841 tests), with a partial real collection of 24/30 runs, 0 problems. Remaining: once all 30 evaluations are done, run the final collection exactly as in `docs/RESULTS/collection.md` §4 (it must print VERDICT: COMPLETE) and copy it to `$IHDM_DATA_ROOT/_results/` and to the SanDisk. Archive `~/execs/ihdm/eval/` to `…/evaluation/`.
+   *(Original wording kept below for reference.)* **Finish T5.2.** The branch is `ticket/T5.2-collect-results`, worktree `projects/GenAI/code/wt/T5.2`,
    head `b8c93bd` (WIP). The ticket is `docs/SPECIFICATIONS/M5-evaluation/T5.2-collect-results.md`,
    and the agent log in that branch holds the full prompt and the plan. Spawn one agent (opus55-high):
    - verify the WIP;
