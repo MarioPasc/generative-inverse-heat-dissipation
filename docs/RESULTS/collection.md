@@ -70,15 +70,21 @@ also fails unless `--allow-missing` is given.
 
 | id | check | pinned by (`tests/analysis/test_collect.py::…`) |
 |---|---|---|
-| C1 | all 30 cells present; summary `run.{run_id,dataset,arm,seed}` and manifest identity equal the row; no summary for a run outside the table | `test_c1_a_missing_run_fails_and_publishes_nothing`, `test_c1_allow_missing_publishes_a_partial_folder`, `test_c1_a_missing_run_directory_is_missing`, `test_c1_a_summary_of_another_cell_fails`, `test_c1_a_manifest_of_another_cell_fails`, `test_c1_a_summary_for_a_run_that_is_not_a_cell_fails` |
-| C2 | `checkpoint_steps == evaluated_steps(n_iters)` (12 at 60k), `final_step`, `lsd_by_step` keys, every `ckpt_<step>.json` with its step, `final.json` at `n_iters`, manifest `n_iters` | `test_c2_a_40k_summary_fails_at_60k`, `test_c2_a_missing_checkpoint_record_fails`, `test_c2_a_checkpoint_record_of_the_wrong_step_fails`, `test_c2_a_manifest_of_another_length_fails` |
-| C3 | `sampling.amp` and every result file's `amp` equal `--amp` | `test_c3_a_run_sampled_in_another_precision_fails`, `test_c3_a_result_file_of_another_precision_fails`, `test_c3_collecting_another_precision_finds_no_run` |
-| C4 | summary seed-list digests, every `ckpt` and `final` `seed_list_sha256` equal `expected_seed_lists.csv` | `test_c4_a_foreign_seed_list_fails`, `test_c4_a_checkpoint_on_another_list_fails` |
+| C1 | `cells.csv` holds each cell of `configs.spectral.arms.EXPERIMENT_CELLS` exactly once (30); all 30 present; summary `run.{run_id,dataset,arm,seed}` and manifest identity equal the row; no summary for a run outside the table | `test_c1_a_table_that_lacks_a_cell_of_the_experiment_fails`, `test_c1_a_table_with_a_repeated_cell_fails`, `test_c1_a_missing_run_fails_and_publishes_nothing`, `test_c1_allow_missing_publishes_a_partial_folder`, `test_c1_a_missing_run_directory_is_missing`, `test_c1_a_run_directory_without_its_manifest_fails`, `test_c1_a_summary_of_another_cell_fails`, `test_c1_a_manifest_of_another_cell_fails`, `test_c1_a_summary_for_a_run_that_is_not_a_cell_fails` |
+| C2 | `checkpoint_steps == evaluated_steps(n_iters)` (12 at 60k), `final_step`, `lsd_by_step` keys, every `ckpt_<step>.json` with its step, `final.json` at `n_iters`, manifest `n_iters` | `test_c2_a_40k_summary_fails_at_60k`, `test_c2_an_lsd_by_step_without_a_step_fails`, `test_c2_a_missing_checkpoint_record_fails`, `test_c2_a_checkpoint_record_of_the_wrong_step_fails`, `test_c2_a_final_record_of_another_step_fails`, `test_c2_a_tar_without_final_record_fails`, `test_c2_a_manifest_of_another_length_fails` |
+| C3 | `sampling.amp` and every result file's `amp` equal `--amp` | `test_c3_a_run_sampled_in_another_precision_fails`, `test_c3_a_result_file_of_another_precision_fails`, `test_c3_a_checkpoint_record_of_another_precision_fails`, `test_c3_collecting_another_precision_finds_no_run` |
+| C4 | summary seed-list digests, every `ckpt` and `final` `seed_list_sha256` equal `expected_seed_lists.csv` | `test_c4_a_foreign_seed_list_fails`, `test_c4_a_checkpoint_on_another_list_fails`, `test_c4_a_final_record_on_the_intermediate_list_fails` |
 | C5 | summary `run.config_sha256` equals manifest `config_sha256`; manifest `recipe_sha256` equals the hash of `config.json`'s recipe | `test_c5_a_config_hash_that_disagrees_with_the_manifest_fails`, `test_c5_a_recipe_hash_that_disagrees_with_the_config_fails` |
-| C6 | strict JSON everywhere (no `NaN`/`Infinity`, which `json.loads` accepts); every `05-metrics.md` §9 key, the Inception block with FID/KID CIs, recall, coverage, `n_reference` | `test_c6_a_nan_token_fails`, `test_c6_a_nan_token_in_the_summary_fails`, `test_c6_a_missing_section_9_key_fails` (4 cases), `test_c6_a_final_without_inception_fails`, `test_c6_an_inception_block_without_its_ci_fails`, `test_c7_a_nan_token_in_the_history_fails` |
-| C7 | canonical `metrics.jsonl` ends with `done` at `n_iters` and holds no `abort` | `test_c7_an_abort_not_abandoned_by_a_resume_fails`, `test_c7_a_history_that_stops_at_40k_fails`, `test_run_11_keeps_its_canonical_history_and_six_skips` |
-| C8 | the tar's `summary.json` equals the plain one byte for byte; the five `.npy` sidecars and `grids/iter_<n_iters>.png` are present; the tar is readable | `test_c8_a_plain_summary_that_differs_from_the_tar_fails`, `test_c8_a_missing_sidecar_fails`, `test_c8_an_unreadable_tar_fails`, `test_c8_a_missing_final_grid_fails` |
-| C9 | gates of `--amp` under both names: strict, keys, the name's pair equals `step_a`/`step_b`, `amp`, intermediate seed list of the dataset, no pair twice per run; cells 0 and 3 hold 35k/40k and `(n_iters − 5k, n_iters)`; gates of other precisions are ignored | `test_c9_a_missing_required_gate_is_missing`, `test_c9_a_gate_whose_content_contradicts_its_name_fails`, `test_c9_a_gate_of_another_precision_inside_ours_fails`, `test_c9_a_legacy_and_a_pair_named_gate_of_the_same_pair_fail`, `test_c9_a_gate_on_a_foreign_seed_list_fails`, `test_c9_gates_of_another_precision_are_ignored` |
+| C6 | strict JSON everywhere (no `NaN`/`Infinity`, which `json.loads` accepts); every `05-metrics.md` §9 key, the Inception block with FID/KID CIs, recall, coverage, `n_reference` | `test_c6_a_nan_token_fails`, `test_c6_a_nan_token_in_the_summary_fails`, `test_c6_a_gate_with_a_nan_token_fails`, `test_c7_a_nan_token_in_the_history_fails`, `test_c6_a_missing_section_9_key_fails` (4 cases), `test_c6_a_summary_without_its_config_hash_fails`, `test_c6_a_final_without_inception_fails`, `test_c6_an_inception_block_without_its_ci_fails` |
+| C7 | canonical `metrics.jsonl` ends with `done` at `n_iters` and holds no `abort` | `test_c7_an_abort_not_abandoned_by_a_resume_fails`, `test_c7_a_history_that_stops_at_40k_fails`, `test_c7_a_run_without_its_history_fails`, `test_run_11_keeps_its_canonical_history_and_six_skips` |
+| C8 | the tar's `summary.json` equals the plain one byte for byte; the five `.npy` sidecars and `grids/iter_<n_iters>.png` are present; the tar is readable | `test_c8_a_plain_summary_that_differs_from_the_tar_fails`, `test_c8_a_tar_without_its_summary_fails`, `test_c8_a_missing_sidecar_fails`, `test_c8_an_unreadable_tar_fails`, `test_c8_a_missing_final_grid_fails` |
+| C9 | gates of `--amp` under both names: strict, keys, the name's pair equals `step_a`/`step_b`, `amp`, intermediate seed list of the dataset, the run is a cell, no pair twice per run; cells 0 and 3 hold 35k/40k and `(n_iters − 5k, n_iters)`; a gate of any other cell is collected too; gates of other precisions are ignored | `test_c9_a_missing_required_gate_is_missing`, `test_c9_an_absent_gate_directory_misses_every_required_gate`, `test_c9_a_gate_whose_content_contradicts_its_name_fails`, `test_c9_a_gate_without_its_interval_fails`, `test_c9_a_gate_of_another_precision_inside_ours_fails`, `test_c9_a_legacy_and_a_pair_named_gate_of_the_same_pair_fail`, `test_c9_a_gate_on_a_foreign_seed_list_fails`, `test_c9_a_gate_of_a_run_that_is_not_a_cell_fails`, `test_c9_a_gate_cell_outside_the_table_fails`, `test_c9_a_gate_is_collected_for_a_cell_outside_the_required_set`, `test_c9_gates_of_another_precision_are_ignored` |
+
+Publication rules are pinned by `test_a_healthy_campaign_is_published_complete`,
+`test_each_run_folder_holds_exactly_the_contract_files`, `test_result_files_are_copied_byte_for_byte`,
+`test_the_gates_of_both_naming_schemes_are_renamed`, `test_the_index_has_one_row_per_cell_in_table_order`,
+`test_an_error_while_staging_leaves_no_folder` and `test_the_output_is_never_overwritten`; the exit
+codes by `tests/cli/test_collect_results.py`.
 
 Exit codes: **0** complete and published; **1** a check failed or an input is absent (nothing
 published, except under `--allow-missing`); **2** unusable arguments (`--out` exists, a bad cell
@@ -104,8 +110,11 @@ rm -rf /tmp/ihdm_results_dry_$$ /tmp/ihdm_pyc_$$
 
 ### 4.2 The collection, once every eval task is COMPLETED (login node)
 
-The collection reads each tar once, to hash it and extract ≈ 20 small members, so it reads
-≈ 17 GB from `$HOME`. It writes ≈ 30 × 1 MB into `~/execs/ihdm/results/` and nothing on FSCRATCH.
+The collection reads each tar once, to hash it and extract ≈ 20 small members; the tars are
+≈ 640 MB each, so it reads ≈ 19 GB from `$HOME`. It writes ≈ 2 MB per run (≈ 65 MB) into
+`~/execs/ihdm/results/` and nothing on FSCRATCH. Measured on the partial collection of
+2026-09-29 (24 runs, login node `picasso3`): 50 s wall, 51 MB written. Run it from the git
+checkout: `collection.json` records `git_sha`, which is `unknown` in an rsynced tree.
 
 ```bash
 ssh picasso
@@ -139,9 +148,9 @@ overwrites.
 SRC=picasso:/mnt/home/users/tic_163_uma/mpascual/execs/ihdm/results/
 WS="$IHDM_DATA_ROOT/../results"
 SANDISK=/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/results
-test ! -e "$WS" && test ! -e "$SANDISK" || echo "a results folder exists already: move it aside"
-rsync -a "$SRC" "$WS/"
-rsync -a "$WS/" "$SANDISK/"
+# refuse to merge into an older copy: move an existing results folder aside first
+if [ -e "$WS" ] || [ -e "$SANDISK" ]; then echo "a results folder exists: move it aside"; else
+  rsync -a "$SRC" "$WS/" && rsync -a "$WS/" "$SANDISK/"; fi
 # verification: both must print nothing (content compared by checksum)
 rsync -a --checksum --dry-run --itemize-changes "$SRC" "$WS/"
 rsync -a --checksum --dry-run --itemize-changes "$WS/" "$SANDISK/"
