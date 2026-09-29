@@ -493,7 +493,8 @@ including the D23 inherited-band correction. Items 1, 2, 3 and 4 of §13.2 are d
     0.94 on Churches, against a prediction of ≈ 0).
 
 **Left to do, in order:**
-1. **Verify the evaluation-tar archive** `…/Sandisk2TB/…/evaluation/eval_2488269/` against Picasso
+1. **(Done ≈ 15:00.)** The evaluation-tar archive `…/evaluation/eval_2488269/` is verified: 73/73 files by name and size, 20 GB, tar sha256 spot check matches. The SanDisk README is updated. The SanDisk now has 103 GB free (95 %).
+   *(The original wording is kept below.)* **Verify the evaluation-tar archive** `…/Sandisk2TB/…/evaluation/eval_2488269/` against Picasso
    `~/execs/ihdm/eval/`: compare the file lists by name and size, as for the training archives.
    Then update the SanDisk README (add `results/` and `evaluation/`).
 2. **Cleanup commands for Mario** (deletions are blocked for the orchestrator):
