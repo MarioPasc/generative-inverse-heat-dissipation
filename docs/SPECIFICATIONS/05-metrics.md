@@ -90,6 +90,9 @@ image at $W = 192$) masks both sides and is reported beside it (T4.1). LSD note:
 log-spaced bins, five hold no mode of the $192^2$ grid; the LSD is the RMS over the 43 populated
 bins, a fixed functional of $W$ and the bin count.
 
+
+**Amendment D23 (2026-09-29).** The estimator above assumes a population mean image with no non-DC content. With a mean $\mu$ the residual about $d_K x_s$ has expectation $(1-d^2)P + (1-d)^2\mu^2$, so the reported share is biased by $-T$, $T = \sum(1-d)^2\mu^2/\sum P$ (large on MRI). The results report the pre-registered value (labelled biased) and the corrected within-seed share $I_w$ with the bias fraction; derivation and numbers in `docs/RESULTS/inherited_band_audit.md`.
+
 ## 6. PCA around the seed (figure only)
 
 PCA fitted on the training split (DC removed, 3200 × 36864 → the first 2 components via
