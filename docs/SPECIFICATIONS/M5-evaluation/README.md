@@ -26,4 +26,4 @@ on the first finished A0 runs of `ixi` and `lsun_church`.
 `python -m ihdm.cli.collect_results --runs $IHDM_RUN_ROOT --out results/` gathering every
 `metrics/summary.json`, `manifest.json`, `metrics.jsonl` and the final grids into one folder;
 rsync to `~/execs/ihdm/results` on Picasso (permanent home) and to this workstation under
-`$IHDM_DATA_ROOT/../results/`; integrity check (30 runs × 8 checkpoints present, hashes).
+`$IHDM_DATA_ROOT/_results/`; integrity check (30 runs × 8 checkpoints present, hashes).

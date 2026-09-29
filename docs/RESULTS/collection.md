@@ -139,14 +139,13 @@ overwrites.
 
 ### 4.3 Copies (workstation, then the SanDisk)
 
-`$IHDM_DATA_ROOT/../results/` on the workstation is
-`/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/../results/`, i.e.
-`/media/mpascual/MeningD2/results/`.
+The workstation copy goes to `$IHDM_DATA_ROOT/_results/`, i.e.
+`/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results/`, next to `_runs_local/`. (`main`, at the merge: the earlier `$IHDM_DATA_ROOT/../results/` would have written a bare `results/` at the root of the MeningD2 disk, which holds other projects.)
 
 ```bash
 # on the workstation
 SRC=picasso:/mnt/home/users/tic_163_uma/mpascual/execs/ihdm/results/
-WS="$IHDM_DATA_ROOT/../results"
+WS="$IHDM_DATA_ROOT/_results"
 SANDISK=/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/results
 # refuse to merge into an older copy: move an existing results folder aside first
 if [ -e "$WS" ] || [ -e "$SANDISK" ]; then echo "a results folder exists: move it aside"; else
