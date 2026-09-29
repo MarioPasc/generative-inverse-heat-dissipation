@@ -6,8 +6,8 @@ come from ONE real :func:`ihdm.metrics.run_eval.evaluate_run` call on the tiny T
 records come from the real result classes. The run directories are T3.5's synthetic 60k runs
 (``tests/cli/test_check_array.py::make_run``), extended from 40k by a resume. Every JSON is written
 with :func:`ihdm.metrics.io.write_json`, and every tar is the shadow run exactly as
-``slurm/eval/eval_array.sbatch`` returns it: ``<run_id>/metrics<amp>/…``, ``<run_id>/samples<amp>/…``
-and links to the real run's files.
+``slurm/eval/eval_array.sbatch`` returns it: ``<run_id>/metrics<amp>/…``,
+``<run_id>/samples<amp>/…`` and links to the real run's files.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from ihdm.metrics.inception import InceptionResult
 from ihdm.metrics.io import write_json
@@ -35,6 +36,7 @@ from ihdm.metrics.run_eval import (
     samples_dirname,
 )
 from ihdm.stats.bootstrap import GateResult, Interval
+from tests.cli import test_check_array
 from tests.cli.test_check_array import make_run
 from tests.metrics.test_run_eval import _build_dataset, _config, _write_run
 
@@ -47,6 +49,11 @@ SUFFIX = "_amp-fp16"
 #: Run 11 of the campaign: an abort at 30,136 abandoned by a resume from 30,001 (D21).
 RUN_11 = "lsun_church_A3_s3"
 GATE_RUNS = ("ixi_A0_s1", "lsun_church_A0_s1")
+#: T3.5's ``make_run`` knows only arms A0 and A3; the campaign also has A1, A2 and A2p
+#: (``configs/spectral/arms.py`` ``_ARM_SCHEDULE`` / ``_ARM_SIGMA_MAX``). Added only while the
+#: campaign is built, so T3.5's own tests see their table unchanged.
+EXTRA_SCHEDULES = {"A1": ("log_W8", 24.0), "A2": ("ixi_W2", 96.0),
+                   "A2p": ("lsun_church_W2", 96.0)}
 SIDECARS = (
     "final_memorisation_per_sample_d.npy",
     "final_memorisation_per_sample_nn.npy",
@@ -266,12 +273,13 @@ def build_campaign(root: Path) -> Campaign:
     campaign.gate_dir.mkdir(parents=True)
     shutil.copyfile(REPO_CELLS, campaign.cells)
     expected = read_expected()
-    for position, row in enumerate(repo_cells()):
-        workdir = make_run(campaign.run_root, row["dataset_id"], row["arm"], int(row["seed"]),
-                           n_iters=N_ITERS, extended_from=40000)
-        if row["run_id"] == RUN_11:
-            _splice_run_11(workdir)
-        _write_results(campaign, row, position, expected)
+    with mock.patch.dict(test_check_array.SCHEDULES, EXTRA_SCHEDULES):
+        for position, row in enumerate(repo_cells()):
+            workdir = make_run(campaign.run_root, row["dataset_id"], row["arm"],
+                               int(row["seed"]), n_iters=N_ITERS, extended_from=40000)
+            if row["run_id"] == RUN_11:
+                _splice_run_11(workdir)
+            _write_results(campaign, row, position, expected)
     for run_id in GATE_RUNS:
         dataset = run_id.rsplit("_", 2)[0]
         seed_sha = expected[dataset][0]

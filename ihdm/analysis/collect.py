@@ -68,7 +68,7 @@ CHECKS: dict[str, str] = {
     "C6": "strict JSON (no NaN/Infinity) and every 05-metrics.md §9 key present",
     "C7": "canonical metrics.jsonl ends with done at n_iters and holds no abort",
     "C8": "tar summary == plain summary; .npy sidecars and final grid present",
-    "C9": "gates: both naming schemes, strict, pair/amp/seed list consistent, required pairs present",
+    "C9": "gates: both naming schemes, strict, pair/amp/seed list consistent, required pairs",
 }
 
 #: ``05-metrics.md`` §9 keys of ``ckpt_<step>.json`` (plus the context the checks read).

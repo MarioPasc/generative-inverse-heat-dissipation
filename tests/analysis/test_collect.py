@@ -98,9 +98,9 @@ def test_result_files_are_copied_byte_for_byte(campaign, tmp_path):
 
 def test_the_gates_of_both_naming_schemes_are_renamed(campaign, tmp_path):
     report, out = _collect(campaign, tmp_path)
+    pairs = ((35000, 40000), (55000, 60000))
     assert sorted(p.name for p in (out / "gates").iterdir()) == sorted(
-        f"{r}_gate_{e:06d}_{l:06d}.json" for r in GATE_RUNS for e, l in ((35000, 40000),
-                                                                          (55000, 60000)))
+        f"{r}_gate_{early:06d}_{late:06d}.json" for r in GATE_RUNS for early, late in pairs)
     legacy = out / "gates" / "ixi_A0_s1_gate_035000_040000.json"
     assert legacy.read_bytes() == (campaign.gate_dir / "ixi_A0_s1_amp-fp16_gate.json").read_bytes()
     assert {g["legacy_name"] for g in report.gates} == {True, False}
@@ -199,7 +199,8 @@ def test_c1_a_manifest_of_another_cell_fails(campaign, tmp_path):
 
 
 def test_c1_a_summary_for_a_run_that_is_not_a_cell_fails(campaign, tmp_path):
-    shutil.copyfile(campaign.summary_path(RUN), campaign.eval_dir / f"ixi_A9_s1{SUFFIX}_summary.json")
+    shutil.copyfile(campaign.summary_path(RUN),
+                    campaign.eval_dir / f"ixi_A9_s1{SUFFIX}_summary.json")
     report, out = _collect(campaign, tmp_path)
     _assert_failed(report, out, "C1", "not a cell")
 
