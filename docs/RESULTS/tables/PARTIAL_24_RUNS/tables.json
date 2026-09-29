@@ -8,8 +8,8 @@
     "verdict": "INCOMPLETE"
   },
   "complete": false,
-  "created": "2026-09-29T08:03:16.310965+00:00",
-  "git_sha": "e12bebbfa87c6ba385b57b6c9b184b46322004aa",
+  "created": "2026-09-29T08:04:59.317403+00:00",
+  "git_sha": "66ec64ef68d8f9b16e2fb9ae7d406b79a8ef252e",
   "missing_runs": [
     "oasis1_A3_s1",
     "oasis1_A3_s2",
@@ -3390,7 +3390,7 @@
       "missing": [],
       "notes": [
         "\u0394 = A3 \u2212 A0 paired by seed (3 seeds on each dataset). The interaction CI resamples the three IXI and the three Churches per-seed \u0394 independently (10,000 draws, percentile). A negative value on a lower-is-better endpoint (LSD, T_\u03c4, KID, FID) means A3 helps IXI more than Churches, the direction the claim predicts.",
-        "The interaction is on each metric's raw scale, as pre-registered; where the two datasets' A0 levels differ (Churches' LSD is about five times IXI's) the raw difference is dominated by the larger scale. '\u0394 / A0' (mean \u0394 over the mean A0 value, same seeds) is a descriptive, scale-free reading and carries no test.",
+        "The interaction is on each metric's raw scale, as pre-registered; where the two datasets' A0 levels differ (Churches' LSD is about five times IXI's) the raw difference is dominated by the larger scale. '\u0394 / A0' (mean \u0394 over the mean A0 value, same seeds) is a descriptive, scale-free reading and carries no test; it is left blank for recall, coverage, the seed-NN fraction and the inherited share, which are proportions near 0 or signed.",
         "p: exact permutation of the dataset label over the six pooled per-seed \u0394 (C(6,3) = 20 assignments), so p cannot fall below p_min = 0.1.",
         "Only the development pair enters: OASIS-1 and Bedrooms (2 seeds, A0/A3 only) are in the transfer table 6, without p-values.",
         "Churches is undertrained (final LSD \u2248 1.0\u20131.45, oscillating across checkpoints, blurry samples); its contrasts are reported with that caveat."
@@ -3531,8 +3531,8 @@
           "p_min": 0.1,
           "p_value": 0.6,
           "point": 0.03375,
-          "relative_mri": 0.407056,
-          "relative_photo": 31.2857,
+          "relative_mri": null,
+          "relative_photo": null,
           "status": "ok",
           "verdict": "not detectable at this budget"
         },
@@ -3556,8 +3556,8 @@
           "p_min": 0.1,
           "p_value": 0.1,
           "point": 0.204167,
-          "relative_mri": 0.658645,
-          "relative_photo": 16.6,
+          "relative_mri": null,
+          "relative_photo": null,
           "status": "ok",
           "verdict": "CI excludes 0"
         },
@@ -3631,8 +3631,8 @@
           "p_min": 0.1,
           "p_value": 0.1,
           "point": 0.045,
-          "relative_mri": 10.5133,
-          "relative_photo": 69.4906,
+          "relative_mri": null,
+          "relative_photo": null,
           "status": "ok",
           "verdict": "CI excludes 0"
         },
@@ -3706,8 +3706,8 @@
           "p_min": 0.1,
           "p_value": 0.1,
           "point": 0.87764,
-          "relative_mri": -1.0823,
-          "relative_photo": 0.0593275,
+          "relative_mri": null,
+          "relative_photo": null,
           "status": "ok",
           "verdict": "CI excludes 0"
         },
@@ -4710,7 +4710,7 @@
         "lsun_bedroom_A3_s2"
       ],
       "notes": [
-        "Signs and magnitudes only, no p-values (05 \u00a78): a transfer cell has 2 seeds. '\u0394 / A0' divides the mean \u0394 by the mean A0 value over the same seeds, so the magnitude can be read across datasets whose metric scales differ.",
+        "Signs and magnitudes only, no p-values (05 \u00a78): a transfer cell has 2 seeds. '\u0394 / A0' divides the mean \u0394 by the mean A0 value over the same seeds, so the magnitude can be read across datasets whose metric scales differ; it is left blank for proportions near 0 and the signed inherited share.",
         "The development \u0394 uses the 3 seeds of IXI or Churches; the transfer \u0394 the 2 seeds of OASIS-1 or Bedrooms. The A3 schedule is the IXI-matched one on every dataset, transferred frozen (D12)."
       ],
       "number": "6",
@@ -4817,7 +4817,7 @@
             0.1
           ],
           "dev_mean": 0.125,
-          "dev_relative": 0.407056,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "recall",
           "pair": "IXI \u2192 OASIS-1",
@@ -4835,7 +4835,7 @@
             0.24125
           ],
           "dev_mean": 0.307917,
-          "dev_relative": 0.658645,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "coverage",
           "pair": "IXI \u2192 OASIS-1",
@@ -4889,7 +4889,7 @@
             0.654
           ],
           "dev_mean": 0.658833,
-          "dev_relative": 10.5133,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "seed_nn_fraction",
           "pair": "IXI \u2192 OASIS-1",
@@ -4943,7 +4943,7 @@
             0.982192
           ],
           "dev_mean": 0.922438,
-          "dev_relative": -1.0823,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "inherited_measured",
           "pair": "IXI \u2192 OASIS-1",
@@ -5051,7 +5051,7 @@
             0.13375
           ],
           "dev_mean": 0.09125,
-          "dev_relative": 31.2857,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "recall",
           "pair": "Churches \u2192 Bedrooms",
@@ -5069,7 +5069,7 @@
             0.1475
           ],
           "dev_mean": 0.10375,
-          "dev_relative": 16.6,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "coverage",
           "pair": "Churches \u2192 Bedrooms",
@@ -5123,7 +5123,7 @@
             0.614
           ],
           "dev_mean": 0.613833,
-          "dev_relative": 69.4906,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "seed_nn_fraction",
           "pair": "Churches \u2192 Bedrooms",
@@ -5177,7 +5177,7 @@
             0.075892
           ],
           "dev_mean": 0.0447987,
-          "dev_relative": 0.0593275,
+          "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "inherited_measured",
           "pair": "Churches \u2192 Bedrooms",

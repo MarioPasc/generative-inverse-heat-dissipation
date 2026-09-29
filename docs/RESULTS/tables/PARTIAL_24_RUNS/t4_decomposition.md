@@ -36,4 +36,4 @@
 - All Δ are against A0 and use only seeds 1 and 2, the seeds A1 and A2 have, so the three Δ share their A0 values. share A1 = Δ_A1 / Δ_A3 and share A2 = Δ_A2 / Δ_A3; a sum near 1 means the two knobs add up to the A3 effect, a sum far from 1 means they interact. No CI: A1 and A2 have 2 seeds.
 - A share is flagged 'not interpretable' when the 3-seed A3−A0 interval of table 2 contains 0: a ratio over an undetectable denominator carries no information.
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>

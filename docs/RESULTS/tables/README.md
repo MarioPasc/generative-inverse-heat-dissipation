@@ -195,7 +195,11 @@ pre-registered**. It is descriptive only: no CI and no p-value, so none of it is
   curves.
 - **Δ / A0 columns in table 3** (and in table 6, where §8's "magnitudes" asks for them). Each is
   the mean paired Δ divided by the mean A0 value over the same seeds, a scale-free reading beside
-  the pre-registered raw-scale interaction, which stays the headline column.
+  the pre-registered raw-scale interaction, which stays the headline column. They are printed
+  only for positive ratio-scale endpoints (LSD, T_τ, KID, FID, M, M_lp, D_pix, D_lp). They are
+  blank for recall, coverage and the seed-NN fraction, whose A0 values sit near 0 on Churches
+  (a +0.09 recall gain would read as +3,000%), and for the inherited share, which is negative
+  on IXI A0 and would flip the sign.
 
 ## `PARTIAL_24_RUNS/`
 

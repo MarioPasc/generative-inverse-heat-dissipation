@@ -21,4 +21,4 @@
 - Descriptive only: per-seed values, means and differences, no CI and no p-value, so nothing here is confirmatory.
 - Why it exists: the pre-registered T_τ (first crossing, tables 2, 3 and 7) fires at the first checkpoint in most runs because the LSD curve is low at 5k, higher over 10k-30k and lower again by the end.
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>

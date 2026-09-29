@@ -42,4 +42,4 @@
 - Inherited share over all non-DC modes, measured 1 − ΣV/ΣP_ref against the linear-Gaussian prediction; the low-band columns mask both to σ_n ≥ 8 px (05 §5).
 - n_skipped counts the no-op fp16 overflow steps kept in the canonical history (run 11, lsun_church_A3_s3: 6, all before its resume at 30,001).
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>

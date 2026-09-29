@@ -14,4 +14,4 @@
 - Paired bootstrap over the 500 frozen evaluation seeds (1,000 resamples, fp16); a run is extended only when the CI of LSD(early) − LSD(late) lies above zero.
 - 35k vs 40k (job 2432703) said extend on IXI and not on Churches; all 30 runs were extended to 60k (D22). The informational 55k vs 60k gate (job 2486891) found no further gain on either run, so 60k is the final length.
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>

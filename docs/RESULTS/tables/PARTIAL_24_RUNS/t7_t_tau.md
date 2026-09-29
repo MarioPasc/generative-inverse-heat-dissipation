@@ -43,4 +43,4 @@
 - Resolution 5k steps (the evaluated checkpoints, D16/D22).
 - The settling step is exploratory, defined after seeing the data (2026-09-29), not pre-registered: the first checkpoint after which the curve stays at or below the primary threshold to the end (table 9).
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>

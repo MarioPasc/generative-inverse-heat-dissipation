@@ -41,4 +41,4 @@
 - T_τ uses the primary threshold (same-seed A0 LSD at the last checkpoint, 500 seeds); table 7 gives both thresholds.
 - KID is the headline Inception metric. FID against N_ref = 800 is biased upward and its bootstrap interval over resampled samples is shifted upward (T4.3), so it can lie above the point estimate.
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>

@@ -24,4 +24,4 @@
 - Every contrast is paired over seeds 1 and 2 (the seeds A2 and A2′ have): the CI is [min, max] of two per-seed Δ and the permutation p has floor p_min = 1/3 (2 vs 2 seeds, 6 assignments). Nothing in this table can reach p < 0.33.
 - Churches is undertrained (final LSD ≈ 1.0–1.45, oscillating across checkpoints, blurry samples); its contrasts are reported with that caveat.
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git e12bebbfa8, 2026-09-29T08:03:16.310965+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>
