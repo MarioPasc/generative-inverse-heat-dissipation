@@ -47,7 +47,8 @@ interval is therefore **exactly [min, max] of the three per-seed differences**. 
   and its coverage under the null is 50%.
 - The permutation p-value cannot go below its floor: **p_min = 0.1** with 3 vs 3 seeds
   (C(6,3) = 20 assignments) and **1/3** with 2 vs 2 (C(4,2) = 6). Every p is printed with its
-  p_min. At these seed counts the p-value can only fail to reject; it can never be "significant".
+  p_min. At these seed counts no p-value can fall below 0.05, so the permutation test can never
+  reject at the conventional level.
 
 The tables follow §8's wording: a CI containing zero is reported as "not detectable at this
 budget", and one that excludes zero as "CI excludes 0". Neither is a significance statement.
