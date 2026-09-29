@@ -215,3 +215,27 @@ def test_a_dataset_outside_the_design_or_a_broken_hash_is_refused(tmp_path):
         compute_constants(tmp_path / "data", ["oasis1"])
     with pytest.raises(InheritedError, match="malformed"):
         load_constants({"datasets": {"ixi": {"sigmas": {"96": {}}}}})
+
+
+@pytest.mark.integration
+def test_the_committed_constants_reproduce_the_audit_on_the_partial_collection():
+    """``I_w`` of the 24-run partial collection, from ``results/`` and the committed JSON only."""
+    from ihdm.analysis.tables import load_results
+
+    partial = Path("/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project"
+                   "/_results_partial_24")
+    if not (partial / "index.csv").is_file():
+        pytest.skip("the partial collection is not mounted")
+    frame = load_results(partial).frame
+    # inherited_band_audit.md §3.3, I_w column.
+    for rid, value in {"ixi_A0_s1": 0.657, "ixi_A3_s1": 0.742, "oasis1_A0_s1": 0.559,
+                       "lsun_church_A0_s1": 0.943, "lsun_church_A3_s2": 0.944}.items():
+        assert frame.at[rid, "inherited_within"] == pytest.approx(value, abs=6e-4), rid
+    assert frame.at["ixi_A0_s1", "inherited_expected"] == pytest.approx(-1.398, abs=1e-3)
+    for rid in ("ixi_A0_s1", "lsun_church_A3_s1"):
+        final = json.loads((partial / "runs" / rid / "final.json").read_text())
+        entry, _ = load_constants().lookup(rid.rsplit("_", 2)[0], json.loads(
+            (partial / "runs" / rid / "summary.json").read_text())["dataset_sha256"],
+            final["sigma_max"])
+        np.testing.assert_allclose(entry.radial_predicted, final["radial"]["predicted"],
+                                   rtol=1e-4, atol=1e-6)

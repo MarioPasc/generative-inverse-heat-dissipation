@@ -30,6 +30,14 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
 from PIL import Image
 
+from ihdm.analysis.inherited import (
+    DEFAULT_CONSTANTS_PATH,
+    BandConstants,
+    InheritedConstants,
+    InheritedError,
+    load_constants,
+    within_seed_share,
+)
 from ihdm.analysis.style import (
     ARM_ORDER,
     DATASET_LABELS,
@@ -130,10 +138,12 @@ class FigureRecord:
 class Results:
     """Read-only view of a ``results/`` folder written by ``ihdm.cli.collect_results``."""
 
-    def __init__(self, root: Path, runs: list[Run], collection: Json | None) -> None:
+    def __init__(self, root: Path, runs: list[Run], collection: Json | None,
+                 constants: InheritedConstants | None = None) -> None:
         self.root = root
         self.runs = runs
         self.collection = collection
+        self.constants = constants or InheritedConstants(path=None, entries={})
         self._json: dict[Path, Json | None] = {}
         self._history: dict[str, list[Json] | None] = {}
 
@@ -157,6 +167,20 @@ class Results:
     def final(self, run: Run) -> Json | None:
         """``final.json`` of the run, or None when the run was not evaluated."""
         return self._read_json(self.run_dir(run) / "final.json")
+
+    def band_constants(self, run: Run) -> tuple[BandConstants | None, str]:
+        """The D23 constants of an evaluated run (matched on dataset, sigma_max and sha256).
+
+        Returns
+        -------
+        tuple[BandConstants | None, str]
+            The entry and ``""``, or ``None`` and why it does not apply.
+        """
+        final = self.final(run) or {}
+        summary = self._read_json(self.run_dir(run) / "summary.json") or {}
+        sigma = final.get("sigma_max")
+        return self.constants.lookup(run.dataset, str(summary.get("dataset_sha256") or ""),
+                                     float(sigma) if sigma is not None else float("nan"))
 
     def lsd_curve(self, run: Run) -> tuple[np.ndarray, np.ndarray] | None:
         """(steps, LSD) of the 500-seed checkpoint set from ``index.csv``; None when absent."""
@@ -194,13 +218,17 @@ class Results:
         return [a for a in ARM_ORDER if a in present]
 
 
-def load_results(root: Path) -> Results:
+def load_results(root: Path,
+                 inherited_constants: str | Path | None = DEFAULT_CONSTANTS_PATH) -> Results:
     """Read ``index.csv`` (and ``collection.json`` when present) of a results folder.
 
     Parameters
     ----------
     root : Path
         The ``results/`` folder.
+    inherited_constants : str, Path or None
+        The D23 constants file of :mod:`ihdm.analysis.inherited` (figure 5's corrected
+        prediction); default the committed ``docs/RESULTS/inherited_band_constants.json``.
 
     Returns
     -------
@@ -210,8 +238,13 @@ def load_results(root: Path) -> Results:
     Raises
     ------
     FigureError
-        If ``index.csv`` is absent or a row lacks its identity columns.
+        If ``index.csv`` is absent, a row lacks its identity columns, or the constants file
+        cannot be read.
     """
+    try:
+        constants = load_constants(inherited_constants)
+    except InheritedError as exc:
+        raise FigureError(str(exc)) from exc
     index = root / "index.csv"
     if not index.is_file():
         raise FigureError(f"{index} not found: is {root} a results folder of collect_results?")
@@ -228,7 +261,7 @@ def load_results(root: Path) -> Results:
         raise FigureError(f"{index} holds no run")
     collection_path = root / "collection.json"
     collection = json.loads(collection_path.read_text()) if collection_path.is_file() else None
-    return Results(root, runs, collection)
+    return Results(root, runs, collection, constants)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -637,14 +670,22 @@ def _zoom_row(axes_row: Iterable[Axes], points: list[np.ndarray]) -> None:
 
 def fig_inherited_band(results: Results, out_dir: Path, pdf: bool = True,
                        png_dpi: int = PNG_DPI) -> FigureRecord:
-    """Measured versus linear-Gaussian predicted regenerated variance, A0 and A3 per dataset."""
+    """Measured regenerated variance against the D23 prediction, A0 and A3 per dataset.
+
+    The prediction is ``(1 - d^2) + (1 - d)^2 mu^2 / P`` (dashed), the expectation of the
+    measured ratio under the linear-Gaussian model with the population's mean image
+    (``inherited_band_audit.md`` §3.2), from the committed constants; the pre-registered line
+    ``1 - d^2`` stays as a thin dotted reference. A panel whose runs have no matching constants
+    draws the reference line only and the record says so.
+    """
     expected = [r for r in results.runs if r.arm in BAND_ARMS]
     used, missing = _missing(expected,
                              lambda r: (results.final(r) or {}).get("radial") is not None)
+    notes: list[str] = []
     with figure_style():
         fig, axes = _panel_grid(len(results.datasets), 4, FULL_WIDTH_IN, 1.75)
         drawn = [ax for ax, dataset in zip(axes.flat, results.datasets, strict=False)
-                 if _band_panel(ax, results, dataset)]
+                 if _band_panel(ax, results, dataset, notes)]
         for ax in axes.flat[:len(results.datasets)]:
             ax.set_xlabel("cycles per image")
         # One y range for every drawn panel: the ratio is dimensionless and comparable.
@@ -656,37 +697,53 @@ def fig_inherited_band(results: Results, out_dir: Path, pdf: bool = True,
         measured = Line2D([], [], color=MUTED, lw=1.3, label="measured (seed mean)")
         seed = Line2D([], [], color=MUTED, lw=0.6, alpha=0.6, label="single seed")
         predicted = Line2D([], [], color=MUTED, lw=1.0, ls="--",
-                           label=r"predicted $1-d_K^2$")
+                           label=r"prediction $(1-d_K^2)+(1-d_K)^2\mu^2/P$ (D23)")
+        reference = Line2D([], [], color=MUTED, lw=0.6, ls=":",
+                           label=r"pre-registered $1-d_K^2$ (reference)")
         _arm_legend(fig, [a for a in BAND_ARMS if any(r.arm == a for r in expected)],
-                    [measured, seed, predicted], ncol=5)
-        fig.tight_layout(rect=(0, 0, 1, 0.84), w_pad=0.6)
+                    [measured, seed, predicted, reference], ncol=3)
+        fig.tight_layout(rect=(0, 0, 1, 0.80), w_pad=0.6)
         files = _save(fig, out_dir, "fig5_inherited_band", pdf, png_dpi)
+    notes = list(dict.fromkeys(notes))
+    no_constants = (" Panels drawn without the D23 prediction (no matching constants): "
+                    + "; ".join(notes) + "." if notes else "")
     caption = (
-        "The inherited band (05-metrics §5): per-mode variance of 50 samples about their prior "
-        "state $d_K \\hat x_s$, averaged over the 40 held-out seeds and divided by the "
-        "population variance $P_{\\mathrm{ref}}$, as a radial profile on the 43 populated "
-        "log-spaced bins (solid; thin: single seeds), against the linear-Gaussian prediction "
-        "$1 - d_K^2(n) = 1 - e^{-2\\lambda_n t_K}$ with $t_K = \\sigma_{B,\\max}^2/2$ (dashed). "
-        "The two terminal blurs: A0 ($\\sigma_{B,\\max}$ = 96 px, prediction $\\approx 1$ above "
-        "one cycle per image) and A3 ($\\sigma_{B,\\max}$ = 24 px, the prior keeps the "
-        "low band). A measured curve on its dashed line means the model regenerates exactly the "
-        "variance the prior removed; below it, the samples inherit more of the seed. Log axes, "
-        "one y range for all panels. The bins below 3 cycles per image hold 1-6 DCT modes each "
-        "on the $192^2$ grid, so the measured ratio there is noisy. "
-        f"n = {len(used)}/{len(expected)} runs.{_missing_clause(missing)}")
+        "The inherited band (05-metrics §5, read as D23 prescribes): per-mode variance of 50 "
+        "samples about their prior state $d_K \\hat x_s$, averaged over the 40 held-out seeds "
+        "and divided by the population variance $P_{\\mathrm{ref}}$, as a radial profile on the "
+        "43 populated log-spaced bins (solid; thin: single seeds). Dashed: its expectation under "
+        "the linear-Gaussian model written with the population's mean image $\\mu$, "
+        "$(1-d_K^2) + (1-d_K)^2\\mu^2/P_{\\mathrm{ref}}$ with $d_K = e^{-\\lambda_n t_K}$ and "
+        "$t_K = \\sigma_{B,\\max}^2/2$ (constants from the ref split, "
+        "`inherited_band_constants.json`). Dotted: the pre-registered line $1 - d_K^2$, which "
+        "omits the mean image and is kept for reference; the two differ where $\\mu^2/P$ is "
+        "large, i.e. in the lowest bins of the MRI datasets, whose mean brain carries 1.5 (IXI) "
+        "and 0.94 (OASIS-1) times the non-DC population variance (inherited_band_audit.md). "
+        "The two terminal blurs: A0 ($\\sigma_{B,\\max}$ = 96 px, $1-d_K^2 \\approx 1$ above "
+        "one cycle per image) and A3 ($\\sigma_{B,\\max}$ = 24 px, the prior keeps the low "
+        "band). A measured curve on its dashed line means the model regenerates exactly the "
+        "variance the blur removed; below the line, the chain adds less than the variance the "
+        "blur removed; only where $d_K$ is appreciable can copying the seed contribute. Log "
+        "axes, one y range for all panels. The bins below 3 cycles per image hold 1-6 DCT modes "
+        "each on the $192^2$ grid, so the measured ratio there is noisy."
+        f"{no_constants} n = {len(used)}/{len(expected)} runs.{_missing_clause(missing)}")
     return FigureRecord(5, "fig5_inherited_band", "Inherited band", FULL_WIDTH_IN, len(used),
                         len(expected), missing, caption, files)
 
 
-def _band_panel(ax: Axes, results: Results, dataset: str) -> bool:
-    """Draw one dataset's measured and predicted curves; False when no A0/A3 run exists."""
+def _band_panel(ax: Axes, results: Results, dataset: str, notes: list[str]) -> bool:
+    """Draw one dataset's measured curves and predictions; False when no A0/A3 run exists.
+
+    ``notes`` collects, per arm, why the D23 prediction could not be drawn.
+    """
     ax.set_title(DATASET_LABELS.get(dataset, dataset))
     drawn = False
     for arm in BAND_ARMS:
-        radials = [f["radial"] for r in results.select(dataset, [arm])
-                   if (f := results.final(r)) and f.get("radial")]
-        if not radials:
+        runs = [r for r in results.select(dataset, [arm])
+                if (f := results.final(r)) and f.get("radial")]
+        if not runs:
             continue
+        radials = [results.final(r)["radial"] for r in runs]
         if not drawn:
             ax.set_xscale("log")
             ax.set_yscale("log")
@@ -699,7 +756,13 @@ def _band_panel(ax: Axes, results: Results, dataset: str) -> bool:
         ax.plot(centres, _positive(np.mean(measured, axis=0)), color=style.color, lw=1.3,
                 zorder=3)
         ax.plot(centres, _positive(np.asarray(radials[0]["predicted"], dtype=float)),
-                color=style.color, lw=1.0, ls="--", zorder=4)
+                color=style.color, lw=0.6, ls=":", zorder=4)
+        entry, reason = results.band_constants(runs[0])
+        if entry is None:
+            notes.append(f"{DATASET_LABELS.get(dataset, dataset)} {arm} ({reason})")
+            continue
+        ax.plot(np.asarray(entry.centres), _positive(np.asarray(entry.radial_corrected)),
+                color=style.color, lw=1.0, ls="--", zorder=5)
     if not drawn:
         _empty_panel(ax, "no evaluated\nA0/A3 run")
         ax.set_xticks([])
@@ -1035,9 +1098,91 @@ def write_readme(records: list[FigureRecord], results: Results, path: Path,
         lines += [f"- {note}" for note in record.notes]
         if record.notes:
             lines.append("")
+    lines += _inherited_section(results, path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines).rstrip() + "\n")
     return path
+
+
+#: The audit that D23 rests on, linked from the README.
+AUDIT_PATH: Path = DEFAULT_CONSTANTS_PATH.parent / "inherited_band_audit.md"
+
+
+def _inherited_rows(results: Results) -> tuple[list[str], list[str]]:
+    """Constants rows and per-cell D23 readings (A0 and A3) of the README section."""
+    constants: dict[tuple[str, float], BandConstants] = {}
+    cells: list[str] = []
+    for dataset in results.datasets:
+        for arm in BAND_ARMS:
+            readings = []
+            for run in results.select(dataset, [arm]):
+                final = results.final(run)
+                entry, _ = results.band_constants(run) if final else (None, "")
+                if final is None or entry is None:
+                    continue
+                constants[(dataset, entry.sigma_max)] = entry
+                readings.append((final["inherited_measured"], within_seed_share(
+                    final["diversity_pix"], final["n_per_seed"], entry.n_pix, entry.sum_power),
+                    entry))
+            if readings:
+                measured, within, entries = zip(*readings, strict=True)
+                entry = entries[0]
+                cells.append(
+                    f"| {DATASET_LABELS.get(dataset, dataset)} | {arm} | {len(readings)} | "
+                    f"{np.mean(measured):+.3f} | {entry.expected_measured:+.3f} | "
+                    f"{np.mean(within):.3f} | {entry.share_predicted:.4f} |")
+    rows = [f"| {DATASET_LABELS.get(d, d)} | {s:g} | {e.sum_power:.2f} | "
+            f"{e.share_predicted:.4f} | {e.mean_term:.4f} | {e.expected_measured:+.3f} |"
+            for (d, s), e in sorted(constants.items(),
+                                    key=lambda kv: (DATASET_ORDER.index(kv[0][0])
+                                                    if kv[0][0] in DATASET_ORDER else 99,
+                                                    -kv[0][1]))]
+    return rows, cells
+
+
+def _inherited_section(results: Results, path: Path) -> list[str]:
+    """The README section "Inherited band: estimator correction (D23)"."""
+    audit = _relative(AUDIT_PATH, path.parent) if AUDIT_PATH.is_file() else str(AUDIT_PATH)
+    lines = [
+        "## Inherited band: estimator correction (D23)",
+        "",
+        "The inherited band of figure 5 was pre-registered as the per-mode variance of the "
+        "samples about their prior state $d_K\\hat x_s$, divided by the population variance "
+        "$P_{\\mathrm{ref}}$, against the line $1-d_K^2$, with the share "
+        "$1-\\sum V/\\sum P_{\\mathrm{ref}}$ against $I=\\sum d_K^2P/\\sum P$. That reading "
+        "assumes the population mean image has no non-DC content. The registered brains do "
+        "have one: the blur damps the mean as much as the fluctuations, so a model that "
+        "restores the population must add $(1-d_K)\\mu$ to every sample of every seed. That "
+        "addition is the same for all seeds, so it carries no variance and no inheritance. The "
+        "residual still counts it: its expectation is $(1-d_K^2)P+(1-d_K)^2\\mu^2$, the curve's "
+        "is $(1-d_K^2)+(1-d_K)^2\\mu^2/P$ (the dashed line of figure 5), and the share's is "
+        "$I-T$ with $T=\\sum(1-d_K)^2\\mu^2/\\sum P$. The stored scalars split exactly into a "
+        "within-seed part and a seed-mean part, so D23 adds two readings that need no sample: "
+        "the within-seed share $I_w = 1-\\frac{M}{M-1}D_{\\mathrm{pix}}(W^2-1)/\\sum "
+        "P_{\\mathrm{ref}}$, whose expectation is $I$ whatever the mean image, and the "
+        "seed-mean bias fraction, whose expectation is $T+(1-I)/M$. The tables "
+        "(`docs/RESULTS/tables/`, table 1c) test both like every other endpoint. The code, "
+        "`final.json` and `index.csv` are unchanged.",
+        "",
+        f"Derivation and evidence: [`inherited_band_audit.md`]({audit}). Constants: "
+        f"`{results.constants.label}`, computed from each dataset's `ref` split "
+        "by `python -m ihdm.analysis.inherited` and matched to the runs by `dataset_sha256`.",
+        "",
+    ]
+    rows, cells = _inherited_rows(results)
+    if not rows:
+        return lines + ["No run of this folder matches the constants (dataset, σ_B,max and "
+                        "sha256), so figure 5 shows the pre-registered line only.", ""]
+    lines += ["| dataset | σ_B,max | ΣP_ref | I | T | I − T |", "|---|---:|---:|---:|---:|---:|",
+              *rows, "",
+              "Seed means over the evaluated runs of A0 and A3 (tables 1c and 2 give every run, "
+              "the contrasts and the interaction):", "",
+              "| dataset | arm | runs | pre-registered share (biased) | its expectation I − T "
+              "| I_w | its expectation I |",
+              "|---|---|---:|---:|---:|---:|---:|", *cells, "",
+              "I_w above I means the samples of one seed vary less than the variance the blur "
+              "removed (under-dispersion); it is not inheritance.", ""]
+    return lines
 
 
 def _relative(target: Path, base: Path) -> str:

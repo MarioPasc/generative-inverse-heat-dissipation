@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 from PIL import Image
 
 from ihdm.analysis import figures
@@ -26,6 +27,7 @@ from ihdm.analysis.figures import (
 )
 from ihdm.analysis.style import ARM_ORDER, FULL_WIDTH_IN, SINGLE_WIDTH_IN, arm_style
 from tests.analysis.synthetic_eval import Campaign, build_campaign, copy_campaign
+from tests.analysis.test_inherited import SYNTHETIC_CORRECTED, synthetic_constants
 
 #: The six cells whose evaluation was still running when the partial collection was made.
 TIER3 = ("lsun_bedroom_A0_s1", "lsun_bedroom_A0_s2", "oasis1_A3_s1", "oasis1_A3_s2",
@@ -231,3 +233,61 @@ def test_the_octave_loss_uses_only_the_last_steps():
     result = figures._octave_loss(history, 60000, ("a", "b"))
     np.testing.assert_allclose(result[0], 2.0)
     assert np.isnan(result[1])
+
+
+# ---- figure 5 under D23 -------------------------------------------------------------------------
+
+
+def _dashed(ax) -> list:
+    return [line for line in ax.get_lines() if line.get_linestyle() == "--"]
+
+
+def test_figure_5_draws_the_d23_prediction_and_keeps_the_reference(complete_results, tmp_path):
+    path = synthetic_constants(complete_results, tmp_path / "constants.json")
+    results = load_results(complete_results, path)
+    fig, ax = plt.subplots()
+    notes: list[str] = []
+    assert figures._band_panel(ax, results, "ixi", notes)
+    assert notes == []
+    dashed = _dashed(ax)
+    assert len(dashed) == len(figures.BAND_ARMS)
+    for line in dashed:
+        np.testing.assert_allclose(line.get_ydata(), SYNTHETIC_CORRECTED)
+    dotted = [line for line in ax.get_lines() if line.get_linestyle() == ":"]
+    assert len(dotted) == len(figures.BAND_ARMS)
+    assert all(line.get_linewidth() < 1.0 for line in dotted)
+    plt.close(fig)
+
+    record = figures.fig_inherited_band(results, tmp_path / "out", png_dpi=DPI)
+    assert "below the line, the chain adds less than the variance the blur removed" in (
+        record.caption)
+    assert "inherit more of the seed" not in record.caption
+    assert "without the D23 prediction" not in record.caption
+    with Image.open(record.files[1]) as image:
+        assert np.asarray(image.convert("L")).std() > 0
+
+
+def test_figure_5_without_matching_constants_says_so(complete_results, tmp_path):
+    results = load_results(complete_results, None)
+    fig, ax = plt.subplots()
+    notes: list[str] = []
+    assert figures._band_panel(ax, results, "ixi", notes)
+    assert _dashed(ax) == [] and len(notes) == len(figures.BAND_ARMS)
+    plt.close(fig)
+    record = figures.fig_inherited_band(results, tmp_path, pdf=False, png_dpi=DPI)
+    assert "Panels drawn without the D23 prediction" in record.caption
+
+
+def test_the_readme_explains_the_d23_correction_with_numbers(complete_drawn, complete_results,
+                                                             tmp_path):
+    out, records = complete_drawn
+    path = synthetic_constants(complete_results, tmp_path / "constants.json")
+    text = write_readme(list(records.values()), load_results(complete_results, path),
+                        out / "README.md", "cmd").read_text()
+    section = text.split("## Inherited band: estimator correction (D23)", 1)[1]
+    assert "inherited_band_audit.md" in section
+    assert "| dataset | σ_B,max | ΣP_ref | I | T | I − T |" in section
+    assert "| IXI T1 | A0 | 3 |" in section
+    unmatched = write_readme(list(records.values()), load_results(complete_results, None),
+                             tmp_path / "README.md", "cmd").read_text()
+    assert "No run of this folder matches the constants" in unmatched
