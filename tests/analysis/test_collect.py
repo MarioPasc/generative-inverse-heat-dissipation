@@ -145,6 +145,19 @@ def test_run_11_keeps_its_canonical_history_and_six_skips(campaign, tmp_path):
     assert recorded["sha256"] == hashlib.sha256(raw_path.read_bytes()).hexdigest()
 
 
+def test_an_error_while_staging_leaves_no_folder(campaign, tmp_path, monkeypatch):
+    import ihdm.analysis.collect as module
+
+    def broken(report, stage):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(module, "_write_index", broken)
+    with pytest.raises(OSError, match="disk full"):
+        _collect(campaign, tmp_path)
+    assert not (tmp_path / "results").exists()
+    assert not list(tmp_path.glob(".results.partial-*"))
+
+
 def test_the_output_is_never_overwritten(campaign, tmp_path):
     (tmp_path / "results").mkdir()
     with pytest.raises(CollectError, match="exists"):
@@ -198,6 +211,35 @@ def test_c1_a_manifest_of_another_cell_fails(campaign, tmp_path):
     _assert_failed(report, out, "C1", "manifest arm 'A0' != cells.csv 'A3'")
 
 
+def _rewrite_cells(campaign, edit):
+    with campaign.cells.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    rows = edit(rows)
+    with campaign.cells.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def test_c1_a_table_that_lacks_a_cell_of_the_experiment_fails(campaign, tmp_path):
+    _rewrite_cells(campaign, lambda rows: rows[:-1])
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C1", "is not EXPERIMENT_CELLS (30 cells): absent "
+                   "[('lsun_bedroom', 'A3', 2)], extra []")
+
+
+def test_c1_a_table_with_a_repeated_cell_fails(campaign, tmp_path):
+    _rewrite_cells(campaign, lambda rows: [*rows, {**rows[0], "index": "30"}])
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C1", "repeated run_id ['ixi_A0_s1']")
+
+
+def test_c1_a_run_directory_without_its_manifest_fails(campaign, tmp_path):
+    (campaign.run_root / RUN / "manifest.json").unlink()
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C1", "no manifest.json in")
+
+
 def test_c1_a_summary_for_a_run_that_is_not_a_cell_fails(campaign, tmp_path):
     shutil.copyfile(campaign.summary_path(RUN),
                     campaign.eval_dir / f"ixi_A9_s1{SUFFIX}_summary.json")
@@ -236,6 +278,25 @@ def test_c2_a_checkpoint_record_of_the_wrong_step_fails(campaign, tmp_path):
     _assert_failed(report, out, "C2", "ckpt_010000.json holds step 15000")
 
 
+def test_c2_an_lsd_by_step_without_a_step_fails(campaign, tmp_path):
+    campaign.edit_json(RUN, "summary.json", lambda s: s["lsd_by_step"].pop("30000"))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C2", "lsd_by_step does not hold exactly the evaluated steps")
+
+
+def test_c2_a_final_record_of_another_step_fails(campaign, tmp_path):
+    campaign.edit_json(RUN, "final.json", lambda r: r.update(step=40000))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C2", "final.json holds step 40000, not 60000")
+
+
+def test_c2_a_tar_without_final_record_fails(campaign, tmp_path):
+    (campaign.metrics_dir(RUN) / "final.json").unlink()
+    campaign.repack(RUN)
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C2", "the tar holds no final.json")
+
+
 def test_c2_a_manifest_of_another_length_fails(campaign, tmp_path):
     path = campaign.run_root / RUN / "manifest.json"
     manifest = json.loads(path.read_text())
@@ -262,6 +323,12 @@ def test_c3_a_result_file_of_another_precision_fails(campaign, tmp_path):
     _assert_failed(report, out, "C3", "final.json amp 'off'")
 
 
+def test_c3_a_checkpoint_record_of_another_precision_fails(campaign, tmp_path):
+    campaign.edit_json(RUN, "ckpt_055000.json", lambda r: r.update(amp="bf16"))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C3", "ckpt_055000.json amp 'bf16' != 'fp16'")
+
+
 def test_c3_collecting_another_precision_finds_no_run(campaign, tmp_path):
     report, _ = _collect(campaign, tmp_path, amp="off")
     assert report.verdict == "INCOMPLETE"
@@ -285,6 +352,13 @@ def test_c4_a_checkpoint_on_another_list_fails(campaign, tmp_path):
     campaign.edit_json(RUN, "ckpt_020000.json", lambda r: r.update(seed_list_sha256=other))
     report, out = _collect(campaign, tmp_path)
     _assert_failed(report, out, "C4", "ckpt_020000.json seed_list_sha256")
+
+
+def test_c4_a_final_record_on_the_intermediate_list_fails(campaign, tmp_path):
+    intermediate = read_expected()["ixi"][0]
+    campaign.edit_json(RUN, "final.json", lambda r: r.update(seed_list_sha256=intermediate))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C4", "final.json seed_list_sha256 != the expected final list")
 
 
 # --------------------------------------------------------------------------------------------
@@ -340,6 +414,19 @@ def test_c6_a_missing_section_9_key_fails(campaign, tmp_path, name, key, fragmen
     _assert_failed(report, out, "C6", fragment)
 
 
+def test_c6_a_summary_without_its_config_hash_fails(campaign, tmp_path):
+    campaign.edit_json(RUN, "summary.json", lambda s: s["run"].pop("config_sha256"))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C6", "summary.json misses keys ['run.config_sha256']")
+
+
+def test_c6_a_gate_with_a_nan_token_fails(campaign, tmp_path):
+    path = campaign.gate_dir / f"ixi_A0_s1{SUFFIX}_gate_055000_060000.json"
+    path.write_text(path.read_text().replace('"lsd_a": ', '"lsd_a": NaN, "was": ', 1))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C6", "not strict JSON (non-strict JSON token NaN)")
+
+
 def test_c6_a_final_without_inception_fails(campaign, tmp_path):
     campaign.edit_json(RUN, "final.json", lambda r: r.update(inception=None))
     report, out = _collect(campaign, tmp_path)
@@ -377,6 +464,12 @@ def test_c7_a_history_that_stops_at_40k_fails(campaign, tmp_path):
     _assert_failed(report, out, "C7", "not done at 60000")
 
 
+def test_c7_a_run_without_its_history_fails(campaign, tmp_path):
+    (campaign.run_root / RUN / "metrics.jsonl").unlink()
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C7", "no metrics.jsonl in")
+
+
 def test_c7_a_nan_token_in_the_history_fails(campaign, tmp_path):
     path = campaign.run_root / RUN / "metrics.jsonl"
     path.write_text(path.read_text().replace('"loss": 0.3,', '"loss": NaN,', 1))
@@ -394,6 +487,13 @@ def test_c8_a_plain_summary_that_differs_from_the_tar_fails(campaign, tmp_path):
                        plain_summary=False)
     report, out = _collect(campaign, tmp_path)
     _assert_failed(report, out, "C8", "differs from the plain summary")
+
+
+def test_c8_a_tar_without_its_summary_fails(campaign, tmp_path):
+    (campaign.metrics_dir(RUN) / "summary.json").unlink()
+    campaign.repack(RUN, plain_summary=False)
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C8", "the tar holds no summary.json")
 
 
 def test_c8_a_missing_sidecar_fails(campaign, tmp_path):
@@ -454,6 +554,45 @@ def test_c9_a_gate_on_a_foreign_seed_list_fails(campaign, tmp_path):
     path.write_text(json.dumps(gate_record((35000, 40000), read_expected()["ixi"][0])))
     report, out = _collect(campaign, tmp_path)
     _assert_failed(report, out, "C9", "seed_list_sha256")
+
+
+def test_c9_a_gate_without_its_interval_fails(campaign, tmp_path):
+    record = gate_record((55000, 60000), read_expected()["ixi"][0])
+    del record["difference"]["ci_high"], record["extend"]
+    (campaign.gate_dir / f"ixi_A0_s1{SUFFIX}_gate_055000_060000.json").write_text(
+        json.dumps(record))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C9", "missing keys ['extend', 'difference.ci_high']")
+
+
+def test_c9_a_gate_of_a_run_that_is_not_a_cell_fails(campaign, tmp_path):
+    record = gate_record((55000, 60000), read_expected()["ixi"][0])
+    (campaign.gate_dir / f"ixi_A9_s1{SUFFIX}_gate_055000_060000.json").write_text(
+        json.dumps(record))
+    report, out = _collect(campaign, tmp_path)
+    _assert_failed(report, out, "C9", "run ixi_A9_s1 is not a cell of cells.csv")
+
+
+def test_c9_a_gate_cell_outside_the_table_fails(campaign, tmp_path):
+    report, out = _collect(campaign, tmp_path, gate_cells=(0, 3, 99))
+    _assert_failed(report, out, "C9", "gate cell 99: not a row of cells.csv")
+
+
+def test_c9_an_absent_gate_directory_misses_every_required_gate(campaign, tmp_path):
+    shutil.rmtree(campaign.gate_dir)
+    report, out = _collect(campaign, tmp_path, allow_missing=True)
+    assert report.verdict == "INCOMPLETE" and report.checks["C9"].verdict == "MISSING"
+    assert len(report.checks["C9"].missing) == 4  # 2 gate cells x 2 required pairs
+    assert not (out / "gates").exists() and not report.gates
+
+
+def test_c9_a_gate_is_collected_for_a_cell_outside_the_required_set(campaign, tmp_path):
+    record = gate_record((55000, 60000), read_expected()["ixi"][0])
+    (campaign.gate_dir / f"ixi_A3_s1{SUFFIX}_gate_055000_060000.json").write_text(
+        json.dumps(record))
+    report, out = _collect(campaign, tmp_path)
+    assert report.verdict == "COMPLETE", format_report(report)
+    assert (out / "gates" / "ixi_A3_s1_gate_055000_060000.json").is_file()
 
 
 def test_c9_gates_of_another_precision_are_ignored(campaign, tmp_path):

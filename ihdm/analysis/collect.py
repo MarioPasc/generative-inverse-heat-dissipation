@@ -34,6 +34,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from configs.spectral.arms import EXPERIMENT_CELLS
 from ihdm.cli.check_array import Cell, CheckArrayError, _recipe_hash, read_cells
 from ihdm.metrics.io import write_json
 from ihdm.metrics.run_eval import AMP_MODES, EVAL_STRIDE, evaluated_steps, metrics_dirname
@@ -60,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 #: The integrity checks. C1-C7 are the ticket's list; C8 and C9 cover the archive and the gates.
 CHECKS: dict[str, str] = {
-    "C1": "all cells present; summary and manifest identity match cells.csv",
+    "C1": "cells.csv == EXPERIMENT_CELLS; all cells present; summary/manifest identity match",
     "C2": "checkpoint_steps == evaluated_steps(n_iters); every ckpt_<step>.json and final.json",
     "C3": "sampling.amp == --amp in every summary and result file",
     "C4": "seed-list digests == slurm/eval/expected_seed_lists.csv",
@@ -421,6 +422,21 @@ def read_expected_seed_lists(path: Path) -> dict[str, tuple[str, str]]:
                     for row in csv.DictReader(handle)}
         except KeyError as error:
             raise CollectError(f"{path}: missing column {error}") from error
+
+
+def _check_cell_table(report: CollectionReport, cells: list[Cell]) -> None:
+    """C1: the table holds each cell of ``EXPERIMENT_CELLS`` exactly once (30 at D16)."""
+    who = Path(report.config.cells).name
+    for label, values in (("run_id", [c.run_id for c in cells]),
+                          ("index", [c.index for c in cells])):
+        repeated = sorted({v for v in values if values.count(v) > 1})
+        if repeated:
+            report.fail("C1", who, f"repeated {label} {repeated}")
+    want = {(d, a, s) for d, a, seeds in EXPERIMENT_CELLS for s in seeds}
+    have = {(c.dataset_id, c.arm, c.seed) for c in cells}
+    if have != want:
+        report.fail("C1", who, f"is not EXPERIMENT_CELLS ({len(want)} cells): absent "
+                    f"{sorted(want - have)}, extra {sorted(have - want)}")
 
 
 def _read_tiers(path: Path) -> dict[str, str]:
@@ -982,6 +998,7 @@ def collect(config: CollectConfig) -> CollectionReport:
                               checks={k: CheckResult(k, t) for k, t in CHECKS.items()})
     report.runs = [RunRecord(cell=c, tier=tiers.get(c.run_id, "")) for c in cells]
     records = {r.cell.run_id: r for r in report.runs}
+    _check_cell_table(report, cells)
     _unknown_summaries(report, records)
 
     stage = _stage_dir(out)
