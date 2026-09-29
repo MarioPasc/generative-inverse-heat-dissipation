@@ -351,6 +351,7 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
 - **Deletions on Picasso are blocked for the orchestrator.** Hand Mario the exact command with the
   `!` prefix; moving a folder (`mv`) is allowed.
 
+| W13b (2026-09-29) | T6.3 inherited-band audit → T6.4 D23 reading-only correction | opus55-xhigh → opus55-high | `ef63c12` | ACCEPT. The audit found the pre-registered estimator biased under a non-zero mean image (measured = I − T; T(96) = 1.40 IXI, 0.88 OASIS-1, 0.06 Churches); the pipeline itself is exact. Its implementation step was DENIED by the permission check (the ticket forbade `ihdm/analysis` edits); Mario approved it; T6.4 implemented it: `inherited.py`, a constants JSON, table 1c, I_w and the bias fraction in tables 2–6, the corrected figure 5. 964 tests. Corrected interaction on I_w +0.082 [+0.066, +0.097] against +0.878 on the biased share | `cff6585`, pushed |
 | W13 (2026-09-29) | T6.1 (tables) ‖ T6.2 (figures), built on the 24-run partial collection | opus55-xhigh ‖ opus55-high | `039ad2c` | both ACCEPT (937 tests on main). T6.1: 11 tables. Rulings: T_tau threshold = A0's CRN curve value `lsd_060000` (the 2k set as a sensitivity row); the pre-registered T_tau is degenerate (the non-monotone LSD makes the first crossing fire at 5k in 20/24 runs); an exploratory 'settling' T_tau and Δ/A0 columns are added, descriptive only and labelled. T6.2: 7 figures, byte-stable; the stripe of lsun_church_A3_s1 is gone at 60k | T6.2 `724254b`, T6.1 merged after; pushed |
 | W12b (2026-09-29) | T5.2 resumed from WIP `b8c93bd` | opus55-high | `b8c93bd` | ACCEPT: the WIP's tests errored at setup (the fixture knew only A0/A3), fixed; C1 check cells.csv == EXPERIMENT_CELLS; 74 T5.2 tests, 841 total; partial real collection 24/30 runs + 4 gates, 0 problems; main moved the workstation copy target to `$IHDM_DATA_ROOT/_results/` | merged on main, pushed |
 | W12 (2026-09-28) | T5.2 (collect_results) | opus55-high | `0ec8703` | **INCOMPLETE**: the agent was stopped by the harness (auto mode returned no safety verdict 10 times in a row) at its testing stage. Its uncommitted work is preserved by `main` as WIP commit `b8c93bd` on `ticket/T5.2-collect-results` (9 files, ≈ 2.4k lines, unverified) | not merged |
@@ -427,7 +428,9 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
      `python -m ihdm.cli.figures --results $IHDM_DATA_ROOT/_results --out docs/RESULTS/figures/`.
      Each must print VERDICT: COMPLETE. Commit the outputs.
    - Delete the `PARTIAL_24_RUNS/` folders and `$IHDM_DATA_ROOT/_results_partial_24/`.
-   - **Audit the inherited-band metric before the report reads it.** The two agents disagree:
+   - **(Done: D23, T6.3/T6.4.)** The inherited band is corrected at reading time; the final `analyse`/`figures` runs pick up
+     `docs/RESULTS/inherited_band_constants.json` automatically. Optional follow-up: the per-mode re-centred estimator (needs the eval tars; CPU).
+   *(The original wording is kept below.)* **Audit the inherited-band metric before the report reads it.** The two agents disagree:
      T6.1 finds Churches' measured share at 0.76 against a predicted 0.018; T6.2's fig. 5 shows
      Churches A0 at 0.00–0.13 against a prediction of ≈ 1; `inherited_measured` is negative on the
      σ 96 MRI runs. Suspect a share-versus-ratio or variant mix-up between `final.json` fields;
