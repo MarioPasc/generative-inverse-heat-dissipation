@@ -274,8 +274,11 @@ a population with a mean), and the per-mode within-seed variance, as radial curv
 re-read (`inherited_band` on that stack takes seconds), with no resampling. This per-mode split is
 the only part of the audit that the stored scalars cannot give.
 
-**Implementation status.** The D23 reading fix is not implemented in this ticket; see the T6.3
-log (`docs/AGENT-LOGS/M6-analysis/T6.3-inherited-band-audit.md` §6).
+**Implementation status.** The D23 reading fix was implemented on 2026-09-29 by T6.4, which Mario
+approved: `ihdm/analysis/inherited.py`, `docs/RESULTS/inherited_band_constants.json`, table 1c, $I_w$
+and the bias fraction in tables 2–6, and the corrected figure 5 (commits `c18fa84`…`1ea25ba`; see
+the addendum of the T6.3 log). The optional per-mode re-centred estimator, which needs the
+evaluation tars, is not done.
 
 The findings are pinned by `tests/metrics/test_inherited_audit.py`. Its synthetic tests pin four results: the mean term
 enters as exactly $I - T$; the radial ratio is $(1-d^2) + (1-d)^2\mu^2/P$ mode for mode;
