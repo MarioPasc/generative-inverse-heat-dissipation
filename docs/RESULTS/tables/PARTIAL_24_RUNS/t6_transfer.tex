@@ -2,6 +2,7 @@
 % status: incomplete: 14/20 runs
 % note: Signs and magnitudes only, no p-values (05 §8): a transfer cell has 2 seeds. 'Δ / A0' divides the mean Δ by the mean A0 value over the same seeds, so the magnitude can be read across datasets whose metric scales differ; it is left blank for proportions near 0 and the signed inherited share.
 % note: The development Δ uses the 3 seeds of IXI or Churches; the transfer Δ the 2 seeds of OASIS-1 or Bedrooms. The A3 schedule is the IXI-matched one on every dataset, transferred frozen (D12).
+% note: Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 − ΣV/ΣP_ref is biased under a non-zero mean image, its model expectation is I − T with T = Σ(1−d)²μ²/ΣP_ref. I_w = 1 − M/(M−1)·D_pix(W²−1)/ΣP_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 − pre-registered share − D_pix(W²−1)/ΣP_ref the seed-mean bias fraction (expectation T + (1−I)/M). ΣP_ref and T come from the ref split (inherited_band_constants.json).
 \begin{table}[htbp]
 \centering
 \small
@@ -22,7 +23,9 @@ IXI \ensuremath{\to} OASIS-1 & $M_{\mathrm{lp}}$ & \ensuremath{-}0.7907 & \ensur
 IXI \ensuremath{\to} OASIS-1 & seed-NN frac. & +0.6588 & -- & -- & -- & -- & incomplete: 2/4 runs \\
 IXI \ensuremath{\to} OASIS-1 & $D_{\mathrm{pix}}$ & \ensuremath{-}0.002647 & \ensuremath{-}23.2\% & -- & -- & -- & incomplete: 2/4 runs \\
 IXI \ensuremath{\to} OASIS-1 & $D_{\mathrm{lp}}$ & \ensuremath{-2.646\times10^{-4}} & \ensuremath{-}94.5\% & -- & -- & -- & incomplete: 2/4 runs \\
-IXI \ensuremath{\to} OASIS-1 & inherited (meas.) & +0.9224 & -- & -- & -- & -- & incomplete: 2/4 runs \\
+IXI \ensuremath{\to} OASIS-1 & inherited (pre-reg., biased) & +0.9224 & -- & -- & -- & -- & incomplete: 2/4 runs \\
+IXI \ensuremath{\to} OASIS-1 & $I_w$ (D23) & +0.07938 & -- & -- & -- & -- & incomplete: 2/4 runs \\
+IXI \ensuremath{\to} OASIS-1 & $G_b$ (D23) & \ensuremath{-}0.8446 & -- & -- & -- & -- & incomplete: 2/4 runs \\
 IXI \ensuremath{\to} OASIS-1 & $T_\tau$, 2k threshold (sens.) & 0 & +0.0\% & -- & -- & -- & incomplete: 2/4 runs \\
 \midrule
 Churches \ensuremath{\to} Bedrooms & LSD (final) & \ensuremath{-}0.3707 & \ensuremath{-}30.9\% & -- & -- & -- & incomplete: 0/4 runs \\
@@ -36,7 +39,9 @@ Churches \ensuremath{\to} Bedrooms & $M_{\mathrm{lp}}$ & \ensuremath{-}0.5775 & 
 Churches \ensuremath{\to} Bedrooms & seed-NN frac. & +0.6138 & -- & -- & -- & -- & incomplete: 0/4 runs \\
 Churches \ensuremath{\to} Bedrooms & $D_{\mathrm{pix}}$ & \ensuremath{+1.299\times10^{-4}} & +4.1\% & -- & -- & -- & incomplete: 0/4 runs \\
 Churches \ensuremath{\to} Bedrooms & $D_{\mathrm{lp}}$ & \ensuremath{-8.248\times10^{-4}} & \ensuremath{-}96.6\% & -- & -- & -- & incomplete: 0/4 runs \\
-Churches \ensuremath{\to} Bedrooms & inherited (meas.) & +0.04480 & -- & -- & -- & -- & incomplete: 0/4 runs \\
+Churches \ensuremath{\to} Bedrooms & inherited (pre-reg., biased) & +0.04480 & -- & -- & -- & -- & incomplete: 0/4 runs \\
+Churches \ensuremath{\to} Bedrooms & $I_w$ (D23) & \ensuremath{-}0.002623 & -- & -- & -- & -- & incomplete: 0/4 runs \\
+Churches \ensuremath{\to} Bedrooms & $G_b$ (D23) & \ensuremath{-}0.04737 & -- & -- & -- & -- & incomplete: 0/4 runs \\
 Churches \ensuremath{\to} Bedrooms & $T_\tau$, 2k threshold (sens.) & 0 & +0.0\% & -- & -- & -- & incomplete: 0/4 runs \\
 \bottomrule
 \end{tabular}
