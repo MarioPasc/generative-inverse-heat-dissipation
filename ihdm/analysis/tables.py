@@ -160,6 +160,11 @@ class Endpoint:
         Which direction is better, in words, for the README and the notes.
     kind : {"float", "step"}
         ``"step"`` values are checkpoint steps (``T_tau``), formatted in thousands.
+    ratio : bool
+        Whether the endpoint is a positive quantity on a ratio scale, so that the descriptive
+        ``Delta / A0`` of tables 3 and 6 means something. ``False`` for proportions that sit
+        near zero (recall, coverage, seed-NN fraction) and for the signed inherited share,
+        where dividing by the A0 value inflates or flips the reading.
     """
 
     key: str
@@ -167,6 +172,7 @@ class Endpoint:
     tex: str
     reading: str
     kind: str = "float"
+    ratio: bool = True
 
 
 #: The endpoints of tables 2-6 (``00-overview.md`` §1, ``05-metrics.md`` §2-§7), in report order.
@@ -175,16 +181,16 @@ ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("t_tau", "T_τ (steps)", r"$T_\tau$ (steps)", "lower is earlier", "step"),
     Endpoint("kid", "KID (headline)", "KID", "lower is better"),
     Endpoint("fid", "FID", "FID", "lower is better; biased upward at N_ref = 800"),
-    Endpoint("recall", "recall", "recall", "higher is better"),
-    Endpoint("coverage", "coverage", "coverage", "higher is better"),
+    Endpoint("recall", "recall", "recall", "higher is better", ratio=False),
+    Endpoint("coverage", "coverage", "coverage", "higher is better", ratio=False),
     Endpoint("M", "M", "$M$", "1 = as far as held-out data; below 1 = copying"),
     Endpoint("M_lp", "M_lp", r"$M_{\mathrm{lp}}$", "as M, after the sigma_B = 16 low-pass"),
     Endpoint("seed_nn_fraction", "seed-NN fraction", "seed-NN frac.",
-             "share of samples whose nearest training image is their own seed"),
+             "share of samples whose nearest training image is their own seed", ratio=False),
     Endpoint("D_pix", "D_pix", r"$D_{\mathrm{pix}}$", "higher = more within-seed diversity"),
     Endpoint("D_lp", "D_lp", r"$D_{\mathrm{lp}}$", "as D_pix, after the low-pass"),
     Endpoint("inherited_measured", "inherited share (measured)", "inherited (meas.)",
-             "read against the predicted share of table 1b"),
+             "read against the predicted share of table 1b", ratio=False),
     Endpoint("t_tau_2k", "T_τ, 2k-set threshold (sensitivity)",
              r"$T_\tau$, 2k threshold (sens.)", "lower is earlier", "step"),
 )
@@ -1263,8 +1269,8 @@ def build_interaction_table(results: Results) -> Table:
             "ci_low": result.ci_low, "ci_high": result.ci_high, "p_value": result.p_value,
             "p_min": result.p_min, "n_assignments": result.n_assignments,
             "verdict": result.verdict, "status": result.status,
-            "relative_mri": _share(result.mri.mean, result.mri.reference_mean),
-            "relative_photo": _share(result.photo.mean, result.photo.reference_mean),
+            "relative_mri": _relative(endpoint, result.mri),
+            "relative_photo": _relative(endpoint, result.photo),
         })
     required = tuple(run_id(d, a, s) for d in (MRI_DATASET, PHOTO_DATASET) for a in ("A0", "A3")
                      for s in design_seeds(d, a))
@@ -1297,7 +1303,9 @@ def build_interaction_table(results: Results) -> Table:
             "The interaction is on each metric's raw scale, as pre-registered; where the two "
             "datasets' A0 levels differ (Churches' LSD is about five times IXI's) the raw "
             "difference is dominated by the larger scale. 'Δ / A0' (mean Δ over the mean A0 "
-            "value, same seeds) is a descriptive, scale-free reading and carries no test.",
+            "value, same seeds) is a descriptive, scale-free reading and carries no test; it is "
+            "left blank for recall, coverage, the seed-NN fraction and the inherited share, "
+            "which are proportions near 0 or signed.",
             "p: exact permutation of the dataset label over the six pooled per-seed Δ "
             "(C(6,3) = 20 assignments), so p cannot fall below p_min = 0.1.",
             "Only the development pair enters: OASIS-1 and Bedrooms (2 seeds, A0/A3 only) are "
@@ -1314,6 +1322,13 @@ def _share(numerator: float, denominator: float) -> float:
     if _missing(numerator) or _missing(denominator) or denominator == 0.0:
         return math.nan
     return float(numerator) / float(denominator)
+
+
+def _relative(endpoint: Endpoint, contrast: ContrastResult) -> float:
+    """Descriptive ``mean Delta / mean A0`` on ratio-scale endpoints with a positive A0 mean."""
+    if not endpoint.ratio or _missing(contrast.reference_mean) or contrast.reference_mean <= 0:
+        return math.nan
+    return _share(contrast.mean, contrast.reference_mean)
 
 
 def build_decomposition_table(results: Results) -> Table:
@@ -1436,9 +1451,9 @@ def build_transfer_table(results: Results) -> Table:
                 "_group": development, "pair": f"{DATASET_LABEL[development]} → "
                                               f"{DATASET_LABEL[transfer]}",
                 "endpoint": endpoint.key, "dev_mean": dev.mean, "dev_deltas": list(dev.deltas),
-                "dev_relative": _share(dev.mean, dev.reference_mean),
+                "dev_relative": _relative(endpoint, dev),
                 "transfer_mean": tra.mean, "transfer_deltas": list(tra.deltas),
-                "transfer_relative": _share(tra.mean, tra.reference_mean),
+                "transfer_relative": _relative(endpoint, tra),
                 "dev_sign": _sign(dev.mean), "transfer_sign": _sign(tra.mean),
                 "agree": agree, "status": "; ".join(flags) if flags else STATUS_OK,
             })
@@ -1465,7 +1480,8 @@ def build_transfer_table(results: Results) -> Table:
         notes=(
             "Signs and magnitudes only, no p-values (05 §8): a transfer cell has 2 seeds. "
             "'Δ / A0' divides the mean Δ by the mean A0 value over the same seeds, so the "
-            "magnitude can be read across datasets whose metric scales differ.",
+            "magnitude can be read across datasets whose metric scales differ; it is left blank "
+            "for proportions near 0 and the signed inherited share.",
             "The development Δ uses the 3 seeds of IXI or Churches; the transfer Δ the 2 seeds "
             "of OASIS-1 or Bedrooms. The A3 schedule is the IXI-matched one on every dataset, "
             "transferred frozen (D12).",

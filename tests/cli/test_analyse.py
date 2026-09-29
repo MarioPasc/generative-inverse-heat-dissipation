@@ -9,7 +9,7 @@ import pytest
 
 from ihdm.cli.analyse import EXIT_FAIL, EXIT_OK, EXIT_PARTIAL, EXIT_USAGE, main
 from tests.analysis.synthetic_eval import build_campaign, copy_campaign
-from tests.analysis.test_tables import TIER_3, collect_planted, drop_runs
+from tests.analysis.test_analysis_tables import TIER_3, collect_planted, drop_runs
 
 
 @pytest.fixture(scope="module")

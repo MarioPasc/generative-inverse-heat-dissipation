@@ -368,6 +368,14 @@ def test_the_contrast_tables_cover_each_arm_and_endpoint(results):
         "A3−A0", "A1−A0", "A2−A0", "A2′−A0"}
 
 
+def test_the_relative_columns_are_blank_off_the_ratio_scale(results):
+    rows = {r["endpoint"]: r for r in _tables(results)["t3_interaction"].rows}
+    assert rows["kid"]["relative_mri"] == pytest.approx(-0.0993333 / 1.02, abs=1e-4)
+    for endpoint in ("recall", "coverage", "seed_nn_fraction", "inherited_measured"):
+        assert math.isnan(rows[endpoint]["relative_mri"]), endpoint
+        assert math.isnan(rows[endpoint]["relative_photo"]), endpoint
+
+
 def test_the_decomposition_recovers_the_planted_shares(results):
     rows = {(r["dataset"], r["endpoint"]): r for r in _tables(results)["t4_decomposition"].rows}
     ixi = rows[("ixi", "kid")]
