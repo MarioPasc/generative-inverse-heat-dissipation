@@ -463,3 +463,52 @@ If you need to re-submit the jobs, make sure to whipe out the current results an
 7. **Close each session** with the TFM `session-log` skill (worklog) and keep
    `~/.claude/projects/-home-mpascual-research-code-TFM/memory/genai-code-orchestration.md`
    current.
+
+### 13.3 Update 2026-09-29 ≈ 14:30 — the experiment's compute is DONE; START HERE
+
+**Done:** training (30 runs at 60k), evaluation (30/30), collection (COMPLETE, 9/9 checks), and the
+final tables and figures on all 30 runs (`docs/RESULTS/tables/`, `docs/RESULTS/figures/`, `d2b3e2f`),
+including the D23 inherited-band correction. Items 1, 2, 3 and 4 of §13.2 are done.
+
+**Where the results are:**
+- `results/` in three copies:
+  - Picasso `~/execs/ihdm/results/` (canonical);
+  - `$IHDM_DATA_ROOT/_results/`;
+  - the SanDisk `…/results/`.
+- The evaluation tars: the SanDisk `…/evaluation/eval_2488269/`. The copy was running at this
+  update; check it (item 1 below).
+- The training archives (40k, 60k): §13.1.
+
+**The headline** (Table 3, interaction Δ_IXI − Δ_Churches for A3 vs A0, 3 seeds each, p_min 0.1):
+- **Not detectable at this budget:** LSD, KID, FID, recall and $T_\tau$.
+- **All seeds agree in sign (p = 0.1, the floor):** coverage, $M$, $M_{lp}$, the seed-NN fraction,
+  $D_{pix}$, $D_{lp}$, and the D23-corrected within-seed share $I_w$
+  (+0.082 [+0.066, +0.097]).
+- **Caveats (READMEs):**
+  - "CI excludes 0" at 3 seeds means only that all 3 seeds agree in sign.
+  - The pre-registered $T_\tau$ is degenerate: the LSD curves are non-monotone, and an
+    exploratory "settling" variant is added.
+  - The pre-registered inherited share is biased (D23).
+  - Churches is undertrained, and the models under-regenerate (within-seed share 0.66 on IXI,
+    0.94 on Churches, against a prediction of ≈ 0).
+
+**Left to do, in order:**
+1. **Verify the evaluation-tar archive** `…/Sandisk2TB/…/evaluation/eval_2488269/` against Picasso
+   `~/execs/ihdm/eval/`: compare the file lists by name and size, as for the training archives.
+   Then update the SanDisk README (add `results/` and `evaluation/`).
+2. **Cleanup commands for Mario** (deletions are blocked for the orchestrator):
+   ```
+   rm -rf /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24
+   ssh picasso 'rm -rf ~/execs/ihdm/wt/T3.4 ~/execs/ihdm/wt/T5.1 ~/execs/ihdm/fixtures/array_2408239 ~/fscratch/runs/ihdm_failed ~/fscratch/runs/ihdm/lsun_church_A3_s3/checkpoints-meta/abort_step_030136.pth'
+   ```
+   Everything in the second command is archived. Afterwards FSCRATCH can drop the run folders
+   too, if Mario wants: they are archived twice (40k and 60k).
+3. **Optional analysis follow-ups:**
+   - the per-mode re-centred inherited-band estimator, which needs the tars (CPU only);
+   - `\resizebox` for tables 2a, 2b and 5 in the report;
+   - add `docs/RESULTS/tables/` and `docs/RESULTS/figures/` to the `docs/README.md` tree.
+4. **Report writing** (Mario): the tables' and figures' READMEs carry the captions, the caveats
+   and the deviations: D19 recipe v2, D20 fp16 evaluation, D21 run 11, D22 the 60k extension,
+   D23 the inherited-band correction, and the exploratory items in their own section.
+5. **[ask Mario]**, still open: the proposal's Fig. 1 caption numbers, and pinning torch in
+   `environment.yml`.
