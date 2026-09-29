@@ -4,7 +4,7 @@
 
 **Status: incomplete: 24/30 runs** (missing: oasis1_A3_s1, oasis1_A3_s2, lsun_bedroom_A0_s1, lsun_bedroom_A0_s2, lsun_bedroom_A3_s1, lsun_bedroom_A3_s2)
 
-| dataset | arm | seed | M | M_lp | seed-NN frac. | D_pix | D_lp | inherited meas. | inherited pred. | low-band meas. | low-band pred. | n_skipped | status |
+| dataset | arm | seed | M | M_lp | seed-NN frac. | D_pix | D_lp | inherited meas. (pre-reg., biased) | inherited pred. | low-band meas. (pre-reg., biased) | low-band pred. | n_skipped | status |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | IXI | A0 | 1 | 0.9191 | 1.096 | 0.04700 | 0.01143 | 2.738e-04 | -0.7675 | 0.003432 | -2.931 | 0.01076 | 0 | ok |
 | IXI | A0 | 2 | 0.9015 | 0.9913 | 0.06600 | 0.01129 | 2.757e-04 | -0.8787 | 0.003432 | -3.245 | 0.01076 | 0 | ok |
@@ -39,7 +39,7 @@
 
 - M and M_lp: median nearest-training-image distance of the 2,000 training-seeded samples over that of held-out real images (05 §4); 1 means as far as new data.
 - D_pix / D_lp: within-seed diversity over 40 held-out seeds × 50 samples (05 §3).
-- Inherited share over all non-DC modes, measured 1 − ΣV/ΣP_ref against the linear-Gaussian prediction; the low-band columns mask both to σ_n ≥ 8 px (05 §5).
+- Inherited share over all non-DC modes, measured 1 − ΣV/ΣP_ref as pre-registered (biased under a non-zero mean image; see inherited_band_audit.md), beside the linear-Gaussian prediction I; the low-band columns mask both to σ_n ≥ 8 px (05 §5). The corrected reading is table 1c.
 - n_skipped counts the no-op fp16 overflow steps kept in the canonical history (run 11, lsun_church_A3_s3: 6, all before its resume at 30,001).
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 4adfff670e, 2026-09-29T09:15:36.919074+00:00</sub>

@@ -41,7 +41,7 @@ Files: [`fig4_pca_seed.png`](PARTIAL_24_RUNS/fig4_pca_seed.png). Width 3.3 in. C
 
 Files: [`fig5_inherited_band.png`](PARTIAL_24_RUNS/fig5_inherited_band.png). Width 6.75 in. Coverage: **14/20 runs**.
 
-**Caption draft.** The inherited band (05-metrics §5): per-mode variance of 50 samples about their prior state $d_K \hat x_s$, averaged over the 40 held-out seeds and divided by the population variance $P_{\mathrm{ref}}$, as a radial profile on the 43 populated log-spaced bins (solid; thin: single seeds), against the linear-Gaussian prediction $1 - d_K^2(n) = 1 - e^{-2\lambda_n t_K}$ with $t_K = \sigma_{B,\max}^2/2$ (dashed). The two terminal blurs: A0 ($\sigma_{B,\max}$ = 96 px, prediction $\approx 1$ above one cycle per image) and A3 ($\sigma_{B,\max}$ = 24 px, the prior keeps the low band). A measured curve on its dashed line means the model regenerates exactly the variance the prior removed; below it, the samples inherit more of the seed. Log axes, one y range for all panels. The bins below 3 cycles per image hold 1-6 DCT modes each on the $192^2$ grid, so the measured ratio there is noisy. n = 14/20 runs. Absent (not evaluated or not collected): `lsun_bedroom_A0_s1`, `lsun_bedroom_A0_s2`, `oasis1_A3_s1`, `oasis1_A3_s2`, `lsun_bedroom_A3_s1`, `lsun_bedroom_A3_s2`.
+**Caption draft.** The inherited band (05-metrics §5, read as D23 prescribes): per-mode variance of 50 samples about their prior state $d_K \hat x_s$, averaged over the 40 held-out seeds and divided by the population variance $P_{\mathrm{ref}}$, as a radial profile on the 43 populated log-spaced bins (solid; thin: single seeds). Dashed: its expectation under the linear-Gaussian model written with the population's mean image $\mu$, $(1-d_K^2) + (1-d_K)^2\mu^2/P_{\mathrm{ref}}$ with $d_K = e^{-\lambda_n t_K}$ and $t_K = \sigma_{B,\max}^2/2$ (constants from the ref split, `inherited_band_constants.json`). Dotted: the pre-registered line $1 - d_K^2$, which omits the mean image and is kept for reference; the two differ where $\mu^2/P$ is large, i.e. in the lowest bins of the MRI datasets, whose mean brain carries 1.5 (IXI) and 0.94 (OASIS-1) times the non-DC population variance (inherited_band_audit.md). The two terminal blurs: A0 ($\sigma_{B,\max}$ = 96 px, $1-d_K^2 \approx 1$ above one cycle per image) and A3 ($\sigma_{B,\max}$ = 24 px, the prior keeps the low band). A measured curve on its dashed line means the model regenerates exactly the variance the blur removed; below the line, the chain adds less than the variance the blur removed; only where $d_K$ is appreciable can copying the seed contribute. Log axes, one y range for all panels. The bins below 3 cycles per image hold 1-6 DCT modes each on the $192^2$ grid, so the measured ratio there is noisy. n = 14/20 runs. Absent (not evaluated or not collected): `lsun_bedroom_A0_s1`, `lsun_bedroom_A0_s2`, `oasis1_A3_s1`, `oasis1_A3_s2`, `lsun_bedroom_A3_s1`, `lsun_bedroom_A3_s2`.
 
 ## Figure 6. Sample grids
 
@@ -56,3 +56,29 @@ Files: [`fig6_grids.png`](PARTIAL_24_RUNS/fig6_grids.png). Width 6.75 in. Covera
 Files: [`fig7_training_sanity.png`](PARTIAL_24_RUNS/fig7_training_sanity.png). Width 6.75 in. Coverage: **30/30 runs**.
 
 **Caption draft.** Training sanity from each run's canonical history (`metrics.canonical.jsonl`: the segment abandoned by run 11's resume at 30,001 is already removed, D21). Top: training loss, running mean over 20 logged steps (1000 iterations), log scale; middle: throughput in iterations per second as logged (A100, batch 16). Both y ranges span the records from step 2,500 on; the warm-up and the first logged step lie above or below them. Bottom: the per-octave training loss averaged over the last 5,000 iterations, on the trainer's σ_B bands in pixels (labelled by their lower edge; bands an arm's blur range never visits are not logged and not drawn), log scale. Thin lines: single runs; thick lines in the bottom row: seed mean. The loss is the regression loss of each arm's own blur schedule, so its level is not comparable across arms; the panel checks convergence and stability only. Shaded: the 40k → 60k extension, resumed at step 40,001 (D22). Skipped fp16 steps kept in the canonical histories: `lsun_church_A3_s3` 6 skipped steps. n = 30/30 runs.
+
+## Inherited band: estimator correction (D23)
+
+The inherited band of figure 5 was pre-registered as the per-mode variance of the samples about their prior state $d_K\hat x_s$, divided by the population variance $P_{\mathrm{ref}}$, against the line $1-d_K^2$, with the share $1-\sum V/\sum P_{\mathrm{ref}}$ against $I=\sum d_K^2P/\sum P$. That reading assumes the population mean image has no non-DC content. The registered brains do have one: the blur damps the mean as much as the fluctuations, so a model that restores the population must add $(1-d_K)\mu$ to every sample of every seed. That addition is the same for all seeds, so it carries no variance and no inheritance. The residual still counts it: its expectation is $(1-d_K^2)P+(1-d_K)^2\mu^2$, the curve's is $(1-d_K^2)+(1-d_K)^2\mu^2/P$ (the dashed line of figure 5), and the share's is $I-T$ with $T=\sum(1-d_K)^2\mu^2/\sum P$. The stored scalars split exactly into a within-seed part and a seed-mean part, so D23 adds two readings that need no sample: the within-seed share $I_w = 1-\frac{M}{M-1}D_{\mathrm{pix}}(W^2-1)/\sum P_{\mathrm{ref}}$, whose expectation is $I$ whatever the mean image, and the seed-mean bias fraction, whose expectation is $T+(1-I)/M$. The tables (`docs/RESULTS/tables/`, table 1c) test both like every other endpoint. The code, `final.json` and `index.csv` are unchanged.
+
+Derivation and evidence: [`inherited_band_audit.md`](../inherited_band_audit.md). Constants: `docs/RESULTS/inherited_band_constants.json`, computed from each dataset's `ref` split by `python -m ihdm.analysis.inherited` and matched to the runs by `dataset_sha256`.
+
+| dataset | σ_B,max | ΣP_ref | I | T | I − T |
+|---|---:|---:|---:|---:|---:|
+| IXI T1 | 96 | 1254.13 | 0.0034 | 1.4015 | -1.398 |
+| IXI T1 | 24 | 1254.13 | 0.0795 | 0.2113 | -0.132 |
+| LSUN Churches | 96 | 1862.91 | 0.0179 | 0.0607 | -0.043 |
+| LSUN Churches | 24 | 1862.91 | 0.2886 | 0.0016 | +0.287 |
+| OASIS-1 T1 | 96 | 1015.14 | 0.0017 | 0.8785 | -0.877 |
+
+Seed means over the evaluated runs of A0 and A3 (tables 1c and 2 give every run, the contrasts and the interaction):
+
+| dataset | arm | runs | pre-registered share (biased) | its expectation I − T | I_w | its expectation I |
+|---|---|---:|---:|---:|---:|---:|
+| IXI T1 | A0 | 3 | -0.852 | -1.398 | 0.658 | 0.0034 |
+| IXI T1 | A3 | 3 | +0.070 | -0.132 | 0.738 | 0.0795 |
+| LSUN Churches | A0 | 3 | +0.755 | -0.043 | 0.936 | 0.0179 |
+| LSUN Churches | A3 | 3 | +0.800 | +0.287 | 0.934 | 0.2886 |
+| OASIS-1 T1 | A0 | 2 | -0.422 | -0.877 | 0.552 | 0.0017 |
+
+I_w above I means the samples of one seed vary less than the variance the blur removed (under-dispersion); it is not inheritance.

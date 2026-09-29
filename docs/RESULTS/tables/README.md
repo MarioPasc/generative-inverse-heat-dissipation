@@ -58,7 +58,8 @@ budget", and one that excludes zero as "CI excludes 0". Neither is a significanc
 | # | file | what it shows | method |
 |---|---|---|---|
 | 1a | `t1a_cells_fidelity` | one row per run: final LSD (2k set), LSD at the last checkpoint (500 seeds), T_τ, KID with CI, FID with CI and N_ref, recall, coverage | values as collected; T_τ as in table 7 |
-| 1b | `t1b_cells_mechanism` | one row per run: M, M_lp, seed-NN fraction, D_pix, D_lp, inherited share measured/predicted (all modes and the σ_n ≥ 8 px low band), `n_skipped` | values as collected; low band from `summary.json` via `cell_table` |
+| 1b | `t1b_cells_mechanism` | one row per run: M, M_lp, seed-NN fraction, D_pix, D_lp, inherited share measured (as pre-registered, biased; see D23 below) and predicted (all modes and the σ_n ≥ 8 px low band), `n_skipped` | values as collected; low band from `summary.json` via `cell_table` |
+| 1c | `t1c_cells_inherited` | one row per run: the inherited band read as D23 prescribes. Pre-registered share against I − T, I_w against I, G_b against T + (1−I)/M, with T and M | stored scalars plus `docs/RESULTS/inherited_band_constants.json` (below) |
 | 2a, 2b | `t2a_contrasts_ixi`, `t2b_contrasts_lsun_church` | A3−A0, A1−A0, A2−A0 (and A2′−A0 on Churches) for every endpoint: n seeds, mean Δ, 95% CI, per-seed Δ, permutation p, p_min | paired contrast (below) |
 | 3 | `t3_interaction` | **the headline**: Δ_IXI − Δ_Churches for A3 vs A0, every endpoint, with CI and p | interaction (below) |
 | 4 | `t4_decomposition` | share of the A3 effect carried by A1 (terminal blur alone) and by A2 (spacing alone), per development dataset | ratio of seed-matched means, no CI |
@@ -73,8 +74,9 @@ earlier), KID (the headline Inception metric; lower is better), FID (lower is be
 caveat below), recall and coverage (higher is better), M and M_lp (1 = as far from the training
 set as held-out real images, below 1 = copying), seed-NN fraction (share of samples whose nearest
 training image is their own seed), D_pix and D_lp (higher = more within-seed diversity), the
-measured inherited share (read against the predicted share of table 1b), and T_τ under the 2k
-threshold (sensitivity row). Definitions: `docs/SPECIFICATIONS/05-metrics.md` §2–§7.
+inherited share as pre-registered (biased under a non-zero mean image; model expectation I − T),
+the within-seed share I_w (read against I) and the seed-mean bias fraction G_b (read against
+T + (1−I)/M) of D23, and T_τ under the 2k threshold (sensitivity row). Definitions: `docs/SPECIFICATIONS/05-metrics.md` §2–§7.
 
 ## Statistical method (`05-metrics.md` §8, D13, D16, D17)
 
@@ -199,8 +201,68 @@ pre-registered**. It is descriptive only: no CI and no p-value, so none of it is
   the pre-registered raw-scale interaction, which stays the headline column. They are printed
   only for positive ratio-scale endpoints (LSD, T_τ, KID, FID, M, M_lp, D_pix, D_lp). They are
   blank for recall, coverage and the seed-NN fraction, whose A0 values sit near 0 on Churches
-  (a +0.09 recall gain would read as +3,000%), and for the inherited share, which is negative
-  on IXI A0 and would flip the sign.
+  (a +0.09 recall gain would read as +3,000%), and for the three inherited-band endpoints: the
+  pre-registered share is negative on IXI A0 and would flip the sign, and I_w and G_b are read
+  against their own expectations, not as ratios.
+
+## Inherited band: estimator correction (D23)
+
+**What was wrong.** `05-metrics.md` §5 measures the per-mode variance of the 50 samples of a seed
+about their prior state $d_K\hat x_s$ and reports $1-\sum V/\sum P_{\mathrm{ref}}$ as the
+inherited share, against $I=\sum d_K^2P/\sum P$. The derivation behind it took the population
+mean image to be zero at every non-DC mode. The registered brains are not: their mean image
+carries 1.5 × (IXI) and 0.94 × (OASIS-1) the non-DC population variance. The blur damps the mean
+as much as the fluctuations, so a model that restores the population must add $(1-d_K)\mu$ to
+every sample. That term is the same for all seeds; it carries no variance and no inheritance.
+The residual counts it anyway, so its expectation is $(1-d_K^2)P+(1-d_K)^2\mu^2$ and the stored
+share reads $I-T$ with $T=\sum(1-d_K)^2\mu^2/\sum P_{\mathrm{ref}}$, not $I$. The share is also
+normalised by $P_{\mathrm{ref}}$, so a model that regenerates less than the removed variance
+reads that shortfall as inheritance (Churches). The code, `final.json` and `index.csv` are
+correct; the reading was not. Derivation and evidence:
+[`inherited_band_audit.md`](../inherited_band_audit.md).
+
+**What the tables do now (D23, reading only).** The pre-registered share stays in every table,
+labelled "as pre-registered (biased under a non-zero mean image; see
+inherited_band_audit.md)". Two endpoints are added from stored scalars, using the exact split
+$\sum V = D_{\mathrm{pix}}(W^2-1) + \text{seed-mean bias}$ (audit §3.3):
+
+- the within-seed share $I_w = 1-\frac{M}{M-1}D_{\mathrm{pix}}(W^2-1)/\sum P_{\mathrm{ref}}$,
+  expectation $I$ whatever the mean image, read against `inherited_predicted`;
+- the seed-mean bias fraction $G_b = 1-\text{pre-registered share}-D_{\mathrm{pix}}(W^2-1)/\sum
+  P_{\mathrm{ref}}$, expectation $T+(1-I)/M$.
+
+Table 1c sets each against its expectation per run; tables 2–6 contrast and interact them with
+the same statistics as every other endpoint. $M$ (`n_per_seed`, 50) and $\sigma_{B,\max}$ come
+from each run's `summary.json`. $\sum P_{\mathrm{ref}}$, $W$ and $T$ come from
+`docs/RESULTS/inherited_band_constants.json`, written by
+`python -m ihdm.analysis.inherited --data-root <root>` from each dataset's `ref` split (the same
+split and $P_{\mathrm{ref}}$ as `run_eval`). A run is matched to its constants only when its
+`dataset_sha256` equals the file's; otherwise its D23 cells are blank and table 1c names the
+reason. No sample and no evaluation tar is read.
+
+| dataset | ΣP_ref | I (96) | T (96) | I − T (96) | I (24) | T (24) | I − T (24) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| IXI | 1254.13 | 0.0034 | 1.4015 | −1.398 | 0.0795 | 0.2113 | −0.132 |
+| OASIS-1 | 1015.14 | 0.0017 | 0.8785 | −0.877 | 0.0426 | 0.1917 | −0.149 |
+| Churches | 1862.91 | 0.0179 | 0.0607 | −0.043 | 0.2886 | 0.0016 | +0.287 |
+| Bedrooms | 1726.48 | 0.0167 | 0.0254 | −0.009 | 0.2959 | 0.0011 | +0.295 |
+
+On the 24-run partial collection (`PARTIAL_24_RUNS/`, not for quoting), seed means:
+
+| cell | pre-registered share (biased) | its expectation I − T | I_w | its expectation I |
+|---|---:|---:|---:|---:|
+| IXI A0 | −0.852 | −1.398 | 0.658 | 0.0034 |
+| IXI A3 | +0.070 | −0.132 | 0.738 | 0.0795 |
+| OASIS-1 A0 | −0.422 | −0.877 | 0.552 | 0.0017 |
+| Churches A0 | +0.755 | −0.043 | 0.936 | 0.0179 |
+| Churches A3 | +0.800 | +0.287 | 0.934 | 0.2886 |
+
+A3−A0 on I_w is +0.079 [+0.073, +0.085] on IXI (ΔI = +0.076) and −0.003 [−0.018, +0.013] on
+Churches (ΔI = +0.271); the interaction is +0.082 [+0.066, +0.097] (p = 0.1 = p_min), against
++0.878 on the pre-registered share, most of which is $T$ shrinking with σ_B,max on MRI. I_w lies
+far above I everywhere: the samples of one seed vary by 25–45 % (MRI) and 5–8 % (Churches) of
+the population variance, against the model's 70–98 %. That is under-dispersion, not
+inheritance. The prediction $I$ is itself model-dependent (audit §3.6).
 
 ## `PARTIAL_24_RUNS/`
 

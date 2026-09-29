@@ -8,8 +8,13 @@
     "verdict": "INCOMPLETE"
   },
   "complete": false,
-  "created": "2026-09-29T08:04:59.317403+00:00",
-  "git_sha": "66ec64ef68d8f9b16e2fb9ae7d406b79a8ef252e",
+  "created": "2026-09-29T09:15:36.919074+00:00",
+  "git_sha": "4adfff670ea89f6aa5d3ebce53a542c1cad2925b",
+  "inherited_constants": {
+    "decision": "D23 (docs/RESULTS/inherited_band_audit.md)",
+    "path": "docs/RESULTS/inherited_band_constants.json",
+    "runs_without_constants": []
+  },
   "missing_runs": [
     "oasis1_A3_s1",
     "oasis1_A3_s2",
@@ -695,7 +700,7 @@
       "notes": [
         "M and M_lp: median nearest-training-image distance of the 2,000 training-seeded samples over that of held-out real images (05 \u00a74); 1 means as far as new data.",
         "D_pix / D_lp: within-seed diversity over 40 held-out seeds \u00d7 50 samples (05 \u00a73).",
-        "Inherited share over all non-DC modes, measured 1 \u2212 \u03a3V/\u03a3P_ref against the linear-Gaussian prediction; the low-band columns mask both to \u03c3_n \u2265 8 px (05 \u00a75).",
+        "Inherited share over all non-DC modes, measured 1 \u2212 \u03a3V/\u03a3P_ref as pre-registered (biased under a non-zero mean image; see inherited_band_audit.md), beside the linear-Gaussian prediction I; the low-band columns mask both to \u03c3_n \u2265 8 px (05 \u00a75). The corrected reading is table 1c.",
         "n_skipped counts the no-op fp16 overflow steps kept in the canonical history (run 11, lsun_church_A3_s3: 6, all before its resume at 30,001)."
       ],
       "number": "1b",
@@ -1246,6 +1251,523 @@
       "status": "incomplete: 24/30 runs",
       "title": "Cell table, one row per run: memorisation, diversity and inherited band"
     },
+    "t1c_cells_inherited": {
+      "columns": [
+        "dataset",
+        "arm",
+        "seed",
+        "inherited_measured",
+        "inherited_expected",
+        "inherited_within",
+        "inherited_predicted",
+        "inherited_bias",
+        "inherited_bias_expected",
+        "inherited_mean_term",
+        "n_per_seed",
+        "status"
+      ],
+      "complete": false,
+      "missing": [
+        "oasis1_A3_s1",
+        "oasis1_A3_s2",
+        "lsun_bedroom_A0_s1",
+        "lsun_bedroom_A0_s2",
+        "lsun_bedroom_A3_s1",
+        "lsun_bedroom_A3_s2"
+      ],
+      "notes": [
+        "Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 \u2212 \u03a3V/\u03a3P_ref is biased under a non-zero mean image, its model expectation is I \u2212 T with T = \u03a3(1\u2212d)\u00b2\u03bc\u00b2/\u03a3P_ref. I_w = 1 \u2212 M/(M\u22121)\u00b7D_pix(W\u00b2\u22121)/\u03a3P_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 \u2212 pre-registered share \u2212 D_pix(W\u00b2\u22121)/\u03a3P_ref the seed-mean bias fraction (expectation T + (1\u2212I)/M). \u03a3P_ref and T come from the ref split (inherited_band_constants.json).",
+        "Read each measured column against the expectation on its right: pre-registered share against I \u2212 T, I_w against I, G_b against T + (1\u2212I)/M. The model is the linear-Gaussian one of 05 \u00a75 written with a mean image; an I_w above I means the samples of one seed vary less than the variance the blur removed (under-dispersion), not that more of the seed is inherited.",
+        "M = n_per_seed samples per seed (final.json); W\u00b2 \u2212 1 non-DC modes; constants file: docs/RESULTS/inherited_band_constants.json."
+      ],
+      "number": "1c",
+      "required": [
+        "ixi_A0_s1",
+        "ixi_A0_s2",
+        "ixi_A0_s3",
+        "ixi_A3_s1",
+        "ixi_A3_s2",
+        "ixi_A3_s3",
+        "ixi_A1_s1",
+        "ixi_A1_s2",
+        "ixi_A2_s1",
+        "ixi_A2_s2",
+        "lsun_church_A0_s1",
+        "lsun_church_A0_s2",
+        "lsun_church_A0_s3",
+        "lsun_church_A3_s1",
+        "lsun_church_A3_s2",
+        "lsun_church_A3_s3",
+        "lsun_church_A1_s1",
+        "lsun_church_A1_s2",
+        "lsun_church_A2_s1",
+        "lsun_church_A2_s2",
+        "lsun_church_A2p_s1",
+        "lsun_church_A2p_s2",
+        "oasis1_A0_s1",
+        "oasis1_A0_s2",
+        "oasis1_A3_s1",
+        "oasis1_A3_s2",
+        "lsun_bedroom_A0_s1",
+        "lsun_bedroom_A0_s2",
+        "lsun_bedroom_A3_s1",
+        "lsun_bedroom_A3_s2"
+      ],
+      "rows": [
+        {
+          "arm": "A0",
+          "dataset": "ixi",
+          "inherited_bias": 1.43144,
+          "inherited_bias_expected": 1.42142,
+          "inherited_expected": -1.39806,
+          "inherited_mean_term": 1.40149,
+          "inherited_measured": -0.767507,
+          "inherited_predicted": 0.00343245,
+          "inherited_within": 0.657079,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A0_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "ixi",
+          "inherited_bias": 1.54687,
+          "inherited_bias_expected": 1.42142,
+          "inherited_expected": -1.39806,
+          "inherited_mean_term": 1.40149,
+          "inherited_measured": -0.878735,
+          "inherited_predicted": 0.00343245,
+          "inherited_within": 0.661365,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A0_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "ixi",
+          "inherited_bias": 1.57452,
+          "inherited_bias_expected": 1.42142,
+          "inherited_expected": -1.39806,
+          "inherited_mean_term": 1.40149,
+          "inherited_measured": -0.910636,
+          "inherited_predicted": 0.00343245,
+          "inherited_within": 0.657022,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A0_s3",
+          "seed": 3,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "ixi",
+          "inherited_bias": 0.671269,
+          "inherited_bias_expected": 0.2297,
+          "inherited_expected": -0.131746,
+          "inherited_mean_term": 0.211291,
+          "inherited_measured": 0.0754966,
+          "inherited_predicted": 0.0795447,
+          "inherited_within": 0.741598,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A3_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "ixi",
+          "inherited_bias": 0.676144,
+          "inherited_bias_expected": 0.2297,
+          "inherited_expected": -0.131746,
+          "inherited_mean_term": 0.211291,
+          "inherited_measured": 0.0633846,
+          "inherited_predicted": 0.0795447,
+          "inherited_within": 0.734213,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A3_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "ixi",
+          "inherited_bias": 0.671494,
+          "inherited_bias_expected": 0.2297,
+          "inherited_expected": -0.131746,
+          "inherited_mean_term": 0.211291,
+          "inherited_measured": 0.071556,
+          "inherited_predicted": 0.0795447,
+          "inherited_within": 0.737807,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A3_s3",
+          "seed": 3,
+          "status": "ok"
+        },
+        {
+          "arm": "A1",
+          "dataset": "ixi",
+          "inherited_bias": 0.627506,
+          "inherited_bias_expected": 0.2297,
+          "inherited_expected": -0.131746,
+          "inherited_mean_term": 0.211291,
+          "inherited_measured": 0.120707,
+          "inherited_predicted": 0.0795447,
+          "inherited_within": 0.743075,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A1_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A1",
+          "dataset": "ixi",
+          "inherited_bias": 0.672049,
+          "inherited_bias_expected": 0.2297,
+          "inherited_expected": -0.131746,
+          "inherited_mean_term": 0.211291,
+          "inherited_measured": 0.0657695,
+          "inherited_predicted": 0.0795447,
+          "inherited_within": 0.732468,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A1_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A2",
+          "dataset": "ixi",
+          "inherited_bias": 1.50641,
+          "inherited_bias_expected": 1.42142,
+          "inherited_expected": -1.39806,
+          "inherited_mean_term": 1.40149,
+          "inherited_measured": -0.833094,
+          "inherited_predicted": 0.00343245,
+          "inherited_within": 0.66665,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A2_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A2",
+          "dataset": "ixi",
+          "inherited_bias": 1.69381,
+          "inherited_bias_expected": 1.42142,
+          "inherited_expected": -1.39806,
+          "inherited_mean_term": 1.40149,
+          "inherited_measured": -1.04678,
+          "inherited_predicted": 0.00343245,
+          "inherited_within": 0.639827,
+          "n_per_seed": 50.0,
+          "run_id": "ixi_A2_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.175852,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.768435,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.94315,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A0_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.171787,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.776725,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.947462,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A0_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.199572,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.720165,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.918099,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A0_s3",
+          "seed": 3,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.132656,
+          "inherited_bias_expected": 0.0158573,
+          "inherited_expected": 0.286988,
+          "inherited_mean_term": 0.00162964,
+          "inherited_measured": 0.794198,
+          "inherited_predicted": 0.288618,
+          "inherited_within": 0.925361,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A3_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.135915,
+          "inherited_bias_expected": 0.0158573,
+          "inherited_expected": 0.286988,
+          "inherited_mean_term": 0.00162964,
+          "inherited_measured": 0.809466,
+          "inherited_predicted": 0.288618,
+          "inherited_within": 0.944266,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A3_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.136533,
+          "inherited_bias_expected": 0.0158573,
+          "inherited_expected": 0.286988,
+          "inherited_mean_term": 0.00162964,
+          "inherited_measured": 0.796057,
+          "inherited_predicted": 0.288618,
+          "inherited_within": 0.931215,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A3_s3",
+          "seed": 3,
+          "status": "ok"
+        },
+        {
+          "arm": "A1",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.135227,
+          "inherited_bias_expected": 0.0158573,
+          "inherited_expected": 0.286988,
+          "inherited_mean_term": 0.00162964,
+          "inherited_measured": 0.790108,
+          "inherited_predicted": 0.288618,
+          "inherited_within": 0.923812,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A1_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A1",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.125005,
+          "inherited_bias_expected": 0.0158573,
+          "inherited_expected": 0.286988,
+          "inherited_mean_term": 0.00162964,
+          "inherited_measured": 0.820209,
+          "inherited_predicted": 0.288618,
+          "inherited_within": 0.944096,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A1_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A2",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.182052,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.741389,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.921878,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A2_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A2",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.199726,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.717587,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.915626,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A2_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A2p",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.198487,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.709702,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.906316,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A2p_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A2p",
+          "dataset": "lsun_church",
+          "inherited_bias": 0.177854,
+          "inherited_bias_expected": 0.0803028,
+          "inherited_expected": -0.042751,
+          "inherited_mean_term": 0.060661,
+          "inherited_measured": 0.733031,
+          "inherited_predicted": 0.01791,
+          "inherited_within": 0.909066,
+          "n_per_seed": 50.0,
+          "run_id": "lsun_church_A2p_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "oasis1",
+          "inherited_bias": 0.957481,
+          "inherited_bias_expected": 0.898507,
+          "inherited_expected": -0.876869,
+          "inherited_mean_term": 0.87854,
+          "inherited_measured": -0.389732,
+          "inherited_predicted": 0.00167099,
+          "inherited_within": 0.558928,
+          "n_per_seed": 50.0,
+          "run_id": "oasis1_A0_s1",
+          "seed": 1,
+          "status": "ok"
+        },
+        {
+          "arm": "A0",
+          "dataset": "oasis1",
+          "inherited_bias": 1.00836,
+          "inherited_bias_expected": 0.898507,
+          "inherited_expected": -0.876869,
+          "inherited_mean_term": 0.87854,
+          "inherited_measured": -0.454717,
+          "inherited_predicted": 0.00167099,
+          "inherited_within": 0.544536,
+          "n_per_seed": 50.0,
+          "run_id": "oasis1_A0_s2",
+          "seed": 2,
+          "status": "ok"
+        },
+        {
+          "arm": "A3",
+          "dataset": "oasis1",
+          "inherited_bias": null,
+          "inherited_bias_expected": null,
+          "inherited_expected": null,
+          "inherited_mean_term": null,
+          "inherited_measured": null,
+          "inherited_predicted": null,
+          "inherited_within": null,
+          "n_per_seed": null,
+          "run_id": "oasis1_A3_s1",
+          "seed": 1,
+          "status": "missing: not evaluated"
+        },
+        {
+          "arm": "A3",
+          "dataset": "oasis1",
+          "inherited_bias": null,
+          "inherited_bias_expected": null,
+          "inherited_expected": null,
+          "inherited_mean_term": null,
+          "inherited_measured": null,
+          "inherited_predicted": null,
+          "inherited_within": null,
+          "n_per_seed": null,
+          "run_id": "oasis1_A3_s2",
+          "seed": 2,
+          "status": "missing: not evaluated"
+        },
+        {
+          "arm": "A0",
+          "dataset": "lsun_bedroom",
+          "inherited_bias": null,
+          "inherited_bias_expected": null,
+          "inherited_expected": null,
+          "inherited_mean_term": null,
+          "inherited_measured": null,
+          "inherited_predicted": null,
+          "inherited_within": null,
+          "n_per_seed": null,
+          "run_id": "lsun_bedroom_A0_s1",
+          "seed": 1,
+          "status": "missing: not evaluated"
+        },
+        {
+          "arm": "A0",
+          "dataset": "lsun_bedroom",
+          "inherited_bias": null,
+          "inherited_bias_expected": null,
+          "inherited_expected": null,
+          "inherited_mean_term": null,
+          "inherited_measured": null,
+          "inherited_predicted": null,
+          "inherited_within": null,
+          "n_per_seed": null,
+          "run_id": "lsun_bedroom_A0_s2",
+          "seed": 2,
+          "status": "missing: not evaluated"
+        },
+        {
+          "arm": "A3",
+          "dataset": "lsun_bedroom",
+          "inherited_bias": null,
+          "inherited_bias_expected": null,
+          "inherited_expected": null,
+          "inherited_mean_term": null,
+          "inherited_measured": null,
+          "inherited_predicted": null,
+          "inherited_within": null,
+          "n_per_seed": null,
+          "run_id": "lsun_bedroom_A3_s1",
+          "seed": 1,
+          "status": "missing: not evaluated"
+        },
+        {
+          "arm": "A3",
+          "dataset": "lsun_bedroom",
+          "inherited_bias": null,
+          "inherited_bias_expected": null,
+          "inherited_expected": null,
+          "inherited_mean_term": null,
+          "inherited_measured": null,
+          "inherited_predicted": null,
+          "inherited_within": null,
+          "n_per_seed": null,
+          "run_id": "lsun_bedroom_A3_s2",
+          "seed": 2,
+          "status": "missing: not evaluated"
+        }
+      ],
+      "status": "incomplete: 24/30 runs",
+      "title": "Cell table, one row per run: the inherited band read as D23 prescribes"
+    },
     "t2a_contrasts_ixi": {
       "columns": [
         "contrast",
@@ -1264,7 +1786,8 @@
         "\u0394 = arm \u2212 A0, paired by seed. CI: percentile bootstrap over seeds, 10,000 draws. With 3 seeds the 95% interval is exactly [min, max] of the three per-seed \u0394, so 'CI excludes 0' means 'all three seeds agree in sign' (coverage 75% under a symmetric null); with 2 seeds it is [min, max] of two values (coverage 50%).",
         "p: exact permutation of arm labels over the pooled seeds of the two cells; its floor p_min is 0.1 with 3 vs 3 seeds (20 assignments) and 1/3 with 2 vs 2 (6 assignments).",
         "LSD CIs resample seeds only: the samples themselves are not in results/, so the sample-level resampling of 05 \u00a78 is not applied.",
-        "T_\u03c4 rows are 'not computable' when a seed never reaches the threshold; nothing is imputed."
+        "T_\u03c4 rows are 'not computable' when a seed never reaches the threshold; nothing is imputed.",
+        "Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 \u2212 \u03a3V/\u03a3P_ref is biased under a non-zero mean image, its model expectation is I \u2212 T with T = \u03a3(1\u2212d)\u00b2\u03bc\u00b2/\u03a3P_ref. I_w = 1 \u2212 M/(M\u22121)\u00b7D_pix(W\u00b2\u22121)/\u03a3P_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 \u2212 pre-registered share \u2212 D_pix(W\u00b2\u22121)/\u03a3P_ref the seed-mean bias fraction (expectation T + (1\u2212I)/M). \u03a3P_ref and T come from the ref split (inherited_band_constants.json)."
       ],
       "number": "2a",
       "required": [
@@ -1569,6 +2092,54 @@
           "verdict": "CI excludes 0"
         },
         {
+          "ci_high": 0.0845186,
+          "ci_low": 0.0728474,
+          "contrast": "A3\u2212A0",
+          "deltas": [
+            0.0845186,
+            0.0728474,
+            0.0807841
+          ],
+          "endpoint": "inherited_within",
+          "mean": 0.0793834,
+          "n_assignments": 20,
+          "n_seeds": 3,
+          "p_min": 0.1,
+          "p_value": 0.1,
+          "reference_mean": 0.658489,
+          "seeds": [
+            1,
+            2,
+            3
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": -0.760175,
+          "ci_low": -0.903024,
+          "contrast": "A3\u2212A0",
+          "deltas": [
+            -0.760175,
+            -0.870729,
+            -0.903024
+          ],
+          "endpoint": "inherited_bias",
+          "mean": -0.844643,
+          "n_assignments": 20,
+          "n_seeds": 3,
+          "p_min": 0.1,
+          "p_value": 0.1,
+          "reference_mean": 1.51761,
+          "seeds": [
+            1,
+            2,
+            3
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
           "ci_high": 0.0,
           "ci_low": 0.0,
           "contrast": "A3\u2212A0",
@@ -1849,6 +2420,50 @@
           "p_min": 0.333333,
           "p_value": 0.333333,
           "reference_mean": -0.823121,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": 0.0859955,
+          "ci_low": 0.0711027,
+          "contrast": "A1\u2212A0",
+          "deltas": [
+            0.0859955,
+            0.0711027
+          ],
+          "endpoint": "inherited_within",
+          "mean": 0.0785491,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 0.659222,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": -0.803938,
+          "ci_low": -0.874824,
+          "contrast": "A1\u2212A0",
+          "deltas": [
+            -0.803938,
+            -0.874824
+          ],
+          "endpoint": "inherited_bias",
+          "mean": -0.839381,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 1.48916,
           "seeds": [
             1,
             2
@@ -2143,6 +2758,50 @@
           "verdict": "CI excludes 0"
         },
         {
+          "ci_high": 0.00957081,
+          "ci_low": -0.0215381,
+          "contrast": "A2\u2212A0",
+          "deltas": [
+            0.00957081,
+            -0.0215381
+          ],
+          "endpoint": "inherited_within",
+          "mean": -0.00598363,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 1.0,
+          "reference_mean": 0.659222,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "not detectable at this budget"
+        },
+        {
+          "ci_high": 0.146938,
+          "ci_low": 0.0749664,
+          "contrast": "A2\u2212A0",
+          "deltas": [
+            0.0749664,
+            0.146938
+          ],
+          "endpoint": "inherited_bias",
+          "mean": 0.110952,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.666667,
+          "reference_mean": 1.48916,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
           "ci_high": 0.0,
           "ci_low": 0.0,
           "contrast": "A2\u2212A0",
@@ -2187,6 +2846,7 @@
         "p: exact permutation of arm labels over the pooled seeds of the two cells; its floor p_min is 0.1 with 3 vs 3 seeds (20 assignments) and 1/3 with 2 vs 2 (6 assignments).",
         "LSD CIs resample seeds only: the samples themselves are not in results/, so the sample-level resampling of 05 \u00a78 is not applied.",
         "T_\u03c4 rows are 'not computable' when a seed never reaches the threshold; nothing is imputed.",
+        "Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 \u2212 \u03a3V/\u03a3P_ref is biased under a non-zero mean image, its model expectation is I \u2212 T with T = \u03a3(1\u2212d)\u00b2\u03bc\u00b2/\u03a3P_ref. I_w = 1 \u2212 M/(M\u22121)\u00b7D_pix(W\u00b2\u22121)/\u03a3P_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 \u2212 pre-registered share \u2212 D_pix(W\u00b2\u22121)/\u03a3P_ref the seed-mean bias fraction (expectation T + (1\u2212I)/M). \u03a3P_ref and T come from the ref split (inherited_band_constants.json).",
         "Churches is undertrained (final LSD \u2248 1.0\u20131.45, oscillating across checkpoints, blurry samples); its contrasts are reported with that caveat."
       ],
       "number": "2b",
@@ -2494,6 +3154,54 @@
           "verdict": "CI excludes 0"
         },
         {
+          "ci_high": 0.0131159,
+          "ci_low": -0.0177897,
+          "contrast": "A3\u2212A0",
+          "deltas": [
+            -0.0177897,
+            -0.00319534,
+            0.0131159
+          ],
+          "endpoint": "inherited_within",
+          "mean": -0.00262304,
+          "n_assignments": 20,
+          "n_seeds": 3,
+          "p_min": 0.1,
+          "p_value": 0.9,
+          "reference_mean": 0.936237,
+          "seeds": [
+            1,
+            2,
+            3
+          ],
+          "status": "ok",
+          "verdict": "not detectable at this budget"
+        },
+        {
+          "ci_high": -0.0358724,
+          "ci_low": -0.0630384,
+          "contrast": "A3\u2212A0",
+          "deltas": [
+            -0.0431969,
+            -0.0358724,
+            -0.0630384
+          ],
+          "endpoint": "inherited_bias",
+          "mean": -0.0473692,
+          "n_assignments": 20,
+          "n_seeds": 3,
+          "p_min": 0.1,
+          "p_value": 0.1,
+          "reference_mean": 0.182404,
+          "seeds": [
+            1,
+            2,
+            3
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
           "ci_high": 0.0,
           "ci_low": 0.0,
           "contrast": "A3\u2212A0",
@@ -2774,6 +3482,50 @@
           "p_min": 0.333333,
           "p_value": 0.333333,
           "reference_mean": 0.77258,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": -0.00336555,
+          "ci_low": -0.0193388,
+          "contrast": "A1\u2212A0",
+          "deltas": [
+            -0.0193388,
+            -0.00336555
+          ],
+          "endpoint": "inherited_within",
+          "mean": -0.0113522,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.666667,
+          "reference_mean": 0.945306,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": -0.040625,
+          "ci_low": -0.0467822,
+          "contrast": "A1\u2212A0",
+          "deltas": [
+            -0.040625,
+            -0.0467822
+          ],
+          "endpoint": "inherited_bias",
+          "mean": -0.0437036,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 0.17382,
           "seeds": [
             1,
             2
@@ -3065,6 +3817,50 @@
           "verdict": "CI excludes 0"
         },
         {
+          "ci_high": -0.0212724,
+          "ci_low": -0.0318358,
+          "contrast": "A2\u2212A0",
+          "deltas": [
+            -0.0212724,
+            -0.0318358
+          ],
+          "endpoint": "inherited_within",
+          "mean": -0.0265541,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 0.945306,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": 0.0279389,
+          "ci_low": 0.0061991,
+          "contrast": "A2\u2212A0",
+          "deltas": [
+            0.0061991,
+            0.0279389
+          ],
+          "endpoint": "inherited_bias",
+          "mean": 0.017069,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 0.17382,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
           "ci_high": null,
           "ci_low": null,
           "contrast": "A2\u2212A0",
@@ -3348,6 +4144,50 @@
           "verdict": "CI excludes 0"
         },
         {
+          "ci_high": -0.0368349,
+          "ci_low": -0.0383955,
+          "contrast": "A2\u2032\u2212A0",
+          "deltas": [
+            -0.0368349,
+            -0.0383955
+          ],
+          "endpoint": "inherited_within",
+          "mean": -0.0376152,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 0.945306,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": 0.0226348,
+          "ci_low": 0.0060664,
+          "contrast": "A2\u2032\u2212A0",
+          "deltas": [
+            0.0226348,
+            0.0060664
+          ],
+          "endpoint": "inherited_bias",
+          "mean": 0.0143506,
+          "n_assignments": 6,
+          "n_seeds": 2,
+          "p_min": 0.333333,
+          "p_value": 0.333333,
+          "reference_mean": 0.17382,
+          "seeds": [
+            1,
+            2
+          ],
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
           "ci_high": 0.0,
           "ci_low": 0.0,
           "contrast": "A2\u2032\u2212A0",
@@ -3393,6 +4233,7 @@
         "The interaction is on each metric's raw scale, as pre-registered; where the two datasets' A0 levels differ (Churches' LSD is about five times IXI's) the raw difference is dominated by the larger scale. '\u0394 / A0' (mean \u0394 over the mean A0 value, same seeds) is a descriptive, scale-free reading and carries no test; it is left blank for recall, coverage, the seed-NN fraction and the inherited share, which are proportions near 0 or signed.",
         "p: exact permutation of the dataset label over the six pooled per-seed \u0394 (C(6,3) = 20 assignments), so p cannot fall below p_min = 0.1.",
         "Only the development pair enters: OASIS-1 and Bedrooms (2 seeds, A0/A3 only) are in the transfer table 6, without p-values.",
+        "Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 \u2212 \u03a3V/\u03a3P_ref is biased under a non-zero mean image, its model expectation is I \u2212 T with T = \u03a3(1\u2212d)\u00b2\u03bc\u00b2/\u03a3P_ref. I_w = 1 \u2212 M/(M\u22121)\u00b7D_pix(W\u00b2\u22121)/\u03a3P_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 \u2212 pre-registered share \u2212 D_pix(W\u00b2\u22121)/\u03a3P_ref the seed-mean bias fraction (expectation T + (1\u2212I)/M). \u03a3P_ref and T come from the ref split (inherited_band_constants.json). On the pre-registered share the interaction mixes \u0394I with \u0394T, which moves with \u03c3_B,max on MRI (a property of the data, audit \u00a73.5).",
         "Churches is undertrained (final LSD \u2248 1.0\u20131.45, oscillating across checkpoints, blurry samples); its contrasts are reported with that caveat."
       ],
       "number": "3",
@@ -3712,6 +4553,56 @@
           "verdict": "CI excludes 0"
         },
         {
+          "ci_high": 0.0971731,
+          "ci_low": 0.0662674,
+          "delta_mri": 0.0793834,
+          "delta_photo": -0.00262304,
+          "deltas_mri": [
+            0.0845186,
+            0.0728474,
+            0.0807841
+          ],
+          "deltas_photo": [
+            -0.0177897,
+            -0.00319534,
+            0.0131159
+          ],
+          "endpoint": "inherited_within",
+          "n_assignments": 20,
+          "p_min": 0.1,
+          "p_value": 0.1,
+          "point": 0.0820064,
+          "relative_mri": null,
+          "relative_photo": null,
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
+          "ci_high": -0.716978,
+          "ci_low": -0.853945,
+          "delta_mri": -0.844643,
+          "delta_photo": -0.0473692,
+          "deltas_mri": [
+            -0.760175,
+            -0.870729,
+            -0.903024
+          ],
+          "deltas_photo": [
+            -0.0431969,
+            -0.0358724,
+            -0.0630384
+          ],
+          "endpoint": "inherited_bias",
+          "n_assignments": 20,
+          "p_min": 0.1,
+          "p_value": 0.1,
+          "point": -0.797273,
+          "relative_mri": null,
+          "relative_photo": null,
+          "status": "ok",
+          "verdict": "CI excludes 0"
+        },
+        {
           "ci_high": 0.0,
           "ci_low": 0.0,
           "delta_mri": 0.0,
@@ -3975,6 +4866,38 @@
           "status": "ok"
         },
         {
+          "a3_detectable": true,
+          "dataset": "ixi",
+          "delta_a1": 0.0785491,
+          "delta_a2": -0.00598363,
+          "delta_a3": 0.078683,
+          "endpoint": "inherited_within",
+          "seeds": [
+            1,
+            2
+          ],
+          "share_a1": 0.998298,
+          "share_a2": -0.0760474,
+          "share_sum": 0.922251,
+          "status": "ok"
+        },
+        {
+          "a3_detectable": true,
+          "dataset": "ixi",
+          "delta_a1": -0.839381,
+          "delta_a2": 0.110952,
+          "delta_a3": -0.815452,
+          "endpoint": "inherited_bias",
+          "seeds": [
+            1,
+            2
+          ],
+          "share_a1": 1.02934,
+          "share_a2": -0.136062,
+          "share_sum": 0.893282,
+          "status": "ok"
+        },
+        {
           "a3_detectable": false,
           "dataset": "ixi",
           "delta_a1": 0.0,
@@ -4180,6 +5103,38 @@
           "share_a1": 1.11372,
           "share_a2": -1.47313,
           "share_sum": -0.359411,
+          "status": "ok"
+        },
+        {
+          "a3_detectable": false,
+          "dataset": "lsun_church",
+          "delta_a1": -0.0113522,
+          "delta_a2": -0.0265541,
+          "delta_a3": -0.0104925,
+          "endpoint": "inherited_within",
+          "seeds": [
+            1,
+            2
+          ],
+          "share_a1": 1.08193,
+          "share_a2": 2.53077,
+          "share_sum": 3.6127,
+          "status": "A3\u2212A0 not detectable (table 2): shares not interpretable"
+        },
+        {
+          "a3_detectable": true,
+          "dataset": "lsun_church",
+          "delta_a1": -0.0437036,
+          "delta_a2": 0.017069,
+          "delta_a3": -0.0395347,
+          "endpoint": "inherited_bias",
+          "seeds": [
+            1,
+            2
+          ],
+          "share_a1": 1.10545,
+          "share_a2": -0.431747,
+          "share_sum": 0.673704,
           "status": "ok"
         },
         {
@@ -4656,6 +5611,78 @@
           "endpoint": "inherited_measured"
         },
         {
+          "a2_a0_ci_high": -0.0212724,
+          "a2_a0_ci_low": -0.0318358,
+          "a2_a0_deltas": [
+            -0.0212724,
+            -0.0318358
+          ],
+          "a2_a0_mean": -0.0265541,
+          "a2_a0_p": 0.333333,
+          "a2_a0_p_min": 0.333333,
+          "a2_a0_status": "ok",
+          "a2_a0_verdict": "CI excludes 0",
+          "a2p_a0_ci_high": -0.0368349,
+          "a2p_a0_ci_low": -0.0383955,
+          "a2p_a0_deltas": [
+            -0.0368349,
+            -0.0383955
+          ],
+          "a2p_a0_mean": -0.0376152,
+          "a2p_a0_p": 0.333333,
+          "a2p_a0_p_min": 0.333333,
+          "a2p_a0_status": "ok",
+          "a2p_a0_verdict": "CI excludes 0",
+          "a2p_a2_ci_high": -0.00655968,
+          "a2p_a2_ci_low": -0.0155625,
+          "a2p_a2_deltas": [
+            -0.0155625,
+            -0.00655968
+          ],
+          "a2p_a2_mean": -0.0110611,
+          "a2p_a2_p": 0.333333,
+          "a2p_a2_p_min": 0.333333,
+          "a2p_a2_status": "ok",
+          "a2p_a2_verdict": "CI excludes 0",
+          "endpoint": "inherited_within"
+        },
+        {
+          "a2_a0_ci_high": 0.0279389,
+          "a2_a0_ci_low": 0.0061991,
+          "a2_a0_deltas": [
+            0.0061991,
+            0.0279389
+          ],
+          "a2_a0_mean": 0.017069,
+          "a2_a0_p": 0.333333,
+          "a2_a0_p_min": 0.333333,
+          "a2_a0_status": "ok",
+          "a2_a0_verdict": "CI excludes 0",
+          "a2p_a0_ci_high": 0.0226348,
+          "a2p_a0_ci_low": 0.0060664,
+          "a2p_a0_deltas": [
+            0.0226348,
+            0.0060664
+          ],
+          "a2p_a0_mean": 0.0143506,
+          "a2p_a0_p": 0.333333,
+          "a2p_a0_p_min": 0.333333,
+          "a2p_a0_status": "ok",
+          "a2p_a0_verdict": "CI excludes 0",
+          "a2p_a2_ci_high": 0.0164357,
+          "a2p_a2_ci_low": -0.0218725,
+          "a2p_a2_deltas": [
+            0.0164357,
+            -0.0218725
+          ],
+          "a2p_a2_mean": -0.00271839,
+          "a2p_a2_p": 0.666667,
+          "a2p_a2_p_min": 0.333333,
+          "a2p_a2_status": "ok",
+          "a2p_a2_verdict": "not detectable at this budget",
+          "endpoint": "inherited_bias"
+        },
+        {
           "a2_a0_ci_high": null,
           "a2_a0_ci_low": null,
           "a2_a0_deltas": [],
@@ -4711,7 +5738,8 @@
       ],
       "notes": [
         "Signs and magnitudes only, no p-values (05 \u00a78): a transfer cell has 2 seeds. '\u0394 / A0' divides the mean \u0394 by the mean A0 value over the same seeds, so the magnitude can be read across datasets whose metric scales differ; it is left blank for proportions near 0 and the signed inherited share.",
-        "The development \u0394 uses the 3 seeds of IXI or Churches; the transfer \u0394 the 2 seeds of OASIS-1 or Bedrooms. The A3 schedule is the IXI-matched one on every dataset, transferred frozen (D12)."
+        "The development \u0394 uses the 3 seeds of IXI or Churches; the transfer \u0394 the 2 seeds of OASIS-1 or Bedrooms. The A3 schedule is the IXI-matched one on every dataset, transferred frozen (D12).",
+        "Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 \u2212 \u03a3V/\u03a3P_ref is biased under a non-zero mean image, its model expectation is I \u2212 T with T = \u03a3(1\u2212d)\u00b2\u03bc\u00b2/\u03a3P_ref. I_w = 1 \u2212 M/(M\u22121)\u00b7D_pix(W\u00b2\u22121)/\u03a3P_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 \u2212 pre-registered share \u2212 D_pix(W\u00b2\u22121)/\u03a3P_ref the seed-mean bias fraction (expectation T + (1\u2212I)/M). \u03a3P_ref and T come from the ref split (inherited_band_constants.json)."
       ],
       "number": "6",
       "required": [
@@ -4956,6 +5984,42 @@
         {
           "agree": null,
           "dev_deltas": [
+            0.0845186,
+            0.0728474,
+            0.0807841
+          ],
+          "dev_mean": 0.0793834,
+          "dev_relative": null,
+          "dev_sign": "+",
+          "endpoint": "inherited_within",
+          "pair": "IXI \u2192 OASIS-1",
+          "status": "incomplete: 2/4 runs",
+          "transfer_deltas": [],
+          "transfer_mean": null,
+          "transfer_relative": null,
+          "transfer_sign": "\u2014"
+        },
+        {
+          "agree": null,
+          "dev_deltas": [
+            -0.760175,
+            -0.870729,
+            -0.903024
+          ],
+          "dev_mean": -0.844643,
+          "dev_relative": null,
+          "dev_sign": "\u2212",
+          "endpoint": "inherited_bias",
+          "pair": "IXI \u2192 OASIS-1",
+          "status": "incomplete: 2/4 runs",
+          "transfer_deltas": [],
+          "transfer_mean": null,
+          "transfer_relative": null,
+          "transfer_sign": "\u2014"
+        },
+        {
+          "agree": null,
+          "dev_deltas": [
             0.0,
             0.0,
             0.0
@@ -5180,6 +6244,42 @@
           "dev_relative": null,
           "dev_sign": "+",
           "endpoint": "inherited_measured",
+          "pair": "Churches \u2192 Bedrooms",
+          "status": "incomplete: 0/4 runs",
+          "transfer_deltas": [],
+          "transfer_mean": null,
+          "transfer_relative": null,
+          "transfer_sign": "\u2014"
+        },
+        {
+          "agree": null,
+          "dev_deltas": [
+            -0.0177897,
+            -0.00319534,
+            0.0131159
+          ],
+          "dev_mean": -0.00262304,
+          "dev_relative": null,
+          "dev_sign": "\u2212",
+          "endpoint": "inherited_within",
+          "pair": "Churches \u2192 Bedrooms",
+          "status": "incomplete: 0/4 runs",
+          "transfer_deltas": [],
+          "transfer_mean": null,
+          "transfer_relative": null,
+          "transfer_sign": "\u2014"
+        },
+        {
+          "agree": null,
+          "dev_deltas": [
+            -0.0431969,
+            -0.0358724,
+            -0.0630384
+          ],
+          "dev_mean": -0.0473692,
+          "dev_relative": null,
+          "dev_sign": "\u2212",
+          "endpoint": "inherited_bias",
           "pair": "Churches \u2192 Bedrooms",
           "status": "incomplete: 0/4 runs",
           "transfer_deltas": [],

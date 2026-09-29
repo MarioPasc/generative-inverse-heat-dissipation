@@ -17,7 +17,9 @@
 | A3−A0 | seed-NN fraction | 3 | +0.6138 | [+0.6125, +0.6150] | +0.6125 / +0.6150 / +0.6140 | 0.100 | 0.100 | CI excludes 0 |
 | A3−A0 | D_pix | 3 | +1.299e-04 | [-6.496e-04, +8.810e-04] | +8.810e-04 / +1.582e-04 / -6.496e-04 | 0.900 | 0.100 | not detectable at this budget |
 | A3−A0 | D_lp | 3 | -8.248e-04 | [-0.001035, -5.725e-04] | -8.666e-04 / -5.725e-04 / -0.001035 | 0.100 | 0.100 | CI excludes 0 |
-| A3−A0 | inherited share (measured) | 3 | +0.04480 | [+0.02576, +0.07589] | +0.02576 / +0.03274 / +0.07589 | 0.100 | 0.100 | CI excludes 0 |
+| A3−A0 | inherited share as pre-registered (biased under a non-zero mean image; see inherited_band_audit.md) | 3 | +0.04480 | [+0.02576, +0.07589] | +0.02576 / +0.03274 / +0.07589 | 0.100 | 0.100 | CI excludes 0 |
+| A3−A0 | within-seed share I_w (D23) | 3 | -0.002623 | [-0.01779, +0.01312] | -0.01779 / -0.003195 / +0.01312 | 0.900 | 0.100 | not detectable at this budget |
+| A3−A0 | seed-mean bias fraction G_b (D23) | 3 | -0.04737 | [-0.06304, -0.03587] | -0.04320 / -0.03587 / -0.06304 | 0.100 | 0.100 | CI excludes 0 |
 | A3−A0 | T_τ, 2k-set threshold (sensitivity) | 3 | 0 | [0, 0] | 0 / 0 / 0 | 1.000 | 0.100 | not detectable at this budget |
 | A1−A0 | LSD (final, 2k set) | 2 | -0.4517 | [-0.7883, -0.1152] | -0.7883 / -0.1152 | 0.333 | 0.333 | CI excludes 0 |
 | A1−A0 | T_τ (steps) | 2 | 0 | [0, 0] | 0 / 0 | 1.000 | 0.333 | not detectable at this budget |
@@ -30,7 +32,9 @@
 | A1−A0 | seed-NN fraction | 2 | +0.6067 | [+0.5960, +0.6175] | +0.6175 / +0.5960 | 0.333 | 0.333 | CI excludes 0 |
 | A1−A0 | D_pix | 2 | +5.622e-04 | [+1.667e-04, +9.578e-04] | +9.578e-04 / +1.667e-04 | 0.667 | 0.333 | CI excludes 0 |
 | A1−A0 | D_lp | 2 | -7.172e-04 | [-8.641e-04, -5.704e-04] | -8.641e-04 / -5.704e-04 | 0.333 | 0.333 | CI excludes 0 |
-| A1−A0 | inherited share (measured) | 2 | +0.03258 | [+0.02167, +0.04348] | +0.02167 / +0.04348 | 0.333 | 0.333 | CI excludes 0 |
+| A1−A0 | inherited share as pre-registered (biased under a non-zero mean image; see inherited_band_audit.md) | 2 | +0.03258 | [+0.02167, +0.04348] | +0.02167 / +0.04348 | 0.333 | 0.333 | CI excludes 0 |
+| A1−A0 | within-seed share I_w (D23) | 2 | -0.01135 | [-0.01934, -0.003366] | -0.01934 / -0.003366 | 0.667 | 0.333 | CI excludes 0 |
+| A1−A0 | seed-mean bias fraction G_b (D23) | 2 | -0.04370 | [-0.04678, -0.04063] | -0.04063 / -0.04678 | 0.333 | 0.333 | CI excludes 0 |
 | A1−A0 | T_τ, 2k-set threshold (sensitivity) | 2 | 0 | [0, 0] | 0 / 0 | 1.000 | 0.333 | not detectable at this budget |
 | A2−A0 | LSD (final, 2k set) | 2 | -0.06205 | [-0.3459, +0.2218] | -0.3459 / +0.2218 | 0.667 | 0.333 | not detectable at this budget |
 | A2−A0 | T_τ (steps) | 2 | — | — | — | — | — | not computable: T_τ not reached (A2 s2) |
@@ -43,7 +47,9 @@
 | A2−A0 | seed-NN fraction | 2 | +0.003000 | [+0.001000, +0.005000] | +0.001000 / +0.005000 | 0.333 | 0.333 | CI excludes 0 |
 | A2−A0 | D_pix | 2 | +0.001315 | [+0.001054, +0.001577] | +0.001054 / +0.001577 | 0.333 | 0.333 | CI excludes 0 |
 | A2−A0 | D_lp | 2 | +3.919e-04 | [+1.258e-04, +6.580e-04] | +1.258e-04 / +6.580e-04 | 0.333 | 0.333 | CI excludes 0 |
-| A2−A0 | inherited share (measured) | 2 | -0.04309 | [-0.05914, -0.02705] | -0.02705 / -0.05914 | 0.333 | 0.333 | CI excludes 0 |
+| A2−A0 | inherited share as pre-registered (biased under a non-zero mean image; see inherited_band_audit.md) | 2 | -0.04309 | [-0.05914, -0.02705] | -0.02705 / -0.05914 | 0.333 | 0.333 | CI excludes 0 |
+| A2−A0 | within-seed share I_w (D23) | 2 | -0.02655 | [-0.03184, -0.02127] | -0.02127 / -0.03184 | 0.333 | 0.333 | CI excludes 0 |
+| A2−A0 | seed-mean bias fraction G_b (D23) | 2 | +0.01707 | [+0.006199, +0.02794] | +0.006199 / +0.02794 | 0.333 | 0.333 | CI excludes 0 |
 | A2−A0 | T_τ, 2k-set threshold (sensitivity) | 2 | — | — | — | — | — | not computable: T_τ not reached (A2 s2) |
 | A2′−A0 | LSD (final, 2k set) | 2 | -0.4074 | [-0.5500, -0.2647] | -0.5500 / -0.2647 | 0.333 | 0.333 | CI excludes 0 |
 | A2′−A0 | T_τ (steps) | 2 | 0 | [0, 0] | 0 / 0 | 1.000 | 0.333 | not detectable at this budget |
@@ -56,13 +62,16 @@
 | A2′−A0 | seed-NN fraction | 2 | +4.337e-19 | [-1.000e-03, +0.001000] | -1.000e-03 / +0.001000 | 1.000 | 0.333 | not detectable at this budget |
 | A2′−A0 | D_pix | 2 | +0.001863 | [+0.001824, +0.001902] | +0.001824 / +0.001902 | 0.333 | 0.333 | CI excludes 0 |
 | A2′−A0 | D_lp | 2 | +2.295e-04 | [+1.973e-04, +2.616e-04] | +1.973e-04 / +2.616e-04 | 0.667 | 0.333 | CI excludes 0 |
-| A2′−A0 | inherited share (measured) | 2 | -0.05121 | [-0.05873, -0.04369] | -0.05873 / -0.04369 | 0.333 | 0.333 | CI excludes 0 |
+| A2′−A0 | inherited share as pre-registered (biased under a non-zero mean image; see inherited_band_audit.md) | 2 | -0.05121 | [-0.05873, -0.04369] | -0.05873 / -0.04369 | 0.333 | 0.333 | CI excludes 0 |
+| A2′−A0 | within-seed share I_w (D23) | 2 | -0.03762 | [-0.03840, -0.03683] | -0.03683 / -0.03840 | 0.333 | 0.333 | CI excludes 0 |
+| A2′−A0 | seed-mean bias fraction G_b (D23) | 2 | +0.01435 | [+0.006066, +0.02263] | +0.02263 / +0.006066 | 0.333 | 0.333 | CI excludes 0 |
 | A2′−A0 | T_τ, 2k-set threshold (sensitivity) | 2 | 0 | [0, 0] | 0 / 0 | 1.000 | 0.333 | not detectable at this budget |
 
 - Δ = arm − A0, paired by seed. CI: percentile bootstrap over seeds, 10,000 draws. With 3 seeds the 95% interval is exactly [min, max] of the three per-seed Δ, so 'CI excludes 0' means 'all three seeds agree in sign' (coverage 75% under a symmetric null); with 2 seeds it is [min, max] of two values (coverage 50%).
 - p: exact permutation of arm labels over the pooled seeds of the two cells; its floor p_min is 0.1 with 3 vs 3 seeds (20 assignments) and 1/3 with 2 vs 2 (6 assignments).
 - LSD CIs resample seeds only: the samples themselves are not in results/, so the sample-level resampling of 05 §8 is not applied.
 - T_τ rows are 'not computable' when a seed never reaches the threshold; nothing is imputed.
+- Inherited band (D23, inherited_band_audit.md): the pre-registered share 1 − ΣV/ΣP_ref is biased under a non-zero mean image, its model expectation is I − T with T = Σ(1−d)²μ²/ΣP_ref. I_w = 1 − M/(M−1)·D_pix(W²−1)/ΣP_ref is the within-seed share (expectation I whatever the mean image) and G_b = 1 − pre-registered share − D_pix(W²−1)/ΣP_ref the seed-mean bias fraction (expectation T + (1−I)/M). ΣP_ref and T come from the ref split (inherited_band_constants.json).
 - Churches is undertrained (final LSD ≈ 1.0–1.45, oscillating across checkpoints, blurry samples); its contrasts are reported with that caveat.
 
-<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 66ec64ef68, 2026-09-29T08:04:59.317403+00:00</sub>
+<sub>source: /media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results_partial_24 (collection INCOMPLETE, created 2026-09-29T07:38:12.518998+00:00, git 9fb5c84635); tables: git 4adfff670e, 2026-09-29T09:15:36.919074+00:00</sub>
