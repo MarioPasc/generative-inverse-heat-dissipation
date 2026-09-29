@@ -701,7 +701,7 @@ def _band_panel(ax: Axes, results: Results, dataset: str) -> bool:
         ax.plot(centres, _positive(np.asarray(radials[0]["predicted"], dtype=float)),
                 color=style.color, lw=1.0, ls="--", zorder=4)
     if not drawn:
-        _empty_panel(ax, "no evaluated A0/A3 run")
+        _empty_panel(ax, "no evaluated\nA0/A3 run")
         ax.set_xticks([])
         ax.set_yticks([])
     return drawn
@@ -761,8 +761,10 @@ def fig_grids(results: Results, out_dir: Path, pdf: bool = True,
         f"Training sample grids at the last iteration ({_n_iters(results) // 1000}k, EMA weights) "
         f"of training seed {GRID_SEED}, for A0 (left) and A3 (right) on each dataset. In each "
         "grid the top row holds 8 training images used as seeds and the bottom row the sample "
-        "each seed produces after blurring to the terminal level. These are the trainer's "
-        "monitoring grids, not the evaluation sets." + stripe_note +
+        "each seed produces from its prior state (the seed blurred to the terminal level), "
+        "drawn with the EMA weights. The seeds are fixed by the run seed, so the A0 and A3 "
+        "grids of a dataset share their top row. These are the trainer's monitoring grids "
+        "(`ihdm/train/grids.py`), not the evaluation sets." + stripe_note +
         f" n = {len(used)}/{len(expected)} runs.{_missing_clause(missing)}")
     return FigureRecord(6, "fig6_grids", "Sample grids", FULL_WIDTH_IN, len(used), len(expected),
                         missing, caption, files, notes)
