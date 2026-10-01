@@ -150,3 +150,24 @@ Main pastes them into each log's §1 at merge time.
       3.81 → 0.59 at 800); the lr rises over the warm-up; 3.65 it/s (r128) and 1.71 it/s (n32k),
       as in the smoke.
     - ETA: r128 ≈ 17:15, n32k ≈ 22:20 local.
+11. **The δ sweep finished.** Array 2550585: 4/4 COMPLETED in 1:32–1:39 each, 6.3 A100-h.
+    - **Anchors:** all four reproduce `lsd_060000` to 6 digits; the largest difference is
+      +0.00037 on Churches A0.
+    - **Result:** at δ ≥ 2σ every run is over-dispersed (variance ratio 1.3–4.8), with KID up
+      (CIs disjoint) and precision 0. The pre-registered reading gives "noise": the
+      under-dispersion is not a sampler setting within the tested grid. The added variance goes to
+      64–96 c/img.
+    - **Review: RETURN for one fix.** The README column labelled "I_w" held the pre-registered,
+      biased `inherited_measured`. Main asked for it to be relabelled, for the D23 I_w (M = 5) and
+      ρ to be added, and for a note on the 5-versus-50 samples per seed.
+12. **T7.2 fix verified** (head `1fb48f9`; fix commit `aab6bd3`). Verdict: **ACCEPT**.
+    - Only T7.2's own files changed. Main re-ran `test_diag_collect` + `test_regression_t72`:
+      9 passed.
+    - ρ at 1.25σ matches production for IXI A0 (0.345 vs 0.344) and both Churches runs (0.058
+      vs 0.058; 0.106 vs 0.105); IXI A3 is 0.290 vs 0.281, within 5-sample noise.
+    - Merged into `integration/W14` as `2def5ef`; prompts (redo + superseded first) pasted as
+      `e9474c8`.
+    - Then, on integration:
+      - main appended dated M7 amendments to 03, 04 and 05 (`bee7057`), from the agents' §6
+        proposals;
+      - main updated `results_discussion.md` §8, §10 and §11 with the δ result (`031f548`).
