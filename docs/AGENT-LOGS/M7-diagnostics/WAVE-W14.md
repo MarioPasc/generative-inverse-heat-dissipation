@@ -139,3 +139,14 @@ Main pastes them into each log's §1 at merge time.
    - Main re-ran `tests/analysis`: 186 passed. Verdict: **ACCEPT**.
    - Merged as `41f843e`; prompt pasted as `63c4d96`; `tests/analysis` + `tests/train`: 451
      passed.
+10. **First-task check by main** (2026-10-01, ~12:43 local). Starts were far earlier than the
+    `--test-only` estimates.
+    - The δ-sweep tasks 0–2 started at 11:20–11:25 and task 3 at 12:33. Training: 2550808_0 at
+      12:33 (node exa03), 2550811_1 at 12:34 (exa04).
+    - Both training logs show the right `CELL` line and run id, with `N_ITERS` 60000.
+    - `config.json`: r128 has `image_size` 128, σ_max 64; n32k has 192, 96. Both have lr 1e-4 and
+      batch 16.
+    - `metrics.jsonl`: an eval line at step 0; finite losses (r128 1.69 → 0.19–0.23 at 1.8k; n32k
+      3.81 → 0.59 at 800); the lr rises over the warm-up; 3.65 it/s (r128) and 1.71 it/s (n32k),
+      as in the smoke.
+    - ETA: r128 ≈ 17:15, n32k ≈ 22:20 local.
