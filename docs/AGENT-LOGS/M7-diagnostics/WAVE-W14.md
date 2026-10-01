@@ -82,3 +82,24 @@ Main pastes them into each log's §1 at merge time.
    - Reason: n32k must differ from `lsun_church` in data size only.
    - The SHA-1 rule had already dropped 46 exact copies of `lsun_church` images, because the HF
      test and train shards overlap.
+5. **T7.2 GO gate (head `87133bd`; code at `b030676`): accepted, GO given.**
+   - Every file in the diff lies inside T7.2's ownership; `ihdm/sampling` is untouched.
+   - The Picasso copy's sha256 equals local for `run_eval.py`, `spectral.py` and
+     `delta_sweep.sbatch`.
+   - Main re-ran `tests/metrics`, `tests/sampling` and `tests/analysis`: 517 passed, 6 skipped.
+     `test_regression_t72.py`: 4 passed, 0 skipped, so the default path is byte-identical at
+     W = 96 and W = 192.
+   - δ reaches the lsd, final and heldout draws. An explicit 0.0125 gets its own tree, so the
+     anchor is a real reproduction.
+   - The job: an array of 4 tasks, 2,100 chains each, `--time 02:30:00`, 10 A100-h requested. It
+     works on a `$LOCALSCRATCH` shadow run, writes nothing on FSCRATCH, and copies back to
+     `~/execs/ihdm/diag_eval/delta_sweep/`.
+   - Smoke: V100 loginexa only. The A100 queue `--test-only` estimate was 2026-10-24.
+   - Follow-ups:
+     - `paired_lsd_gate` at W ≠ 192;
+     - rows for `lsun_church_r128` and `lsun_church_n32k` in `slurm/eval/expected_seed_lists.csv`
+       (goes to T7.3);
+     - Mario to delete `~/execs/ihdm/diag_eval/smoke_loginexa`.
+6. **T7.2 submitted: array job 2550585** (tasks 0–3: ixi_A0_s1, ixi_A3_s1, lsun_church_A0_s1,
+   lsun_church_A3_s1), code `b0306769`, PENDING at submission. Agent head `c9563b8`, status
+   waiting-for-queue; main resumes it when the tasks finish.
