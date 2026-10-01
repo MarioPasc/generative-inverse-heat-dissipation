@@ -14,7 +14,10 @@ standard-format ``lsun_church`` and the Hugging Face shards it was built from:
 * ``lsun_church_n32k`` changes the training-set size only: idx 0-3999 are ``lsun_church`` byte
   for byte (index rows and splits included, so ``ref`` and ``seed`` are pixel-identical), and
   idx 4000-32799 are the first 28,800 rows of the ``train`` shard accepted by T1.2's rule (192²
-  native centre crop, short side >= 192 px) and not repeating any image already in the dataset.
+  native centre crop, short side >= 192 px), not repeating any image already in the dataset
+  (SHA-1), and not a near-copy of a ``ref`` image (32x32 thumbnail Pearson r > 0.95; decided by
+  ``main`` on 2026-10-01, because the HF train shard holds re-encoded copies of 6 ``ref``
+  images while ``lsun_church``'s own train split holds none).
 
 Run as ``python -m ihdm.cli.build_diagnostic_photos --set lsun_church_r128|lsun_church_n32k``.
 """
@@ -49,13 +52,17 @@ from ihdm.preprocess.fetch_hf import (
 from ihdm.preprocess.photos import (
     CROP_SIZE,
     DuplicateRecord,
+    NearDuplicateScreen,
     PhotoRecord,
+    ScreenedRecord,
     array_sha1,
     centre_correlation,
     collect_photos,
+    near_duplicate_pairs,
     parse_source,
     select_rows,
     sha1_collisions,
+    thumbnails,
     to_gray_crop,
     to_gray_resize_crop,
     write_contact_sheet,
@@ -76,6 +83,9 @@ N32K_NEW_TRAIN = 28_800
 # The second declared shard of lsun_church, never read by T1.2 (its first shard sufficed).
 N32K_SHARD = PHOTO_SOURCES[BASE_ID].shards[1]
 EXPECTED_N = {R128_ID: 4_000, N32K_ID: 4_000 + N32K_NEW_TRAIN}
+# Pearson r of 32x32 thumbnails above which two images are the same photograph (main, D of
+# 2026-10-01): re-encoded copies score 0.99+, unrelated church photographs at most ~0.72.
+NEAR_DUP_THRESHOLD = 0.95
 
 
 @dataclass(frozen=True)
@@ -112,6 +122,8 @@ class Built:
         Identity checks, collisions and scan counts, also copied into ``meta.json``.
     duplicates : list[DuplicateRecord]
         Rows dropped as duplicates (``n32k`` only), for the QC report.
+    screened_pairs : list[tuple[np.ndarray, np.ndarray, float]]
+        ``(ref image, rejected crop, r)`` of every near-copy kept out (``n32k`` only), for QC.
     """
 
     images: np.ndarray
@@ -120,6 +132,7 @@ class Built:
     meta: DatasetMeta
     evidence: dict[str, Any] = field(default_factory=dict)
     duplicates: list[DuplicateRecord] = field(default_factory=list)
+    screened_pairs: list[tuple[np.ndarray, np.ndarray, float]] = field(default_factory=list)
 
 
 def base_rows(base: BaseDataset) -> list[tuple[str, int]]:
@@ -214,6 +227,15 @@ def _r128_evidence(base: BaseDataset, images: np.ndarray) -> dict[str, Any]:
         "sha1_collisions": [
             {"idx": i, "first_idx": j, "sha1": d} for i, j, d in sha1_collisions(images)
         ],
+        # Record only (main, 2026-10-01): near-copies inside the dataset are kept, and the same
+        # scan of lsun_church's 192² crops says whether r128 inherited them or created them.
+        "near_duplicate_pairs_within": {
+            "rule": f"32x32 thumbnail Pearson r > {NEAR_DUP_THRESHOLD}; recorded, never dropped",
+            "pairs": [list(p) for p in near_duplicate_pairs(images, NEAR_DUP_THRESHOLD)],
+            "pairs_in_lsun_church_192": [
+                list(p) for p in near_duplicate_pairs(base.images, NEAR_DUP_THRESHOLD)
+            ],
+        },
     }
 
 
@@ -285,14 +307,21 @@ def build_n32k(
     seen: dict[str, int] = {}
     for idx, image in enumerate(base.images):
         seen.setdefault(array_sha1(image), idx)
+    ref = list(base.splits["ref"])
+    screen = NearDuplicateScreen(base.images[ref], ref, threshold=NEAR_DUP_THRESHOLD)
     result = collect_photos(rows, target=n_new, id_prefix=PHOTO_SOURCES[BASE_ID].id_prefix,
-                            repo_id=repo_id, seen=seen, start_idx=n_base)
+                            repo_id=repo_id, seen=seen, start_idx=n_base, screen=screen)
 
     images = np.concatenate([base.images, result.images]).astype(np.uint8)
     new_idx = [r.idx for r in result.records]
     index = pd.concat([base.index, _new_index_rows(result.records)], ignore_index=True)
     splits = _n32k_splits(base.splits, new_idx, [r.image_id for r in result.records])
     evidence = _n32k_evidence(base, images, splits, result.counts)
+    evidence["near_duplicate_filter"] = _near_dup_evidence(base, images, splits, result.screened)
+    screened_pairs = [
+        (base.images[s.verdict["ref_idx"]], crop, float(s.verdict["max_r"]))
+        for s, crop in zip(result.screened, screen.rejected_crops, strict=True)
+    ]
 
     meta = DatasetMeta(
         dataset_id=N32K_ID,
@@ -307,7 +336,42 @@ def build_n32k(
         parameters=_n32k_parameters(base, n_new, evidence),
         counts=evidence["counts"],
     )
-    return Built(images, index, splits, meta, evidence, list(result.duplicates))
+    return Built(images, index, splits, meta, evidence, list(result.duplicates), screened_pairs)
+
+
+def _near_dup_evidence(
+    base: BaseDataset, images: np.ndarray, splits: dict[str, Any],
+    screened: list[ScreenedRecord],
+) -> dict[str, Any]:
+    """The near-copy rule, the rows it kept out, and the property it restores."""
+    ref_thumbs = thumbnails(base.images[base.splits["ref"]])
+    rejected = [
+        {"shard": s.shard, "row": s.row, **s.verdict}
+        for s in sorted(screened, key=lambda s: -s.verdict["max_r"])
+    ]
+    return {
+        "rule": (f"a new row is rejected if the Pearson r of its 32x32 mean-pooled thumbnail "
+                 f"with any of the {len(base.splits['ref'])} ref images (seed within ref) "
+                 f"exceeds {NEAR_DUP_THRESHOLD}; applied after the SHA-1 dedup, to new rows "
+                 "only; the next shard row replaces it"),
+        "threshold": NEAR_DUP_THRESHOLD,
+        "n_rejected": len(rejected),
+        "rejected": rejected,
+        "ref_with_near_copy_in_train": {
+            BASE_ID: _count_ref_with_copy(ref_thumbs, base.images, base.splits["train"]),
+            N32K_ID: _count_ref_with_copy(ref_thumbs, images, splits["train"]),
+        },
+    }
+
+
+def _count_ref_with_copy(ref_thumbs: np.ndarray, images: np.ndarray, train: list[int],
+                         block: int = 2048) -> int:
+    """Number of reference images with a train image above the near-copy threshold."""
+    best = np.full(len(ref_thumbs), -1.0)
+    for start in range(0, len(train), block):
+        corr = thumbnails(images[train[start : start + block]]) @ ref_thumbs.T
+        best = np.maximum(best, corr.max(axis=0))
+    return int((best > NEAR_DUP_THRESHOLD).sum())
 
 
 def _new_index_rows(records: Sequence[PhotoRecord]) -> pd.DataFrame:
@@ -389,6 +453,7 @@ def _n32k_parameters(base: BaseDataset, n_new: int, evidence: dict[str, Any]) ->
                        f"in the dataset (the {n_base} of {BASE_ID}, ref and seed included) and "
                        "every earlier new row; a repeated digest is dropped and replaced by the "
                        "next row"),
+        "near_duplicate_rule": evidence["near_duplicate_filter"]["rule"],
         "split_rule": f"{BASE_ID}'s splits; every appended image is in train",
         "orientation": params["orientation"],
         "identity_check": {k: v for k, v in evidence.items() if k != "counts"},
@@ -496,6 +561,13 @@ def _write_qc(out_dir: Path, dataset_id: str, base: BaseDataset, built: Built) -
                         title=f"{dataset_id}: 64 random appended train images (idx)")
     write_duplicates_md(qc / "duplicates.md", dataset_id, built.duplicates,
                         built.meta.counts["new_rows_scan"])
+    if built.screened_pairs:
+        pairs = sorted(built.screened_pairs, key=lambda pair: -pair[2])
+        write_pair_sheet(qc / "near_duplicates_rejected.png", np.stack([p[0] for p in pairs]),
+                         np.stack([p[1] for p in pairs]), list(range(len(pairs))),
+                         title=f"left: {BASE_ID} ref image; right: rejected train-shard row "
+                               f"(thumbnail r > {NEAR_DUP_THRESHOLD}); {len(pairs)} rows, "
+                               "highest r first")
 
 
 def _write_collisions_md(path: Path, collisions: list[dict[str, Any]]) -> None:
@@ -541,10 +613,12 @@ def _report(dataset_id: str, out_dir: Path, built: Built, violations: list[str],
                 f"{len(built.evidence['sha1_collisions'])} SHA-1 collisions")
     else:
         scan = built.meta.counts["new_rows_scan"]
+        near = built.evidence["near_duplicate_filter"]
         tail = (f"new rows: scanned {scan['rows_scanned']}, rejected "
                 f"{scan['rows_rejected_size']} by size and {scan['rows_rejected_unreadable']} "
-                f"unreadable, {scan['duplicates_dropped']} duplicates dropped, "
-                f"ref/seed pixel-identical")
+                f"unreadable, {scan['duplicates_dropped']} SHA-1 duplicates dropped, "
+                f"{near['n_rejected']} ref near-copies kept out (ref with a train near-copy: "
+                f"{near['ref_with_near_copy_in_train']}), ref/seed pixel-identical")
     print(f"{head}, {tail}, {elapsed:.1f} s, {out_dir}")
 
 

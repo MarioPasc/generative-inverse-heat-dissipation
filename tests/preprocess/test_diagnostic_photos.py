@@ -34,13 +34,16 @@ from ihdm.data.format import (
 from ihdm.preprocess.errors import PreprocessError
 from ihdm.preprocess.fetch_hf import PHOTO_SOURCES, RawRow
 from ihdm.preprocess.photos import (
+    NearDuplicateScreen,
     array_sha1,
     build_index,
     centre_correlation,
     collect_photos,
+    near_duplicate_pairs,
     parse_source,
     select_rows,
     sha1_collisions,
+    thumbnails,
     to_gray_crop,
     to_gray_resize_crop,
 )
@@ -178,6 +181,64 @@ def test_collect_photos_extends_a_dataset_without_readmitting_its_images() -> No
     assert [(d.row, d.first_idx) for d in result.duplicates] == [(1, 7), (99, 50)]
 
 
+def _reencoded(img: Image.Image, quality: int = 60, shift: int = 6) -> Image.Image:
+    """A re-encoded, slightly brightened copy: the same photograph, different bytes."""
+    import io
+
+    buffer = io.BytesIO()
+    img.convert("RGB").save(buffer, format="JPEG", quality=quality)
+    pixels = np.asarray(Image.open(io.BytesIO(buffer.getvalue())), np.int16) + shift
+    return Image.fromarray(np.clip(pixels, 0, 255).astype(np.uint8), "RGB")
+
+
+def test_thumbnails_dot_product_is_the_pearson_correlation() -> None:
+    rng = np.random.default_rng(3)
+    images = rng.integers(0, 256, size=(3, 64, 96), dtype=np.uint8)
+    images[2] = 7
+    thumbs = thumbnails(images)
+    assert thumbs.shape == (3, 1024)
+    pooled = images.astype(float).reshape(3, 32, 2, 32, 3).mean(axis=(2, 4)).reshape(3, -1)
+    np.testing.assert_allclose(thumbs[0] @ thumbs[1], np.corrcoef(pooled[0], pooled[1])[0, 1],
+                               rtol=1e-12)
+    np.testing.assert_array_equal(thumbs[2], 0.0)
+    with pytest.raises(PreprocessError, match="multiple"):
+        thumbnails(images[:, :50])
+
+
+def test_near_duplicate_screen_flags_a_reencoded_copy_only() -> None:
+    refs = [_smooth(341, 256, seed=s) for s in range(4)]
+    screen = NearDuplicateScreen(np.stack([to_gray_crop(im) for im in refs]), [10, 11, 12, 13])
+    copy = to_gray_crop(_reencoded(refs[2]))
+    assert not np.array_equal(copy, to_gray_crop(refs[2]))  # SHA-1 would not see it
+    verdict = screen(copy)
+    assert verdict is not None and verdict["ref_idx"] == 12 and verdict["max_r"] > 0.99
+    assert screen(to_gray_crop(_smooth(341, 256, seed=77))) is None
+    assert len(screen.rejected_crops) == 1
+
+
+def test_collect_photos_replaces_screened_rows_and_keeps_t12_counts() -> None:
+    rows = [RawRow("n", i, _smooth(300, 256, seed=200 + i)) for i in range(4)]
+    plain = collect_photos(rows, target=3, id_prefix="church", repo_id=REPO)
+    assert "rows_screened_out" not in plain.counts and plain.screened == []
+
+    banned = to_gray_crop(rows[1].image)
+    screen = NearDuplicateScreen(banned[None], [5])
+    result = collect_photos(rows, target=3, id_prefix="church", repo_id=REPO, screen=screen)
+    assert [r.row for r in result.records] == [0, 2, 3]
+    assert result.counts["rows_screened_out"] == 1
+    assert [(s.row, s.verdict["ref_idx"]) for s in result.screened] == [(1, 5)]
+
+
+def test_near_duplicate_pairs_finds_planted_pairs_across_blocks() -> None:
+    photos = [_smooth(341, 256, seed=s) for s in range(6)]
+    images = np.stack([to_gray_crop(im) for im in photos])
+    images[5] = to_gray_crop(_reencoded(photos[1]))
+    images[4] = images[0]
+    pairs = near_duplicate_pairs(images, threshold=0.95, block=2)
+    assert [(i, j) for i, j, _ in pairs] == [(0, 4), (1, 5)]
+    assert pairs[0][2] == pytest.approx(1.0)
+
+
 # ------------------------------------------------------------------ r128
 
 
@@ -197,6 +258,8 @@ def test_build_r128_keeps_rows_index_and_splits(base: BaseDataset, tmp_path: Pat
     evidence = built.evidence
     assert evidence["rows_192_reproduced"] == N_BASE
     assert evidence["sha1_collisions"] == []
+    assert evidence["near_duplicate_pairs_within"]["pairs"] == []
+    assert evidence["near_duplicate_pairs_within"]["pairs_in_lsun_church_192"] == []
     corr = evidence["centre_correlation"]
     assert corr["matched"]["min"] > corr["null_shifted_by_half"]["max"]
     assert corr["n_matched_below_null_max"] == 0
@@ -257,6 +320,26 @@ def test_build_n32k_appends_new_train_rows_only(base: BaseDataset, tmp_path: Pat
 
     write_dataset(tmp_path / N32K_ID, built.images, built.index, built.splits, built.meta)
     assert validate_dataset(tmp_path / N32K_ID) == []
+
+
+def test_build_n32k_keeps_out_a_near_copy_of_a_ref_image(base: BaseDataset) -> None:
+    accepted = [r for r in _base_stream() if r.row not in (3, 9)]
+    ref_idx = base.splits["ref"][1]
+    rows = _new_stream(_base_stream())
+    rows.insert(2, RawRow(N32K_SHARD, 50, _reencoded(accepted[ref_idx].image)))
+    built = build_n32k(base, iter(rows), git_sha="test", raw_root="raw", n_new=6)
+
+    near = built.evidence["near_duplicate_filter"]
+    assert near["n_rejected"] == 1 and near["threshold"] == 0.95
+    assert near["rejected"][0]["row"] == 50 and near["rejected"][0]["ref_idx"] == ref_idx
+    assert near["rejected"][0]["max_r"] > 0.99
+    assert near["ref_with_near_copy_in_train"] == {BASE_ID: 0, N32K_ID: 0}
+    assert built.meta.counts["new_rows_scan"]["rows_screened_out"] == 1
+    assert len(built.images) == N_BASE + 6
+    assert 50 not in [parse_source(s, REPO)[1] for s in built.index["source"].iloc[N_BASE:]]
+    (ref_image, crop, r), = built.screened_pairs
+    np.testing.assert_array_equal(ref_image, base.images[ref_idx])
+    assert r == near["rejected"][0]["max_r"]
 
 
 def test_build_n32k_fails_when_the_shard_runs_out(base: BaseDataset) -> None:
