@@ -68,6 +68,29 @@
     "sigma_min": 0.5,
     "spread": null
   },
+  "log_W2_128": {
+    "K": 200,
+    "created": "2026-10-01T08:26:28+00:00",
+    "fitted_on": null,
+    "git_sha": "c0d9f66d02a38b004d828e955ebe2589dad1bab9",
+    "images_sha256": null,
+    "kind": "log",
+    "levels_per_octave": {
+      "0.5-1": 29,
+      "1-2": 28,
+      "16-32": 28,
+      "2-4": 29,
+      "32-64": 28,
+      "4-8": 28,
+      "64-96": 1,
+      "8-16": 29
+    },
+    "n_images": null,
+    "sha256": "e874c7148dd13e1af5b0f96e210d75211de5f42f958f6479161ea041b10eb073",
+    "sigma_max": 64.0,
+    "sigma_min": 0.5,
+    "spread": null
+  },
   "log_W8": {
     "K": 200,
     "created": "2026-09-23T08:03:11+00:00",

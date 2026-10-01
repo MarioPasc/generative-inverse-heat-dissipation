@@ -4,6 +4,11 @@ Frozen contract: ``docs/SPECIFICATIONS/04-run-artifacts.md`` §2. Every value in
 here and nowhere else, so the thirty runs differ only in the two knobs the experiment is about
 (``model.blur_sigma_max`` and ``model.blur_schedule``) and in the seed.
 
+The post-hoc M7 diagnostic (T7.1, ``docs/SPECIFICATIONS/M7-diagnostics/``) adds two datasets that
+each change one factor of ``lsun_church``; they run arm A0 only and are listed in
+:data:`DIAGNOSTIC_CELLS`, never in :data:`EXPERIMENT_CELLS`. The 128² one takes the A0 rule at its
+own width (terminal blur W/2 = 64, schedule ``log_W2_128``); every other value is A0's.
+
 Usage with the released trainer::
 
     python train.py --config configs/spectral/arms.py:ixi,A3 --config.seed=2 --workdir <dir>
@@ -26,13 +31,26 @@ import torch
 
 from ihdm.paths import data_root, schedules_dir
 
-__all__ = ["ARMS", "DATASETS", "EXPERIMENT_CELLS", "ArmSpec", "get_config"]
+__all__ = [
+    "ARMS",
+    "DATASETS",
+    "DIAGNOSTIC_CELLS",
+    "DIAGNOSTIC_DATASETS",
+    "EXPERIMENT_CELLS",
+    "ArmSpec",
+    "get_config",
+]
 
 #: The four dataset ids of the experiment (``00-overview.md`` §1).
 DATASETS: tuple[str, ...] = ("ixi", "oasis1", "lsun_church", "lsun_bedroom")
 
+#: The M7 diagnostic datasets (T7.1), each one factor away from ``lsun_church``: ``_r128`` the
+#: resolution and framing (the same 4,000 photos, whole scene resized to 128²), ``_n32k`` the data
+#: size (32,000 train images of 192² native crops, the same 800 ref and 40 seed images).
+DIAGNOSTIC_DATASETS: tuple[str, ...] = ("lsun_church_r128", "lsun_church_n32k")
+
 #: The photograph datasets; the only ones on which arm A2p is defined.
-PHOTOGRAPH_DATASETS: tuple[str, ...] = ("lsun_church", "lsun_bedroom")
+PHOTOGRAPH_DATASETS: tuple[str, ...] = ("lsun_church", "lsun_bedroom", *DIAGNOSTIC_DATASETS)
 
 #: The five arms (``00-overview.md`` §1); ``A2p`` spells the paper's A2'.
 ARMS: tuple[str, ...] = ("A0", "A1", "A2", "A3", "A2p")
@@ -57,6 +75,13 @@ EXPERIMENT_CELLS: tuple[tuple[str, str, tuple[int, ...]], ...] = (
     ("lsun_bedroom", "A3", (1, 2)),
 )
 
+#: The M7 diagnostic runs (T7.1): arm A0, seed 1, one run per factor; read by
+#: ``slurm/diag_train/cells.csv``. Kept apart so the 30-run table above never changes.
+DIAGNOSTIC_CELLS: tuple[tuple[str, str, tuple[int, ...]], ...] = (
+    ("lsun_church_r128", "A0", (1,)),
+    ("lsun_church_n32k", "A0", (1,)),
+)
+
 # arm -> (schedule name, terminal blur). The schedule names are frozen in 04 §2; note that the
 # matched schedules of A2/A3 are the IXI-fitted ones on every dataset (D12: fitted once on the
 # IXI training split and transferred frozen), while A2p is the churches-fitted control.
@@ -69,12 +94,22 @@ _ARM_SCHEDULE: dict[str, str] = {
 }
 _ARM_SIGMA_MAX: dict[str, float] = {"A0": 96.0, "A1": 24.0, "A2": 96.0, "A3": 24.0, "A2p": 96.0}
 
+# The two tables above are the 192² ones. Image side per dataset (03-data-format.md §1: 192
+# unless listed), and the (arm, side) cells built at another side: only A0 at 128² (T7.1), whose
+# terminal blur is the same W/2 rule at width 128, frozen as schedules/log_W2_128.npy.
+_DEFAULT_IMAGE_SIZE: int = 192
+_IMAGE_SIZE: dict[str, int] = {"lsun_church_r128": 128}
+_SCHEDULE_AT_SIZE: dict[tuple[str, int], tuple[str, float]] = {("A0", 128): ("log_W2_128", 64.0)}
+
 #: Arms restricted per dataset; datasets not listed accept every arm the global rules allow.
 #: ``04-run-artifacts.md`` §2 names only the Bedrooms rule; the orchestrator confirmed
 #: (2026-09-22) that it is symmetric across the transfer pair, so OASIS-1 is restricted too.
+#: The diagnostic datasets change one factor of the A0 baseline, so they take A0 only (T7.1).
 _ARMS_BY_DATASET: dict[str, tuple[str, ...]] = {
     "oasis1": ("A0", "A3"),
     "lsun_bedroom": ("A0", "A3"),
+    "lsun_church_r128": ("A0",),
+    "lsun_church_n32k": ("A0",),
 }
 
 _K: int = 200
@@ -88,7 +123,7 @@ class ArmSpec:
     Parameters
     ----------
     dataset_id : str
-        One of :data:`DATASETS`.
+        One of :data:`DATASETS` or :data:`DIAGNOSTIC_DATASETS`.
     arm : str
         One of :data:`ARMS`.
     seed : int
@@ -100,7 +135,8 @@ class ArmSpec:
     ------
     ValueError
         If the dataset or the arm is unknown, or the combination is not allowed
-        (``04-run-artifacts.md`` §2: A2p only on photographs; Bedrooms only A0 and A3).
+        (``04-run-artifacts.md`` §2: A2p only on photographs; Bedrooms only A0 and A3; the
+        diagnostic datasets only A0).
     """
 
     dataset_id: str
@@ -109,8 +145,11 @@ class ArmSpec:
     overrides: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
-        if self.dataset_id not in DATASETS:
-            raise ValueError(f"unknown dataset_id {self.dataset_id!r}; expected one of {DATASETS}")
+        if self.dataset_id not in DATASETS + DIAGNOSTIC_DATASETS:
+            raise ValueError(
+                f"unknown dataset_id {self.dataset_id!r}; expected one of "
+                f"{DATASETS + DIAGNOSTIC_DATASETS}"
+            )
         if self.arm not in ARMS:
             raise ValueError(f"unknown arm {self.arm!r}; expected one of {ARMS}")
         if self.arm == "A2p" and self.dataset_id not in PHOTOGRAPH_DATASETS:
@@ -258,10 +297,37 @@ def _apply_override(config: ml_collections.ConfigDict, dotted_key: str, text: st
     setattr(node, leaf, _coerce(getattr(node, leaf), text))
 
 
+def _schedule_for(arm: str, image_size: int) -> tuple[str, float]:
+    """Return ``(schedule name, terminal blur)`` of an arm at an image side.
+
+    Parameters
+    ----------
+    arm : str
+        One of :data:`ARMS`.
+    image_size : int
+        The image side of the dataset, in pixels.
+
+    Returns
+    -------
+    tuple[str, float]
+        The frozen schedule name and its ``sigma_B`` at level K.
+
+    Raises
+    ------
+    ValueError
+        If no schedule is frozen for this arm at this side.
+    """
+    if image_size == _DEFAULT_IMAGE_SIZE:
+        return _ARM_SCHEDULE[arm], _ARM_SIGMA_MAX[arm]
+    if (arm, image_size) not in _SCHEDULE_AT_SIZE:
+        raise ValueError(f"arm {arm} has no frozen schedule at {image_size}x{image_size}")
+    return _SCHEDULE_AT_SIZE[(arm, image_size)]
+
+
 def _build_config(spec: ArmSpec) -> ml_collections.ConfigDict:
     """Build the config of one cell, before overrides are applied."""
-    sigma_max = _ARM_SIGMA_MAX[spec.arm]
-    schedule_name = _ARM_SCHEDULE[spec.arm]
+    image_size = _IMAGE_SIZE.get(spec.dataset_id, _DEFAULT_IMAGE_SIZE)
+    schedule_name, sigma_max = _schedule_for(spec.arm, image_size)
     schedule, schedule_file, schedule_sha = _load_schedule(schedule_name, sigma_max)
 
     config = ml_collections.ConfigDict()
@@ -311,7 +377,7 @@ def _build_config(spec: ArmSpec) -> ml_collections.ConfigDict:
     data.root = str(data_root())
     data.split_train = "train"
     data.split_eval = "ref"
-    data.image_size = 192
+    data.image_size = image_size  # 192, or 128 for lsun_church_r128 (T7.1)
     data.num_channels = 1
     data.random_flip = False
     data.centered = False
@@ -373,8 +439,8 @@ def get_config(spec: str) -> ml_collections.ConfigDict:
     Parameters
     ----------
     spec : str
-        ``"<dataset_id>,<arm>[,<key>=<value>...]"``, e.g. ``"ixi,A3"`` or
-        ``"lsun_church,A2p,seed=2"``.
+        ``"<dataset_id>,<arm>[,<key>=<value>...]"``, e.g. ``"ixi,A3"``,
+        ``"lsun_church,A2p,seed=2"`` or the diagnostic ``"lsun_church_r128,A0"``.
 
     Returns
     -------

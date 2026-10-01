@@ -10,13 +10,22 @@ The processing rule is frozen by `docs/SPECIFICATIONS/03-data-format.md` §5: RG
 luminance with ``PIL.Image.convert("L")``, then the centre 192x192 crop of the native
 frame. Only a short side above 256 px is resampled (LANCZOS down to a 256-px short side)
 before the crop; LSUN ships with a 256-px short side, so no LSUN row is resampled.
+
+The M7 diagnostic (T7.1, ``docs/SPECIFICATIONS/M7-diagnostics/``) adds the whole-scene rule of
+the paper's loader, :func:`to_gray_resize_crop` (short side resized to 128, centre crop), and the
+helpers that rebuild a dataset from the shard rows another one recorded: :func:`parse_source`,
+:func:`select_rows`, :func:`sha1_collisions`, :func:`centre_correlation`, and the ``seen`` /
+``start_idx`` arguments of :func:`collect_photos`, which extend a dataset without re-admitting
+any image it already holds. Its ``screen`` argument, with :class:`NearDuplicateScreen`, also
+keeps out re-encoded copies of reference images that SHA-1 cannot see (:func:`thumbnails`,
+:func:`near_duplicate_pairs`). Their shell is :mod:`ihdm.cli.build_diagnostic_photos`.
 """
 
 from __future__ import annotations
 
 import hashlib
 import logging
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -33,15 +42,25 @@ __all__ = [
     "TARGET_SHORT_SIDE",
     "PhotoRecord",
     "DuplicateRecord",
+    "ScreenedRecord",
     "CollectResult",
+    "NearDuplicateScreen",
+    "thumbnails",
+    "near_duplicate_pairs",
     "to_gray_crop",
+    "to_gray_resize_crop",
     "needs_resize",
     "array_sha1",
     "image_id",
     "collect_photos",
+    "parse_source",
+    "select_rows",
+    "sha1_collisions",
+    "centre_correlation",
     "build_index",
     "fine_split_labels",
     "write_contact_sheet",
+    "write_pair_sheet",
     "write_intensity_hist",
     "write_duplicates_md",
 ]
@@ -105,6 +124,28 @@ class DuplicateRecord:
     first_idx: int
 
 
+@dataclass(frozen=True)
+class ScreenedRecord:
+    """One distinct row rejected by the ``screen`` of :func:`collect_photos`.
+
+    Parameters
+    ----------
+    shard : str
+        Parquet file the rejected row came from.
+    row : int
+        Row number inside that shard.
+    sha1 : str
+        SHA-1 of its cropped array.
+    verdict : dict[str, Any]
+        What the screen returned, e.g. ``{"max_r": 0.998, "ref_idx": 1645}``.
+    """
+
+    shard: str
+    row: int
+    sha1: str
+    verdict: dict[str, Any]
+
+
 @dataclass
 class CollectResult:
     """Outcome of one acceptance pass over a row stream.
@@ -120,13 +161,17 @@ class CollectResult:
     counts : dict[str, Any]
         Scan statistics: ``rows_scanned``, ``rows_rejected_size``,
         ``rows_rejected_unreadable``, ``duplicates_dropped``, ``resized``,
-        ``n_accepted``, and ``per_shard`` (scanned/accepted per parquet file).
+        ``n_accepted``, and ``per_shard`` (scanned/accepted per parquet file); plus
+        ``rows_screened_out`` when a screen was given.
+    screened : list[ScreenedRecord]
+        Rows rejected by the screen, in the order they were met.
     """
 
     images: np.ndarray
     records: list[PhotoRecord] = field(default_factory=list)
     duplicates: list[DuplicateRecord] = field(default_factory=list)
     counts: dict[str, Any] = field(default_factory=dict)
+    screened: list[ScreenedRecord] = field(default_factory=list)
 
 
 def to_gray_crop(img: Image.Image) -> np.ndarray:
@@ -177,6 +222,51 @@ def needs_resize(img: Image.Image) -> bool:
     return min(img.size) > TARGET_SHORT_SIDE
 
 
+def to_gray_resize_crop(img: Image.Image, size: int) -> np.ndarray:
+    """Convert an image to grayscale, resize its short side to ``size``, take the centre square.
+
+    The whole-scene framing of the paper's loader, ``transforms.Resize(size)`` followed by
+    ``transforms.CenterCrop(size)`` (``scripts/datasets.py`` lines 36-37), with its exact
+    geometry: the long side becomes ``int(size * long / short)`` and the crop offset is
+    ``int(round((side - size) / 2))``. Two deliberate differences from that loader, both fixed by
+    the T7.1 ticket: luminance is taken first (``convert("L")``), and the resampling filter is
+    LANCZOS instead of torchvision's default bilinear.
+
+    Parameters
+    ----------
+    img : PIL.Image.Image
+        Source image in any mode.
+    size : int
+        Output side in pixels (128 for ``lsun_church_r128``).
+
+    Returns
+    -------
+    np.ndarray
+        ``uint8`` array of shape ``(size, size)``.
+
+    Raises
+    ------
+    PreprocessError
+        If the short side is below ``size`` (the rule only ever downsamples) or the crop does
+        not come out square.
+    """
+    width, height = img.size
+    short, long = min(width, height), max(width, height)
+    if short < size:
+        raise PreprocessError(f"short side is {short} px, below the {size} px minimum")
+
+    new_long = int(size * long / short)
+    new_size = (size, new_long) if width <= height else (new_long, size)
+    array = np.asarray(img.convert("L").resize(new_size, Image.Resampling.LANCZOS), np.uint8)
+
+    top = int(round((array.shape[0] - size) / 2.0))
+    left = int(round((array.shape[1] - size) / 2.0))
+    array = np.ascontiguousarray(array[top : top + size, left : left + size])
+    if array.shape != (size, size):
+        raise PreprocessError(f"crop has shape {array.shape}, expected {(size, size)}")
+    return array
+
+
 def array_sha1(array: np.ndarray) -> str:
     """Return the hex SHA-1 of an array's bytes, the de-duplication key.
 
@@ -218,12 +308,16 @@ def collect_photos(
     id_prefix: str,
     repo_id: str,
     on_accept: Callable[[int, RawRow], None] | None = None,
+    seen: dict[str, int] | None = None,
+    start_idx: int = 0,
+    screen: Callable[[np.ndarray], dict[str, Any] | None] | None = None,
 ) -> CollectResult:
     """Accept the first ``target`` usable, distinct images of a row stream.
 
     Rows are taken in stream (shard) order. A row is rejected if its short side is
     below 192 px or it cannot be decoded; it is dropped as a duplicate if the SHA-1
-    of its cropped array repeats an earlier accepted one. Dropped rows are replaced
+    of its cropped array repeats an earlier accepted one (or one of ``seen``); it is
+    screened out if ``screen`` returns a verdict for its crop. Dropped rows are replaced
     by the next rows, so the accepted count reaches ``target`` whenever the stream is
     long enough.
 
@@ -240,11 +334,21 @@ def collect_photos(
     on_accept : Callable[[int, RawRow], None] | None
         Called with ``(idx, row)`` for every accepted image, before the next row is
         read. Used by the CLI to append the raw grayscale PNG.
+    seen : dict[str, int] | None
+        SHA-1 digests of the images a dataset already holds, mapped to their ``idx``, so an
+        extension never re-admits one of them (T7.1's ``lsun_church_n32k``). Not mutated.
+    start_idx : int
+        ``idx`` of the first accepted image, so the records and image ids of an extension
+        continue the existing numbering. 0 for a dataset built from scratch.
+    screen : Callable[[np.ndarray], dict[str, Any] | None] | None
+        Called on the crop of every row that passed the SHA-1 check; a returned dict
+        rejects the row and is kept as its :class:`ScreenedRecord` verdict (T7.1's
+        :class:`NearDuplicateScreen`). ``None`` screens nothing and adds no count key.
 
     Returns
     -------
     CollectResult
-        Accepted images, records, duplicates and scan counts.
+        Accepted images, records, duplicates, screened rows and scan counts.
 
     Raises
     ------
@@ -254,8 +358,11 @@ def collect_photos(
     images: list[np.ndarray] = []
     records: list[PhotoRecord] = []
     duplicates: list[DuplicateRecord] = []
-    seen: dict[str, int] = {}
+    screened: list[ScreenedRecord] = []
+    seen = dict(seen or {})
     counts = _new_counts()
+    if screen is not None:
+        counts["rows_screened_out"] = 0
 
     for raw in rows:
         counts["rows_scanned"] += 1
@@ -277,7 +384,13 @@ def collect_photos(
             )
             continue
 
-        idx = len(images)
+        verdict = screen(array) if screen is not None else None
+        if verdict is not None:
+            counts["rows_screened_out"] += 1
+            screened.append(ScreenedRecord(raw.shard, raw.row, digest, verdict))
+            continue
+
+        idx = start_idx + len(images)
         seen[digest] = idx
         images.append(array)
         counts["resized"] += int(resized)
@@ -310,7 +423,240 @@ def collect_photos(
         records=records,
         duplicates=duplicates,
         counts=counts,
+        screened=screened,
     )
+
+
+def thumbnails(images: np.ndarray, side: int = 32) -> np.ndarray:
+    """Mean-pool images to ``side x side`` thumbnails, centred and scaled to unit norm.
+
+    The dot product of two rows is the Pearson correlation of the two thumbnails, which is
+    insensitive to re-encoding, mild re-processing and global brightness or contrast changes,
+    so it finds copies of a photograph that SHA-1 cannot.
+
+    Parameters
+    ----------
+    images : np.ndarray
+        ``(N, H, W)`` array with ``H`` and ``W`` multiples of ``side``.
+    side : int
+        Thumbnail side in pixels.
+
+    Returns
+    -------
+    np.ndarray
+        ``float64`` array of shape ``(N, side * side)``; a constant image maps to zeros.
+
+    Raises
+    ------
+    PreprocessError
+        If ``H`` or ``W`` is not a multiple of ``side``.
+    """
+    n, height, width = images.shape
+    if height % side or width % side:
+        raise PreprocessError(f"image shape {(height, width)} is not a multiple of {side}")
+    # Pool the stored dtype with a float64 accumulator: no float64 copy of the whole array.
+    pooled = np.asarray(images).reshape(n, side, height // side, side, width // side).mean(
+        axis=(2, 4), dtype=np.float64
+    ).reshape(n, -1)
+    pooled -= pooled.mean(axis=1, keepdims=True)
+    norm = np.linalg.norm(pooled, axis=1, keepdims=True)
+    return pooled / np.where(norm > 0, norm, 1.0)
+
+
+class NearDuplicateScreen:
+    """Reject a crop whose thumbnail correlates above a threshold with a reference image.
+
+    Used as the ``screen`` of :func:`collect_photos` when ``lsun_church_n32k`` appends train
+    rows (T7.1): a re-encoded copy of a ``ref`` image would otherwise enter ``train``, which the
+    baseline ``lsun_church`` does not have, and the dataset would differ in more than its size.
+
+    Parameters
+    ----------
+    reference : np.ndarray
+        ``(M, H, W)`` reference images.
+    reference_idx : Sequence[int]
+        Their ``idx``, reported in the verdicts.
+    threshold : float
+        Pearson r of the 32x32 thumbnails above which a crop is rejected.
+    """
+
+    def __init__(
+        self, reference: np.ndarray, reference_idx: Sequence[int], threshold: float = 0.95
+    ) -> None:
+        self.reference = thumbnails(reference)
+        self.reference_idx = [int(i) for i in reference_idx]
+        self.threshold = threshold
+        self.rejected_crops: list[np.ndarray] = []
+
+    def __call__(self, crop: np.ndarray) -> dict[str, Any] | None:
+        """Return ``{"max_r", "ref_idx"}`` if ``crop`` copies a reference image, else ``None``."""
+        r = self.reference @ thumbnails(crop[None])[0]
+        best = int(np.argmax(r))
+        if r[best] <= self.threshold:
+            return None
+        self.rejected_crops.append(np.array(crop))
+        return {"max_r": round(float(r[best]), 6), "ref_idx": self.reference_idx[best]}
+
+
+def near_duplicate_pairs(
+    images: np.ndarray, threshold: float = 0.95, block: int = 1024
+) -> list[tuple[int, int, float]]:
+    """All pairs of images whose 32x32 thumbnails correlate above ``threshold`` (record only).
+
+    Parameters
+    ----------
+    images : np.ndarray
+        ``(N, H, W)`` array, ``H`` and ``W`` multiples of 32.
+    threshold : float
+        Pearson r of the thumbnails above which a pair is reported.
+    block : int
+        Rows per block of the pairwise product, bounding memory at ``block * N`` floats.
+
+    Returns
+    -------
+    list[tuple[int, int, float]]
+        ``(i, j, r)`` with ``i < j``, sorted by ``i`` then ``j``.
+    """
+    thumbs = thumbnails(images)
+    pairs: list[tuple[int, int, float]] = []
+    for start in range(0, len(thumbs), block):
+        corr = thumbs[start : start + block] @ thumbs.T
+        for i, j in zip(*np.nonzero(corr > threshold), strict=True):
+            if start + i < j:
+                pairs.append((int(start + i), int(j), round(float(corr[i, j]), 6)))
+    return sorted(pairs)
+
+
+def parse_source(source: str, repo_id: str) -> tuple[str, int]:
+    """Split an ``index.csv`` source string ``"<repo_id>/<shard>/<row>"`` into shard and row.
+
+    Parameters
+    ----------
+    source : str
+        The ``source`` value of one photograph row, as :func:`collect_photos` writes it.
+    repo_id : str
+        The Hugging Face repository the dataset was built from.
+
+    Returns
+    -------
+    tuple[str, int]
+        ``(shard, row)``.
+
+    Raises
+    ------
+    PreprocessError
+        If the string does not start with ``repo_id`` or does not end in a row number.
+    """
+    prefix = f"{repo_id}/"
+    shard, _, row = source[len(prefix) :].rpartition("/")
+    if not source.startswith(prefix) or not shard or not row.isdigit():
+        raise PreprocessError(f"source {source!r} is not '{prefix}<shard>/<row>'")
+    return shard, int(row)
+
+
+def select_rows(rows: Iterable[RawRow], wanted: Sequence[tuple[str, int]]) -> Iterator[RawRow]:
+    """Yield the rows of a stream named by ``(shard, row)``, in the order they are named.
+
+    Used to rebuild a dataset from the exact rows another one accepted: those rows are recorded
+    in shard order, so one pass over the stream finds them all, and the stream is not read past
+    the last one.
+
+    Parameters
+    ----------
+    rows : Iterable[RawRow]
+        The row stream, in shard order.
+    wanted : Sequence[tuple[str, int]]
+        The ``(shard, row)`` pairs to yield; they must follow the stream order.
+
+    Yields
+    ------
+    RawRow
+        One row per entry of ``wanted``, in that order.
+
+    Raises
+    ------
+    PreprocessError
+        If the stream ends before every wanted row was met, which is also what happens when
+        ``wanted`` is out of stream order.
+    """
+    pending = iter(wanted)
+    target = next(pending, None)
+    if target is None:
+        return
+    for raw in rows:
+        if (raw.shard, raw.row) != target:
+            continue
+        yield raw
+        target = next(pending, None)
+        if target is None:
+            return
+    raise PreprocessError(
+        f"stream ended before shard row {target}; the wanted rows must exist and follow the "
+        "stream order"
+    )
+
+
+def sha1_collisions(images: np.ndarray) -> list[tuple[int, int, str]]:
+    """Report the images whose SHA-1 repeats an earlier image's, without dropping anything.
+
+    Parameters
+    ----------
+    images : np.ndarray
+        ``uint8`` array of shape ``(N, H, W)``.
+
+    Returns
+    -------
+    list[tuple[int, int, str]]
+        ``(idx, first_idx, digest)`` for every repeat, in ``idx`` order; empty when every
+        image is distinct.
+    """
+    first: dict[str, int] = {}
+    repeats: list[tuple[int, int, str]] = []
+    for idx, image in enumerate(images):
+        digest = array_sha1(image)
+        if digest in first:
+            repeats.append((idx, first[digest], digest))
+        else:
+            first[digest] = idx
+    return repeats
+
+
+def centre_correlation(crops192: np.ndarray, crops128: np.ndarray) -> np.ndarray:
+    """Per-row Pearson correlation of a native 192 crop with the same region of a 128 crop.
+
+    For a photograph with a 256-px short side, the 192² native crop covers the central 192
+    native pixels, and the 128² whole-scene crop shows the central 256 native pixels at half
+    scale; the 192 crop's footprint is therefore the central 96x96 of the 128 crop, to within
+    the sub-pixel rounding of the two crop offsets. The 192 crop is 2x2 mean-pooled to 96x96 and
+    correlated with that footprint. The same photograph gives r close to 1; two different
+    photographs give the correlation of unrelated scenes.
+
+    Parameters
+    ----------
+    crops192 : np.ndarray
+        ``(N, 192, 192)`` native crops.
+    crops128 : np.ndarray
+        ``(N, 128, 128)`` whole-scene crops, row ``i`` paired with ``crops192[i]``.
+
+    Returns
+    -------
+    np.ndarray
+        ``float64`` array of shape ``(N,)``.
+
+    Raises
+    ------
+    PreprocessError
+        If the shapes are not ``(N, 192, 192)`` and ``(N, 128, 128)`` with the same ``N``.
+    """
+    n = crops192.shape[0]
+    if crops192.shape != (n, 192, 192) or crops128.shape != (n, 128, 128):
+        raise PreprocessError(f"expected (N,192,192) and (N,128,128), got {crops192.shape} "
+                              f"and {crops128.shape}")
+    pooled = np.asarray(crops192, np.float64).reshape(n, 96, 2, 96, 2).mean(axis=(2, 4))
+    footprint = np.asarray(crops128, np.float64)[:, 16:112, 16:112]
+    a = pooled.reshape(n, -1) - pooled.reshape(n, -1).mean(axis=1, keepdims=True)
+    b = footprint.reshape(n, -1) - footprint.reshape(n, -1).mean(axis=1, keepdims=True)
+    return (a * b).sum(axis=1) / np.sqrt((a * a).sum(axis=1) * (b * b).sum(axis=1))
 
 
 def fine_split_labels(splits: dict[str, Any], n: int) -> list[str]:
@@ -403,6 +749,47 @@ def write_contact_sheet(
     for ax, pick in zip(np.ravel(axes), picks, strict=False):
         ax.imshow(images[pick], cmap="gray", vmin=0, vmax=255, interpolation="nearest")
         ax.set_title(f"{pick} {labels[pick]}", fontsize=5, pad=1.5)
+    for ax in np.ravel(axes):
+        ax.set_axis_off()
+    if title is not None:
+        fig.suptitle(title, fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def write_pair_sheet(
+    path: Path,
+    left: np.ndarray,
+    right: np.ndarray,
+    picks: Sequence[int],
+    title: str | None = None,
+) -> None:
+    """Render image pairs side by side (``left[i]`` next to ``right[i]``), four pairs per row.
+
+    Parameters
+    ----------
+    path : Path
+        Destination PNG.
+    left, right : np.ndarray
+        ``uint8`` arrays of shape ``(N, H, W)``; the two sides may differ in ``H, W``.
+    picks : Sequence[int]
+        Row indices to show.
+    title : str | None
+        Figure title.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    n_rows = int(np.ceil(len(picks) / 4))
+    fig, axes = plt.subplots(n_rows, 8, figsize=(12.0, 1.62 * n_rows), squeeze=False)
+    for k, pick in enumerate(picks):
+        for side, (images, tag) in enumerate(((left, "L"), (right, "R"))):
+            ax = axes[k // 4][2 * (k % 4) + side]
+            ax.imshow(images[pick], cmap="gray", vmin=0, vmax=255, interpolation="nearest")
+            ax.set_title(f"{pick} {tag} {images.shape[1]}", fontsize=5, pad=1.5)
     for ax in np.ravel(axes):
         ax.set_axis_off()
     if title is not None:
