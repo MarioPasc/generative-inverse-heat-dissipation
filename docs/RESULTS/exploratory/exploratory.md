@@ -4,25 +4,25 @@
 
 Command: `PYTHONPATH=$PWD python -m ihdm.analysis.exploratory --results <results_dir> --out docs/RESULTS/exploratory/`. Source: `/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_results` (collection COMPLETE).
 
-Definitions. e_b = log10 P̄_S(b) − log10 P̄_R(b) on the eight octaves of the final 2k set (`final.json` `lsd_octaves`); octave RMS = sqrt(mean e_b²) (tracks LSD, which uses 43 finer bins); level ē = mean e_b; shape = sd(e_b), so RMS² = ē² + sd². 'Low' = 0.5-4 c/img (a σ_B,max = 24 prior keeps d_K² ≈ 0.54 at 1 c/img, 0.08 at 2 and 5e-5 at 4), 'high' = 4-96 c/img. Variance ratio = ΣP_S/ΣP_R (non-DC). ρ = (1 − I_w)/(1 − I) from table 1c. Precision and density: Naeem et al. (2020), k = 5, Inception pool features, as stored by every run.
+Definitions. e_b = log10 P̄_S(b) − log10 P̄_R(b) on the eight octaves of the final 2k set (`final.json` `lsd_octaves`); octave RMS = sqrt(mean e_b²) (tracks LSD, which uses 43 finer bins); level ē = mean e_b; shape = sd(e_b), so RMS² = ē² + sd². 'Prior' = 0.5-2 c/img (a σ_B,max = 24 prior keeps d_K² ≈ 0.86 at 0.5 c/img, falling to 0.085 at 2), 'mid' = 2-4 c/img (the hand-off band: d_K² ≈ 0.008 at 2.8 c/img, 5e-5 at 4), 'high' = 4-96 c/img (no prior carries anything there). Variance ratio = ΣP_S/ΣP_R (non-DC). ρ = (1 − I_w)/(1 − I) from table 1c. Precision and density: Naeem et al. (2020), k = 5, Inception pool features, as stored by every run.
 
 ## X1. Seed means per cell
 
-| dataset | arm | n | LSD (final, 2k; pre-registered, for reference) | LSD, mean of 45k-60k (500 seeds) | octave RMS error (final) | octave level ē (final) | octave shape sd(e) (final) | octave RMS, 0.5-4 c/img | octave RMS, 4-96 c/img | log10 variance ratio (final) | precision (Inception, k = 5) | density (Inception, k = 5) | regeneration ratio ρ = (1 − I_w)/(1 − I) |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| IXI T1 | A0 | 3 | 0.2422 | 0.2348 | 0.2158 | -0.1873 | 0.1071 | 0.2846 | 0.1609 | -0.1776 | 0.6342 | 0.3735 | 0.3427 |
-| IXI T1 | A3 | 3 | 0.07812 | 0.08379 | 0.06821 | -0.04645 | 0.04992 | 0.03325 | 0.08235 | -0.05284 | 0.7220 | 0.4795 | 0.2848 |
-| IXI T1 | A1 | 2 | 0.09581 | 0.08801 | 0.08463 | -0.05768 | 0.06192 | 0.03612 | 0.1032 | -0.07185 | 0.6623 | 0.4164 | 0.2849 |
-| IXI T1 | A2 | 2 | 0.2205 | 0.2147 | 0.1961 | -0.1707 | 0.09609 | 0.2417 | 0.1627 | -0.1740 | 0.6367 | 0.3809 | 0.3480 |
-| LSUN Churches | A0 | 3 | 1.201 | 1.178 | 1.158 | -1.049 | 0.4866 | 0.6781 | 1.363 | -0.5323 | 0.003167 | 7.000e-04 | 0.06493 |
-| LSUN Churches | A3 | 3 | 0.8303 | 0.8513 | 0.8264 | -0.6168 | 0.5483 | 0.05723 | 1.044 | -0.1856 | 0.08883 | 0.03310 | 0.09332 |
-| LSUN Churches | A1 | 2 | 0.8378 | 0.7929 | 0.8340 | -0.6274 | 0.5484 | 0.05913 | 1.054 | -0.1887 | 0.08350 | 0.02955 | 0.09284 |
-| LSUN Churches | A2 | 2 | 1.228 | 1.272 | 1.211 | -1.057 | 0.5861 | 0.5535 | 1.468 | -0.4859 | 0.05750 | 0.02160 | 0.08273 |
-| LSUN Churches | A2′ | 2 | 0.8822 | 0.8881 | 0.8349 | -0.7789 | 0.3004 | 0.6145 | 0.9418 | -0.4819 | 0.03100 | 0.01080 | 0.09399 |
-| OASIS-1 T1 | A0 | 2 | 0.2308 | 0.2510 | 0.2217 | -0.1924 | 0.1101 | 0.2903 | 0.1676 | -0.1787 | 0.6833 | 0.5195 | 0.4490 |
-| OASIS-1 T1 | A3 | 2 | 0.1118 | 0.1159 | 0.1061 | -0.07951 | 0.07004 | 0.03216 | 0.1317 | -0.08724 | 0.8355 | 0.8325 | 0.3372 |
-| LSUN Bedrooms | A0 | 2 | 1.430 | 1.333 | 1.388 | -1.245 | 0.6115 | 0.6905 | 1.671 | -0.5545 | 0.01175 | 0.002450 | 0.06331 |
-| LSUN Bedrooms | A3 | 2 | 0.9849 | 0.9930 | 0.9978 | -0.7247 | 0.6858 | 0.06057 | 1.261 | -0.1647 | 0.1205 | 0.03900 | 0.07431 |
+| dataset | arm | n | LSD (final, 2k; pre-registered, for reference) | LSD, mean of 45k-60k (500 seeds) | octave RMS error (final) | octave level ē (final) | octave shape sd(e) (final) | octave RMS, 0.5-2 c/img | octave RMS, 2-4 c/img | octave RMS, 4-96 c/img | log10 variance ratio (final) | precision (Inception, k = 5) | density (Inception, k = 5) | regeneration ratio ρ = (1 − I_w)/(1 − I) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| IXI T1 | A0 | 3 | 0.2422 | 0.2348 | 0.2158 | -0.1873 | 0.1071 | 0.2135 | 0.3893 | 0.1609 | -0.1776 | 0.6342 | 0.3735 | 0.3427 |
+| IXI T1 | A3 | 3 | 0.07812 | 0.08379 | 0.06821 | -0.04645 | 0.04992 | 0.02669 | 0.04346 | 0.08235 | -0.05284 | 0.7220 | 0.4795 | 0.2848 |
+| IXI T1 | A1 | 2 | 0.09581 | 0.08801 | 0.08463 | -0.05768 | 0.06192 | 0.02830 | 0.04774 | 0.1032 | -0.07185 | 0.6623 | 0.4164 | 0.2849 |
+| IXI T1 | A2 | 2 | 0.2205 | 0.2147 | 0.1961 | -0.1707 | 0.09609 | 0.1669 | 0.3446 | 0.1627 | -0.1740 | 0.6367 | 0.3809 | 0.3480 |
+| LSUN Churches | A0 | 3 | 1.201 | 1.178 | 1.158 | -1.049 | 0.4866 | 0.5014 | 0.9361 | 1.363 | -0.5323 | 0.003167 | 7.000e-04 | 0.06493 |
+| LSUN Churches | A3 | 3 | 0.8303 | 0.8513 | 0.8264 | -0.6168 | 0.5483 | 0.01638 | 0.09638 | 1.044 | -0.1856 | 0.08883 | 0.03310 | 0.09332 |
+| LSUN Churches | A1 | 2 | 0.8378 | 0.7929 | 0.8340 | -0.6274 | 0.5484 | 0.01579 | 0.09991 | 1.054 | -0.1887 | 0.08350 | 0.02955 | 0.09284 |
+| LSUN Churches | A2 | 2 | 1.228 | 1.272 | 1.211 | -1.057 | 0.5861 | 0.4049 | 0.7685 | 1.468 | -0.4859 | 0.05750 | 0.02160 | 0.08273 |
+| LSUN Churches | A2′ | 2 | 0.8822 | 0.8881 | 0.8349 | -0.7789 | 0.3004 | 0.4494 | 0.8529 | 0.9418 | -0.4819 | 0.03100 | 0.01080 | 0.09399 |
+| OASIS-1 T1 | A0 | 2 | 0.2308 | 0.2510 | 0.2217 | -0.1924 | 0.1101 | 0.2684 | 0.3297 | 0.1676 | -0.1787 | 0.6833 | 0.5195 | 0.4490 |
+| OASIS-1 T1 | A3 | 2 | 0.1118 | 0.1159 | 0.1061 | -0.07951 | 0.07004 | 0.01262 | 0.05243 | 0.1317 | -0.08724 | 0.8355 | 0.8325 | 0.3372 |
+| LSUN Bedrooms | A0 | 2 | 1.430 | 1.333 | 1.388 | -1.245 | 0.6115 | 0.4881 | 0.9758 | 1.671 | -0.5545 | 0.01175 | 0.002450 | 0.06331 |
+| LSUN Bedrooms | A3 | 2 | 0.9849 | 0.9930 | 0.9978 | -0.7247 | 0.6858 | 0.01424 | 0.1030 | 1.261 | -0.1647 | 0.1205 | 0.03900 | 0.07431 |
 
 ## X2. Contrasts, transfer signs and the A3 interaction
 
@@ -90,21 +90,37 @@ Definitions. e_b = log10 P̄_S(b) − log10 P̄_R(b) on the eight octaves of the
 | LSUN Bedrooms A3−A0 (transfer) | 2 | +0.07434 | — | -0.05251 / +0.2012 | — | sign only (§8) |
 | **interaction** Δ_IXI − Δ_Churches (A3) | 3 + 3 | -0.1189 | [-0.4478, +0.2644] | — | 0.700 (min 0.100) | not detectable at this budget |
 
-**octave RMS, 0.5-4 c/img** (the bands a W/8 prior carries)
+**octave RMS, 0.5-2 c/img** (the band a σ_B,max = 24 prior mostly carries (d_K² 0.86 at 0.5 c/img, 0.085 at 2))
 
 | contrast | seeds | mean Δ | 95% CI | per-seed Δ | perm. p | reading |
 |---|---:|---:|---:|---|---:|---|
-| IXI T1 A3−A0 | 3 | -0.2514 | [-0.2642, -0.2346] | -0.2642 / -0.2554 / -0.2346 | 0.100 (min 0.100) | CI excludes 0 |
-| IXI T1 A1−A0 | 2 | -0.2577 | [-0.2617, -0.2536] | -0.2617 / -0.2536 | 0.333 (min 0.333) | CI excludes 0 |
-| IXI T1 A2−A0 | 2 | -0.05209 | [-0.06846, -0.03571] | -0.03571 / -0.06846 | 0.333 (min 0.333) | CI excludes 0 |
-| LSUN Churches A3−A0 | 3 | -0.6209 | [-0.7257, -0.5324] | -0.6047 / -0.7257 / -0.5324 | 0.100 (min 0.100) | CI excludes 0 |
-| LSUN Churches A1−A0 | 2 | -0.6644 | [-0.7156, -0.6132] | -0.6132 / -0.7156 | 0.333 (min 0.333) | CI excludes 0 |
-| LSUN Churches A2−A0 | 2 | -0.1700 | [-0.2615, -0.07846] | -0.07846 / -0.2615 | 0.333 (min 0.333) | CI excludes 0 |
-| LSUN Churches A2′−A0 | 2 | -0.1090 | [-0.1308, -0.08709] | -0.08709 / -0.1308 | 0.333 (min 0.333) | CI excludes 0 |
-| LSUN Churches A2′−A2 | 2 | +0.06103 | [-0.008636, +0.1307] | -0.008636 / +0.1307 | 0.667 (min 0.333) | not detectable at this budget |
-| OASIS-1 T1 A3−A0 (transfer) | 2 | -0.2581 | — | -0.2663 / -0.2499 | — | sign only (§8) |
-| LSUN Bedrooms A3−A0 (transfer) | 2 | -0.6299 | — | -0.6371 / -0.6227 | — | sign only (§8) |
-| **interaction** Δ_IXI − Δ_Churches (A3) | 3 + 3 | +0.3695 | [+0.2839, +0.4713] | — | 0.100 (min 0.100) | CI excludes 0 |
+| IXI T1 A3−A0 | 3 | -0.1868 | [-0.2112, -0.1660] | -0.2112 / -0.1834 / -0.1660 | 0.100 (min 0.100) | CI excludes 0 |
+| IXI T1 A1−A0 | 2 | -0.1956 | [-0.2059, -0.1853] | -0.2059 / -0.1853 | 0.333 (min 0.333) | CI excludes 0 |
+| IXI T1 A2−A0 | 2 | -0.05698 | [-0.07397, -0.03999] | -0.03999 / -0.07397 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A3−A0 | 3 | -0.4850 | [-0.5817, -0.4042] | -0.4690 / -0.5817 / -0.4042 | 0.100 (min 0.100) | CI excludes 0 |
+| LSUN Churches A1−A0 | 2 | -0.5263 | [-0.5821, -0.4705] | -0.4705 / -0.5821 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A2−A0 | 2 | -0.1371 | [-0.2301, -0.04418] | -0.04418 / -0.2301 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A2′−A0 | 2 | -0.09263 | [-0.09865, -0.08662] | -0.08662 / -0.09865 | 0.667 (min 0.333) | CI excludes 0 |
+| LSUN Churches A2′−A2 | 2 | +0.04451 | [-0.04244, +0.1315] | -0.04244 / +0.1315 | 0.667 (min 0.333) | not detectable at this budget |
+| OASIS-1 T1 A3−A0 (transfer) | 2 | -0.2557 | — | -0.2726 / -0.2389 | — | sign only (§8) |
+| LSUN Bedrooms A3−A0 (transfer) | 2 | -0.4739 | — | -0.4540 / -0.4937 | — | sign only (§8) |
+| **interaction** Δ_IXI − Δ_Churches (A3) | 3 + 3 | +0.2981 | [+0.2174, +0.3949] | — | 0.100 (min 0.100) | CI excludes 0 |
+
+**octave RMS, 2-4 c/img** (the hand-off band (d_K² 0.085 at 2 c/img, 0.008 at 2.8, 5e-5 at 4))
+
+| contrast | seeds | mean Δ | 95% CI | per-seed Δ | perm. p | reading |
+|---|---:|---:|---:|---|---:|---|
+| IXI T1 A3−A0 | 3 | -0.3458 | [-0.3584, -0.3322] | -0.3468 / -0.3584 / -0.3322 | 0.100 (min 0.100) | CI excludes 0 |
+| IXI T1 A1−A0 | 2 | -0.3502 | [-0.3526, -0.3477] | -0.3477 / -0.3526 | 0.333 (min 0.333) | CI excludes 0 |
+| IXI T1 A2−A0 | 2 | -0.05330 | [-0.07297, -0.03362] | -0.03362 / -0.07297 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A3−A0 | 3 | -0.8397 | [-0.9636, -0.7334] | -0.8222 / -0.9636 / -0.7334 | 0.100 (min 0.100) | CI excludes 0 |
+| LSUN Churches A1−A0 | 2 | -0.8912 | [-0.9455, -0.8369] | -0.8369 / -0.9455 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A2−A0 | 2 | -0.2226 | [-0.3219, -0.1233] | -0.1233 / -0.3219 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A2′−A0 | 2 | -0.1382 | [-0.1786, -0.09781] | -0.09781 / -0.1786 | 0.333 (min 0.333) | CI excludes 0 |
+| LSUN Churches A2′−A2 | 2 | +0.08439 | [+0.02545, +0.1433] | +0.02545 / +0.1433 | 0.333 (min 0.333) | CI excludes 0 |
+| OASIS-1 T1 A3−A0 (transfer) | 2 | -0.2773 | — | -0.2791 / -0.2755 | — | sign only (§8) |
+| LSUN Bedrooms A3−A0 (transfer) | 2 | -0.8729 | — | -0.9072 / -0.8385 | — | sign only (§8) |
+| **interaction** Δ_IXI − Δ_Churches (A3) | 3 + 3 | +0.4939 | [+0.3915, +0.6139] | — | 0.100 (min 0.100) | CI excludes 0 |
 
 **octave RMS, 4-96 c/img** (bands no prior carries)
 
