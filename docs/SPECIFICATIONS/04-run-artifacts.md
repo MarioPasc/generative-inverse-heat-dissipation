@@ -203,3 +203,16 @@ device mismatch. Tests that run the released trainer on CPU do so in a subproces
 Code that only needs the network for inference (T2.2's sampler, T4.x) instantiates
 `model_code.unet.UNetModel(config).to(device)` directly and loads the EMA state dict (keys without
 the `module.` prefix), never `create_model`.
+
+## Amendment M7 (2026-10-01, T7.1; post hoc)
+
+- **§1.** `s[K] ∈ {96.0, 24.0, 64.0}`. The added schedule is `log_W2_128`: K = 200, log-spaced
+  0.5 → 64 px, the A0 rule (W/2, log spacing) at 128². It is built by the same `log_schedule`
+  code as `log_W2` and appended with `build_schedules --add`. Every earlier entry of
+  `schedules.json` is unchanged.
+- **§2.** For the diagnostic dataset `lsun_church_r128`: `data.image_size` = 128,
+  `blur_sigma_max` = 64.0, `blur_schedule_name` = `log_W2_128`. The diagnostic datasets
+  `lsun_church_r128` and `lsun_church_n32k` accept only arm A0 and are listed in
+  `configs/spectral/arms.py` `DIAGNOSTIC_CELLS`, not `EXPERIMENT_CELLS`. A test confirms that the
+  30 cells of `EXPERIMENT_CELLS` build configs identical (`config_sha256`) to those of the base
+  commit.
