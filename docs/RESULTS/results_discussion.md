@@ -456,16 +456,29 @@ Seed means at three checkpoints:
   across octaves, not more total variance. Most of $T_\tau$'s degeneracy is the cross-arm effect
   of §6, not this curve shape.
 
-**Why the samples are too alike: a hypothesis, not a result.**
+**Why the samples are too alike, and what the δ sweep ruled out.**
 
-- The IHDM sampler adds noise of standard deviation δ = 1.25σ = 0.0125 per step. For the lowest
-  modes, the chain cannot change the prior's pattern "beyond what the small δ noise permits"
-  (`learning/01-ihdm-method.md` §7.5, item 3, DERIVED). The note says this for the lowest modes
-  only.
-- A denoiser trained with MSE predicts the conditional mean. With little injected noise its
-  samples drift toward the average, i.e. they lose variance.
-- δ is a sampling-only hyperparameter (`learning/01` §6.4, VERIFIED). Retuning it costs no
-  training (§11).
+- **The setting.** The IHDM sampler adds noise of standard deviation δ = 1.25σ = 0.0125 per step.
+  For the lowest modes, the chain cannot change the prior's pattern "beyond what the small δ noise
+  permits" (`learning/01-ihdm-method.md` §7.5, item 3, DERIVED; the note says this for the lowest
+  modes only). A denoiser trained with MSE predicts the conditional mean, so with little injected
+  noise its samples drift toward the average.
+- **The test.** δ is a sampling-only hyperparameter (`learning/01` §6.4, VERIFIED), so we tested
+  it with no training. This is the δ sweep of M7: T7.2, `docs/RESULTS/delta_sweep/`, written
+  after the pre-registered reading. Four 60k checkpoints (IXI and Churches, A0 and A3, seed 1)
+  were sampled at δ/σ ∈ {1.25, 2, 3}, paired over the 500 frozen seeds. At 1.25σ the four runs
+  reproduce their stored LSD to 6 digits.
+- **The result.** Already at 2σ every run is over-dispersed:
+  - the variance ratio is 1.3–4.6, against 0.29–0.88 at 1.25σ;
+  - the within-seed variance relative to what the blur removed, ρ, is 1.2–6.4, against
+    0.06–0.35;
+  - KID rises with disjoint intervals (IXI A0 0.042 → 0.275), and precision falls to 0 in every
+    run;
+  - the added variance lands in the finest octave (64–96 c/img goes from −0.11…−2.37 to
+    +0.67…+2.08), while the coarse octaves of Churches stay below zero.
+- **Reading.** By the pre-registered rule, a larger δ adds noise, not the missing structure. The
+  under-dispersion is not a sampler setting within the tested grid. Nothing between 1.25σ and 2σ
+  was tested, and one seed per run makes this descriptive.
 
 ---
 
@@ -523,23 +536,26 @@ Seed means at three checkpoints:
 5. *(Exploratory.)* "Every model under-disperses. LSD in our experiments mostly measures this
    broadband variance deficit. Its pre-registered convergence endpoint $T_\tau$ is degenerate,
    mainly because the W/8 arms start below the paper arm's final LSD."
+6. *(Post-hoc diagnostic, one seed.)* "Raising the sampling noise does not cure the deficit: at
+   twice the default noise every model's samples become over-dispersed noise, with KID rising and
+   Inception precision falling to zero."
 
 ---
 
 ## 11. Follow-ups
 
-**Running (wave W14, approved 2026-10-01; `docs/SPECIFICATIONS/M7-diagnostics/`).** The readings
-of both were written before any run existed.
+**Wave W14, approved 2026-10-01 (`docs/SPECIFICATIONS/M7-diagnostics/`).** The readings of both
+were written before any run existed.
 
-1. **The photograph-failure diagnostic (T7.1 → T7.3).** Churches A0, seed 1, with the 60k recipe
-   unchanged, changing one factor per run:
-   - a 128² whole-scene resize of the same 4,000 photos;
-   - 192² crops with 32,000 training images and the same reference set.
+1. **The photograph-failure diagnostic (T7.1 → T7.3), running.** Churches A0, seed 1, with the
+   60k recipe unchanged, changing one factor per run:
+   - a 128² whole-scene resize of the same 4,000 photos (job 2550808);
+   - 192² crops with 32,000 training images and the same reference set (job 2550811).
 
-   It tells whether resolution and framing, or data size, lifts the failure.
-2. **The δ sweep (T7.2).** The 60k checkpoints of IXI and Churches, A0 and A3, seed 1, sampled at
-   δ ∈ {1.25, 2, 3}·σ. Zero training, ≤ 10 A100-h. It tests whether the under-dispersion of §8 is a
-   sampler setting.
+   It tells whether resolution and framing, or data size, lifts the failure. T7.3 evaluates the
+   runs.
+2. **The δ sweep (T7.2), done.** The answer is no (§8): at δ ≥ 2σ the samples become noise.
+   6.3 A100-h; `docs/RESULTS/delta_sweep/`.
 
 **Not scheduled.**
 
