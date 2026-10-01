@@ -15,7 +15,7 @@ PYTHONPATH=$PWD python -m ihdm.cli.analyse --results <results_dir> --out docs/RE
   `\label{tab:<name>}`, needs `\usepackage{booktabs}`), plus one `tables.json`. The JSON holds
   the raw numbers of every row, the provenance (results folder, collection verdict and git sha,
   the analysing git sha) and the method. The command overwrites its own files and leaves every
-  other file here alone, including this README and `PARTIAL_24_RUNS/`.
+  other file here alone, including this README.
 - **Exit codes:** 0 every table complete; 1 the folder cannot be analysed (collection verdict
   `FAIL`, or `index.csv` disagrees with a run's `summary.json`); 2 `--results` is not a results
   folder; 3 tables written but at least one is incomplete.
@@ -130,9 +130,9 @@ same noise stream at every checkpoint and in every arm (D17).
   resolution (±0.0026), and that difference alone can decide T_τ. Both are printed.
 - **T_τ is degenerate on this data, and it is reported as pre-registered anyway.** The LSD
   curves are non-monotone (next section), so the first crossing fires at the first checkpoint:
-  **T_τ = 5k in 20 of the 24 runs evaluated on 2026-09-29**. The exceptions are
-  `ixi_A0_s2` (35k), `oasis1_A0_s1` (60k), `oasis1_A0_s2` (50k) and `lsun_church_A2_s2` (never
-  reached). A T_τ contrast is "not computable" whenever a seed of either cell never reaches the
+  **T_τ = 5k in 24 of the 30 runs**. The exceptions are `ixi_A0_s2` (35k), `oasis1_A0_s1`
+  (60k), `oasis1_A0_s2` (50k), `lsun_bedroom_A0_s2` and `lsun_bedroom_A3_s2` (20k) and
+  `lsun_church_A2_s2` (never reached). A T_τ contrast is "not computable" whenever a seed of either cell never reaches the
   threshold; nothing is imputed. At this budget T_τ carries no information about the spacing.
   Table 9 gives an exploratory alternative.
 
@@ -175,14 +175,15 @@ same noise stream at every checkpoint and in every arm (D17).
   Churches' A3 gain (−0.37) is therefore larger than IXI's (−0.16), although relative to A0 it
   is −31% against −68%. The raw interaction on LSD is dominated by the dataset with the larger
   scale. Table 3 prints Δ / A0 beside it (see "Exploratory").
-- **The LSD curve is non-monotone**, an observation to explain and not a claim. On the 24
-  evaluated runs, every curve is higher somewhere in 10k–30k than at 60k. In 14 of them the 5k
+- **The LSD curve is non-monotone**, an observation and not a claim. In 15 of the 30 runs the 5k
   value is already at or below the 60k value. IXI A0 runs 0.21–0.24 at 5k, 0.28–0.34 at its
   10k–30k peak and 0.23–0.25 at 60k. Churches A0 runs 0.40–0.78 at 5k, 1.43–1.66 at its peak and
-  1.02–1.45 at 60k. So an early model matches the reference's radial variance profile better
-  than the models of the middle of training. Why is open. The per-octave profiles
-  (`ckpt_<step>.json` `lsd_octaves`) and the samples at 5k against 20k (T6.2) are where to look.
-  This is what makes the first-crossing T_τ fire at 5k.
+  1.02–1.45 at 60k. This is what makes the first-crossing T_τ fire at 5k. *Exploratory reading
+  (2026-10-01, `docs/RESULTS/exploratory/exploratory.md` X3):* the bump is a dip in the samples'
+  total variance. Every A0 curve peaks at 15–20k, exactly where its variance ratio ΣP_S/ΣP_R is
+  lowest (IXI 0.64 → 0.55 → 0.67 at 5k / 20k / 60k). The W/8 arms on MRI do not dip. Within runs
+  the LSD correlates with the mean octave log-error at r = 0.97. See
+  `docs/RESULTS/results_discussion.md` §8.
 
 ## Exploratory (not pre-registered)
 
@@ -247,28 +248,30 @@ reason. No sample and no evaluation tar is read.
 | Churches | 1862.91 | 0.0179 | 0.0607 | −0.043 | 0.2886 | 0.0016 | +0.287 |
 | Bedrooms | 1726.48 | 0.0167 | 0.0254 | −0.009 | 0.2959 | 0.0011 | +0.295 |
 
-On the 24-run partial collection (`PARTIAL_24_RUNS/`, not for quoting), seed means:
+On the final 30-run collection, seed means (table 1c):
 
 | cell | pre-registered share (biased) | its expectation I − T | I_w | its expectation I |
 |---|---:|---:|---:|---:|
 | IXI A0 | −0.852 | −1.398 | 0.658 | 0.0034 |
 | IXI A3 | +0.070 | −0.132 | 0.738 | 0.0795 |
 | OASIS-1 A0 | −0.422 | −0.877 | 0.552 | 0.0017 |
+| OASIS-1 A3 | +0.124 | −0.149 | 0.677 | 0.0426 |
 | Churches A0 | +0.755 | −0.043 | 0.936 | 0.0179 |
 | Churches A3 | +0.800 | +0.287 | 0.934 | 0.2886 |
+| Bedrooms A0 | +0.809 | −0.009 | 0.938 | 0.0167 |
+| Bedrooms A3 | +0.796 | +0.295 | 0.948 | 0.2959 |
 
 A3−A0 on I_w is +0.079 [+0.073, +0.085] on IXI (ΔI = +0.076) and −0.003 [−0.018, +0.013] on
 Churches (ΔI = +0.271); the interaction is +0.082 [+0.066, +0.097] (p = 0.1 = p_min), against
 +0.878 on the pre-registered share, most of which is $T$ shrinking with σ_B,max on MRI. I_w lies
-far above I everywhere: the samples of one seed vary by 25–45 % (MRI) and 5–8 % (Churches) of
-the population variance, against the model's 70–98 %. That is under-dispersion, not
+far above I everywhere: the samples of one seed vary by 26–45 % (MRI) and 5–7 % (photographs) of
+the population variance, against the model's 70–100 %. That is under-dispersion, not
 inheritance. The prediction $I$ is itself model-dependent (audit §3.6).
 
-## `PARTIAL_24_RUNS/`
+## The partial collection
 
-The output of this command on the **24-run partial collection** of 2026-09-29
-(`$IHDM_DATA_ROOT/_results_partial_24/`, collection verdict `INCOMPLETE`). The tier-3 cells 24–29
-were not yet evaluated: `lsun_bedroom_A0_s1/s2`, `oasis1_A3_s1/s2` and `lsun_bedroom_A3_s1/s2`.
-It is a sample of the format, kept to show how incomplete tables are marked. Every file in it is
-bannered "not for quoting". The report quotes the tables in this folder, which `main` writes
-from the final 30-run collection.
+The tables were first drawn on the 24-run partial collection of 2026-09-29 (collection verdict
+`INCOMPLETE`; the tier-3 cells 24–29 were not yet evaluated) to show how incomplete tables are
+marked. Those outputs (`PARTIAL_24_RUNS/`) were deleted once the final 30-run collection was
+analysed; the partial results folder `$IHDM_DATA_ROOT/_results_partial_24/` is pending deletion.
+The report quotes only the tables in this folder.
