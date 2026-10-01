@@ -1,4 +1,4 @@
-"""The post-freeze schedule ``log_W2_128`` of the M7 diagnostic (T7.1) and ``build_schedules --add``.
+"""The post-freeze schedule ``log_W2_128`` of the M7 diagnostic (T7.1) and ``--add``.
 
 ``log_W2_128`` is the A0 schedule of the 128² dataset ``lsun_church_r128``: K = 200 log-spaced
 sigma_B from 0.5 to W/2 = 64 px, built by the same code path as ``log_W2`` (0.5 -> 96). Adding it
