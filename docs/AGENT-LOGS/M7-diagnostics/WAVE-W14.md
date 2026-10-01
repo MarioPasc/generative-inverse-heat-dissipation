@@ -103,3 +103,23 @@ Main pastes them into each log's §1 at merge time.
 6. **T7.2 submitted: array job 2550585** (tasks 0–3: ixi_A0_s1, ixi_A3_s1, lsun_church_A0_s1,
    lsun_church_A3_s1), code `b0306769`, PENDING at submission. Agent head `c9563b8`, status
    waiting-for-queue; main resumes it when the tasks finish.
+7. **T7.1 GO gate (head `c83ff4a`, code `b483fcf`): accepted, GO given.**
+   - Every file in the diff lies inside T7.1's ownership. The Picasso copy's sha256 equals local
+     for 5 files, and `slurm/array/train_array.sbatch` is unchanged.
+   - Config dump against `lsun_church` A0:
+     - r128 differs only in the dataset, `image_size` 128, the schedule `log_W2_128` and σ_max 64;
+     - n32k differs only in the dataset id;
+     - A3 is refused on r128.
+   - Datasets:
+     - r128's `splits.json` equals `lsun_church`'s;
+     - n32k's ref, seed and idx 0–3999 are pixel-identical to `lsun_church`, with 32,000 train;
+     - r128's centre crops correlate with `lsun_church` at median 0.988;
+     - both QC sheets eyeballed: the 14 rejected rows are the same 5 photos, and the r128 pairs are
+       the same scenes.
+   - Main re-ran `tests/{train,spectral,preprocess,slurm,data}`: 523 passed. The agent's full
+     suite: 1095 passed, 1 skipped.
+   - A100 smoke 2550583: `check_run` PASS. r128 runs at 3.665 it/s and 13.4 GB, n32k at
+     1.712 it/s and 28.5 GB.
+   - `--time` is 06:00 for r128 and 13:00 for n32k.
+   - Declined: a `git_sha` fallback in `ihdm/train`; the `GIT_SHA` file is enough.
+   - Mario to delete `fscratch/runs/ihdm_diag_smoke` (4.1 GB).
