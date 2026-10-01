@@ -178,3 +178,17 @@ Main pastes them into each log's §1 at merge time.
       computed only at `final_step = max(table)`.
     - Seed lists: two new rows in `expected_seed_lists.csv`.
     - GO gate before the evaluation array.
+15. **T7.3 GO gate (head `3616ebb`, code `7986b59`): accepted, GO given.**
+    - Prepare job 2555653 completed: 6 cache files per new dataset; the seed digests match the
+      CSV. r128's lists equal `lsun_church`'s (same splits), n32k's differ (32k train).
+    - Smoke 2555659_0 completed: baseline at 60k, 32 seeds, 2.44 s/chain.
+    - Main's review:
+      - the diff is within ownership, and the Picasso hashes match for 3 files;
+      - `photo_collect.lifts()` implements the pre-registered rule exactly, and the 2×2 texts
+        match the README;
+      - the baseline LSD anchors at 45k–60k equal production (1.42166, 1.36797, 1.36529,
+        1.44537);
+      - main re-ran 4 test files: 82 passed, 0 skipped.
+    - Accepted assumption: "KID" means the KID point estimate.
+    - Submission order: the baseline now; r128 and n32k each when its training run is DONE.
+    - Mario to delete `~/execs/ihdm/diag_eval/photo_smoke`.
