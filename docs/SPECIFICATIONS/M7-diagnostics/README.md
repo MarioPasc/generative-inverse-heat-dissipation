@@ -20,6 +20,7 @@ Not part of the pre-registered experiment. Two questions raised by the final res
 | T7.1 | diagnostic datasets, config support, training submission of 2 runs | opus55-xhigh | — |
 | T7.2 | `evaluate_run --delta`, 128²-capable evaluation, δ-sweep job and results | opus55-high | — |
 | T7.3 | evaluation of the 2 diagnostic runs and the baseline (late window), write-up | later wave | T7.1 trained, T7.2 merged |
+| T7.4 | harden `ihdm.analysis.exploratory` (band split at 2 c/img, error handling, value tests) | sonnet5-xhigh | — |
 
 **Pre-registered reading of T7.1/T7.3 (written 2026-10-01, before any diagnostic run exists).**
 Each run is read at checkpoints 45k, 50k, 55k and 60k, with 500 training-seeded samples per
