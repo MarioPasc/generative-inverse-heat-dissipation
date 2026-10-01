@@ -123,3 +123,19 @@ Main pastes them into each log's §1 at merge time.
    - `--time` is 06:00 for r128 and 13:00 for n32k.
    - Declined: a `git_sha` fallback in `ihdm/train`; the `GIT_SHA` file is enough.
    - Mario to delete `fscratch/runs/ihdm_diag_smoke` (4.1 GB).
+8. **T7.1 complete** (head `1739d58`).
+   - Submitted: array 2550808 (r128, `--time` 06:00) and array 2550811 (n32k, 13:00), both
+     PENDING (Priority). The first-task check passes to main.
+   - The log's file table equals the diff (19 files). Verdict: **ACCEPT**.
+   - Merged into `integration/W14` (worktree `wt/integration-W14`, branched from main `b90612e`)
+     as `0246650`; the prompt was pasted by main as `29c9529`. Fast suite on integration: 1095
+     passed, 1 skipped.
+9. **T7.4** (sonnet5-xhigh, base `cf574ea`, head `6c8a5ea`): the exploratory module hardened.
+   - Octave bands are now 0.5–2 / 2–4 / 4–96 c/img; ValueError paths become AnalysisError (exit
+     1); value tests were added.
+   - Main's independent JSON diff of the regenerated outputs: 0 non-band changes over 30 runs and
+     99 contrasts; `oct_rms_high`, the curves and the curve statistics are identical.
+   - New: Churches A2′−A2 on the 2–4 band shows CI excludes 0 (+0.084).
+   - Main re-ran `tests/analysis`: 186 passed. Verdict: **ACCEPT**.
+   - Merged as `41f843e`; prompt pasted as `63c4d96`; `tests/analysis` + `tests/train`: 451
+     passed.
