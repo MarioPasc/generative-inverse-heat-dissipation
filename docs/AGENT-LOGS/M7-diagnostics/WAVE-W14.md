@@ -171,3 +171,10 @@ Main pastes them into each log's §1 at merge time.
       - main appended dated M7 amendments to 03, 04 and 05 (`bee7057`), from the agents' §6
         proposals;
       - main updated `results_discussion.md` §8, §10 and §11 with the δ result (`031f548`).
+13. **Integration after T7.1, T7.4 and T7.2:** full fast suite 1144 passed, 1 skipped.
+14. **T7.3 spawned** (opus55-high, base `26cb9b2` on `integration/W14`, worktree `wt/T7.3`).
+    - Scope: evaluate the baseline, r128 and n32k at 45k–60k and apply the M7 reading.
+    - Code: `evaluate_run` gains a per-step Inception option. It is needed because Inception is
+      computed only at `final_step = max(table)`.
+    - Seed lists: two new rows in `expected_seed_lists.csv`.
+    - GO gate before the evaluation array.
