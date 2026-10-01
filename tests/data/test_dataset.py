@@ -10,7 +10,8 @@ from ihdm.data.errors import DataFormatError
 
 def test_npy_datasets_includes_real_ids_and_synthetic():
     assert NPY_DATASETS == frozenset(
-        {"ixi", "oasis1", "lsun_church", "lsun_bedroom", "synthetic"}
+        {"ixi", "oasis1", "lsun_church", "lsun_bedroom", "lsun_church_r128", "lsun_church_n32k",
+         "synthetic"}
     )
 
 
