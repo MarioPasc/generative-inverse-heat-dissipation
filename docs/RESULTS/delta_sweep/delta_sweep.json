@@ -71,10 +71,11 @@
    "state": "COMPLETED"
   }
  ],
+ "task_json_note": "Task JSONs regenerated locally (T7.2 review fix, D23) by slurm/diag_eval/collect.py task from the metrics trees extracted from the four copied-back tars; every field written on Picasso is unchanged, the rows gain dataset, dataset_sha256, I_w_d23, rho_d23 and the D23 constants used.",
  "tasks": [
   {
    "amp": "fp16",
-   "created": "2026-10-01T10:52:32.356463+00:00",
+   "created": "2026-10-01T12:12:29.517734+00:00",
    "deltas": [
     0.0125,
     0.02,
@@ -91,11 +92,18 @@
    },
    "rows": [
     {
+     "I_w_d23": 0.6560816691850127,
      "M": 0.931691,
      "M_lp": 1.10294,
      "amp": "fp16",
      "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
      "config_sha256": "779d1d23ed34add5db3aff350f0bc4e23624f361fd50ecd1808da1af5afcbebc",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.00343245,
+     "d23_sum_power_ref": 1254.13,
+     "dataset": "ixi",
+     "dataset_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
      "delta": 0.0125,
      "delta_over_sigma": 1.25,
      "diversity_lp": 0.000222118,
@@ -134,6 +142,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 0.34510287919267224,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -159,11 +168,18 @@
      "variance_ratio": 0.651431
     },
     {
+     "I_w_d23": -2.5712657066053755,
      "M": 2.17089,
      "M_lp": 3.04474,
      "amp": "fp16",
      "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
      "config_sha256": "779d1d23ed34add5db3aff350f0bc4e23624f361fd50ecd1808da1af5afcbebc",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.00343245,
+     "d23_sum_power_ref": 1254.13,
+     "dataset": "ixi",
+     "dataset_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
      "delta": 0.02,
      "delta_over_sigma": 2.0,
      "diversity_lp": 0.00153287,
@@ -202,6 +218,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 3.5835661181275427,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -227,11 +244,18 @@
      "variance_ratio": 3.39449
     },
     {
+     "I_w_d23": -2.083164496902234,
      "M": 2.1791,
      "M_lp": 3.57906,
      "amp": "fp16",
      "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
      "config_sha256": "779d1d23ed34add5db3aff350f0bc4e23624f361fd50ecd1808da1af5afcbebc",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.00343245,
+     "d23_sum_power_ref": 1254.13,
+     "dataset": "ixi",
+     "dataset_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
      "delta": 0.03,
      "delta_over_sigma": 3.0,
      "diversity_lp": 0.00129278,
@@ -270,6 +294,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 3.093783754951919,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -300,7 +325,7 @@
   },
   {
    "amp": "fp16",
-   "created": "2026-10-01T10:55:58.799472+00:00",
+   "created": "2026-10-01T12:12:30.576892+00:00",
    "deltas": [
     0.0125,
     0.02,
@@ -317,11 +342,18 @@
    },
    "rows": [
     {
+     "I_w_d23": 0.7334943953876393,
      "M": 0.871239,
      "M_lp": 0.234749,
      "amp": "fp16",
      "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
      "config_sha256": "9b4d8d2eb170994f77d4cc7d8206c5697130e59924b0d9365da01f9894fd2d15",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.0795447,
+     "d23_sum_power_ref": 1254.13,
+     "dataset": "ixi",
+     "dataset_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
      "delta": 0.0125,
      "delta_over_sigma": 1.25,
      "diversity_lp": 1.25614e-05,
@@ -360,6 +392,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 0.28953671581049156,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -385,11 +418,18 @@
      "variance_ratio": 0.882426
     },
     {
+     "I_w_d23": -0.08577323602816289,
      "M": 1.34607,
      "M_lp": 0.672908,
      "amp": "fp16",
      "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
      "config_sha256": "9b4d8d2eb170994f77d4cc7d8206c5697130e59924b0d9365da01f9894fd2d15",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.0795447,
+     "d23_sum_power_ref": 1254.13,
+     "dataset": "ixi",
+     "dataset_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
      "delta": 0.02,
      "delta_over_sigma": 2.0,
      "diversity_lp": 2.93638e-05,
@@ -428,6 +468,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 1.1796045240091104,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -453,11 +494,18 @@
      "variance_ratio": 1.32895
     },
     {
+     "I_w_d23": -3.1570187560300766,
      "M": 2.38216,
      "M_lp": 1.61165,
      "amp": "fp16",
      "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
      "config_sha256": "9b4d8d2eb170994f77d4cc7d8206c5697130e59924b0d9365da01f9894fd2d15",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.0795447,
+     "d23_sum_power_ref": 1254.13,
+     "dataset": "ixi",
+     "dataset_sha256": "b666e407e9afcc03fe2c51eb55ed99b0b72a34c80515e78874d64e155864bf4b",
      "delta": 0.03,
      "delta_over_sigma": 3.0,
      "diversity_lp": 0.00140372,
@@ -496,6 +544,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 4.516263588280796,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -526,7 +575,7 @@
   },
   {
    "amp": "fp16",
-   "created": "2026-10-01T11:04:03.461588+00:00",
+   "created": "2026-10-01T12:12:31.605104+00:00",
    "deltas": [
     0.0125,
     0.02,
@@ -543,11 +592,18 @@
    },
    "rows": [
     {
+     "I_w_d23": 0.9434124128983686,
      "M": 0.536524,
      "M_lp": 0.673157,
      "amp": "fp16",
      "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
      "config_sha256": "e68a64f7af62089e4c28d2a127d3c94c45cbf6b9d3333e833951ed02c684ec86",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.01791,
+     "d23_sum_power_ref": 1862.91,
+     "dataset": "lsun_church",
+     "dataset_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
      "delta": 0.0125,
      "delta_over_sigma": 1.25,
      "diversity_lp": 0.000713846,
@@ -586,6 +642,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 0.05761955330125688,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -611,11 +668,18 @@
      "variance_ratio": 0.285077
     },
     {
+     "I_w_d23": -2.123612447729627,
      "M": 1.9355,
      "M_lp": 0.503244,
      "amp": "fp16",
      "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
      "config_sha256": "e68a64f7af62089e4c28d2a127d3c94c45cbf6b9d3333e833951ed02c684ec86",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.01791,
+     "d23_sum_power_ref": 1862.91,
+     "dataset": "lsun_church",
+     "dataset_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
      "delta": 0.02,
      "delta_over_sigma": 2.0,
      "diversity_lp": 0.000283006,
@@ -654,6 +718,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 3.1805765741730667,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -679,11 +744,18 @@
      "variance_ratio": 3.3576
     },
     {
+     "I_w_d23": -2.934246817479105,
      "M": 2.29126,
      "M_lp": 0.428169,
      "amp": "fp16",
      "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
      "config_sha256": "e68a64f7af62089e4c28d2a127d3c94c45cbf6b9d3333e833951ed02c684ec86",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.01791,
+     "d23_sum_power_ref": 1862.91,
+     "dataset": "lsun_church",
+     "dataset_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
      "delta": 0.03,
      "delta_over_sigma": 3.0,
      "diversity_lp": 0.000123019,
@@ -722,6 +794,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 4.005994173119679,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -752,7 +825,7 @@
   },
   {
    "amp": "fp16",
-   "created": "2026-10-01T12:07:28.562507+00:00",
+   "created": "2026-10-01T12:12:32.618157+00:00",
    "deltas": [
     0.0125,
     0.02,
@@ -769,11 +842,18 @@
    },
    "rows": [
     {
+     "I_w_d23": 0.924898150179021,
      "M": 0.671565,
      "M_lp": 0.11233,
      "amp": "fp16",
      "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
      "config_sha256": "3e3d87ce563edbb1943ccb6bbbfde2dff8f6d682e83ef3c2f094b288ae212957",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.288618,
+     "d23_sum_power_ref": 1862.91,
+     "dataset": "lsun_church",
+     "dataset_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
      "delta": 0.0125,
      "delta_over_sigma": 1.25,
      "diversity_lp": 2.34529e-05,
@@ -812,6 +892,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 0.10557176006840067,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -837,11 +918,18 @@
      "variance_ratio": 0.647773
     },
     {
+     "I_w_d23": -3.5434407848473617,
      "M": 2.4166,
      "M_lp": 0.421258,
      "amp": "fp16",
      "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
      "config_sha256": "3e3d87ce563edbb1943ccb6bbbfde2dff8f6d682e83ef3c2f094b288ae212957",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.288618,
+     "d23_sum_power_ref": 1862.91,
+     "dataset": "lsun_church",
+     "dataset_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
      "delta": 0.02,
      "delta_over_sigma": 2.0,
      "diversity_lp": 3.8647e-05,
@@ -880,6 +968,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 6.386780639441765,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [
@@ -905,11 +994,18 @@
      "variance_ratio": 4.56394
     },
     {
+     "I_w_d23": -3.8166369101298505,
      "M": 2.47261,
      "M_lp": 0.39634,
      "amp": "fp16",
      "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
      "config_sha256": "3e3d87ce563edbb1943ccb6bbbfde2dff8f6d682e83ef3c2f094b288ae212957",
+     "d23_constants": "docs/RESULTS/inherited_band_constants.json",
+     "d23_n_pix": 192,
+     "d23_share_predicted": 0.288618,
+     "d23_sum_power_ref": 1862.91,
+     "dataset": "lsun_church",
+     "dataset_sha256": "299c076853b0dfd261d4c758fea1ee265ddd98f975b43acaa59ac81fcc61b65a",
      "delta": 0.03,
      "delta_over_sigma": 3.0,
      "diversity_lp": 1.28553e-05,
@@ -948,6 +1044,7 @@
      "n_diversity_seeds": 40,
      "n_lsd_samples": 500,
      "n_per_seed": 5,
+     "rho_d23": 6.770816396998871,
      "sample_batch": 32,
      "sample_rng_seed": 2026,
      "sampling_log": [

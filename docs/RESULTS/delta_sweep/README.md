@@ -21,7 +21,8 @@ set. They are not computed on the 2,000-seed production final set that tables 1a
 At δ = 1.25σ they therefore differ from the published values. For example, on `ixi_A0_s1` KID is
 0.0418 here and 0.0464 in production, and precision is 0.584 here and 0.574 in production. Only
 the δ-to-δ contrasts inside this folder are paired and like for like. The held-out set is 40 × 5,
-not the production 40 × 50.
+not the production 40 × 50. D_pix therefore uses 5 samples per seed, and the unbiased I_w applies
+the factor 5/4, whereas production uses 50 samples per seed (factor 50/49).
 
 **Provenance.**
 
@@ -61,24 +62,32 @@ Column definitions:
 - **oct. mean** is the mean over the 8 octave bins of the signed log10 ratio P_samples / P_ref.
 - **64–96** is the finest octave.
 - Both octave columns are negative when the samples carry too little variance.
-- **I_w** is the measured inherited share over all modes. **pred.** is its linear-Gaussian
-  prediction.
+- **inherited share, pre-registered (biased, D23)** is `inherited_measured` of `final.json`, the
+  pre-registered share over all modes. It is biased under a non-zero mean image (D23,
+  `docs/RESULTS/inherited_band_audit.md`) and is kept only for continuity. **I (pred.)** is the
+  linear-Gaussian prediction `inherited_predicted`.
+- **I_w (D23)** is the within-seed share `1 − M/(M−1)·D_pix·(W²−1)/ΣP_ref` with M = 5, and W and
+  ΣP_ref taken from `docs/RESULTS/inherited_band_constants.json`
+  (`ihdm.analysis.inherited.within_seed_share`). Its model expectation is I.
+- **ρ = (1 − I_w)/(1 − I)** is the within-seed variance relative to what the blur removed. It is 1
+  when the chain regenerates exactly the removed variance, below 1 when it regenerates less, and
+  above 1 when it regenerates more.
 - The full octave profiles and the low-band shares are in the JSON.
 
-| run | δ/σ | δ | LSD | var. ratio | oct. mean | 64–96 | KID [95% CI] | FID | precision | recall | density | coverage | M | D_pix | D_lp | I_w | pred. |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `ixi_A0_s1` | 1.25 | 0.0125 | 0.2497 | 0.651 | −0.197 | −0.212 | 0.0418 [0.0383, 0.0461] | 58.1 | 0.584 | 0.386 | 0.296 | 0.274 | 0.932 | 0.00936 | 0.00022 | −0.767 | 0.003 |
-| `ixi_A0_s1` | 2.00 | 0.02 | 0.6814 | 3.394 | +0.257 | +1.518 | 0.2748 [0.2690, 0.2823] | 315.8 | 0.000 | 0.095 | 0.000 | 0.000 | 2.171 | 0.09720 | 0.00153 | −2.885 | 0.003 |
-| `ixi_A0_s1` | 3.00 | 0.03 | 0.5987 | 3.028 | +0.385 | +1.019 | 0.3995 [0.3907, 0.4112] | 356.8 | 0.000 | 0.000 | 0.000 | 0.000 | 2.179 | 0.08391 | 0.00129 | −2.779 | 0.003 |
-| `ixi_A3_s1` | 1.25 | 0.0125 | 0.0840 | 0.882 | −0.047 | −0.108 | 0.0175 [0.0155, 0.0199] | 34.0 | 0.698 | 0.571 | 0.476 | 0.517 | 0.871 | 0.00725 | 0.00001 | +0.076 | 0.080 |
-| `ixi_A3_s1` | 2.00 | 0.02 | 0.3955 | 1.329 | +0.123 | +0.665 | 0.4171 [0.4059, 0.4285] | 312.3 | 0.000 | 0.237 | 0.000 | 0.000 | 1.346 | 0.02955 | 0.00003 | −0.357 | 0.080 |
-| `ixi_A3_s1` | 3.00 | 0.03 | 0.8147 | 3.813 | +0.239 | +1.666 | 0.3530 [0.3468, 0.3609] | 350.0 | 0.000 | 0.000 | 0.000 | 0.000 | 2.382 | 0.11314 | 0.00140 | −3.274 | 0.080 |
-| `lsun_church_A0_s1` | 1.25 | 0.0125 | 1.4454 | 0.285 | −1.253 | −2.368 | 0.2438 [0.2373, 0.2511] | 233.3 | 0.014 | 0.015 | 0.003 | 0.007 | 0.537 | 0.00229 | 0.00071 | +0.769 | 0.018 |
-| `lsun_church_A0_s1` | 2.00 | 0.02 | 1.0814 | 3.358 | −0.003 | +1.386 | 0.4177 [0.4125, 0.4245] | 363.7 | 0.000 | 0.000 | 0.000 | 0.000 | 1.935 | 0.12628 | 0.00028 | −2.185 | 0.018 |
-| `lsun_church_A0_s1` | 3.00 | 0.03 | 1.2740 | 3.970 | −0.132 | +1.233 | 0.4620 [0.4571, 0.4689] | 367.6 | 0.000 | 0.045 | 0.000 | 0.000 | 2.291 | 0.15906 | 0.00012 | −2.949 | 0.018 |
-| `lsun_church_A3_s1` | 1.25 | 0.0125 | 0.6416 | 0.648 | −0.488 | −0.773 | 0.2190 [0.2092, 0.2285] | 212.7 | 0.052 | 0.040 | 0.017 | 0.029 | 0.672 | 0.00304 | 0.00002 | +0.793 | 0.289 |
-| `lsun_church_A3_s1` | 2.00 | 0.02 | 1.1859 | 4.564 | −0.387 | +2.014 | 0.4744 [0.4709, 0.4780] | 364.0 | 0.000 | 0.000 | 0.000 | 0.000 | 2.417 | 0.18369 | 0.00004 | −3.806 | 0.289 |
-| `lsun_church_A3_s1` | 3.00 | 0.03 | 1.6537 | 4.809 | −0.885 | +2.077 | 0.4122 [0.4098, 0.4149] | 326.9 | 0.000 | 0.000 | 0.000 | 0.000 | 2.473 | 0.19473 | 0.00001 | −4.183 | 0.289 |
+| run | δ/σ | δ | LSD | var. ratio | oct. mean | 64–96 | KID [95% CI] | FID | precision | recall | density | coverage | M | D_pix | D_lp | inherited share, pre-registered (biased, D23) | I (pred.) | I_w (D23) | ρ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `ixi_A0_s1` | 1.25 | 0.0125 | 0.2497 | 0.651 | −0.197 | −0.212 | 0.0418 [0.0383, 0.0461] | 58.1 | 0.584 | 0.386 | 0.296 | 0.274 | 0.932 | 0.00936 | 0.00022 | −0.767 | 0.003 | +0.656 | 0.345 |
+| `ixi_A0_s1` | 2.00 | 0.02 | 0.6814 | 3.394 | +0.257 | +1.518 | 0.2748 [0.2690, 0.2823] | 315.8 | 0.000 | 0.095 | 0.000 | 0.000 | 2.171 | 0.09720 | 0.00153 | −2.885 | 0.003 | −2.571 | 3.584 |
+| `ixi_A0_s1` | 3.00 | 0.03 | 0.5987 | 3.028 | +0.385 | +1.019 | 0.3995 [0.3907, 0.4112] | 356.8 | 0.000 | 0.000 | 0.000 | 0.000 | 2.179 | 0.08391 | 0.00129 | −2.779 | 0.003 | −2.083 | 3.094 |
+| `ixi_A3_s1` | 1.25 | 0.0125 | 0.0840 | 0.882 | −0.047 | −0.108 | 0.0175 [0.0155, 0.0199] | 34.0 | 0.698 | 0.571 | 0.476 | 0.517 | 0.871 | 0.00725 | 0.00001 | +0.076 | 0.080 | +0.733 | 0.290 |
+| `ixi_A3_s1` | 2.00 | 0.02 | 0.3955 | 1.329 | +0.123 | +0.665 | 0.4171 [0.4059, 0.4285] | 312.3 | 0.000 | 0.237 | 0.000 | 0.000 | 1.346 | 0.02955 | 0.00003 | −0.357 | 0.080 | −0.086 | 1.180 |
+| `ixi_A3_s1` | 3.00 | 0.03 | 0.8147 | 3.813 | +0.239 | +1.666 | 0.3530 [0.3468, 0.3609] | 350.0 | 0.000 | 0.000 | 0.000 | 0.000 | 2.382 | 0.11314 | 0.00140 | −3.274 | 0.080 | −3.157 | 4.516 |
+| `lsun_church_A0_s1` | 1.25 | 0.0125 | 1.4454 | 0.285 | −1.253 | −2.368 | 0.2438 [0.2373, 0.2511] | 233.3 | 0.014 | 0.015 | 0.003 | 0.007 | 0.537 | 0.00229 | 0.00071 | +0.769 | 0.018 | +0.943 | 0.058 |
+| `lsun_church_A0_s1` | 2.00 | 0.02 | 1.0814 | 3.358 | −0.003 | +1.386 | 0.4177 [0.4125, 0.4245] | 363.7 | 0.000 | 0.000 | 0.000 | 0.000 | 1.935 | 0.12628 | 0.00028 | −2.185 | 0.018 | −2.124 | 3.181 |
+| `lsun_church_A0_s1` | 3.00 | 0.03 | 1.2740 | 3.970 | −0.132 | +1.233 | 0.4620 [0.4571, 0.4689] | 367.6 | 0.000 | 0.045 | 0.000 | 0.000 | 2.291 | 0.15906 | 0.00012 | −2.949 | 0.018 | −2.934 | 4.006 |
+| `lsun_church_A3_s1` | 1.25 | 0.0125 | 0.6416 | 0.648 | −0.488 | −0.773 | 0.2190 [0.2092, 0.2285] | 212.7 | 0.052 | 0.040 | 0.017 | 0.029 | 0.672 | 0.00304 | 0.00002 | +0.793 | 0.289 | +0.925 | 0.106 |
+| `lsun_church_A3_s1` | 2.00 | 0.02 | 1.1859 | 4.564 | −0.387 | +2.014 | 0.4744 [0.4709, 0.4780] | 364.0 | 0.000 | 0.000 | 0.000 | 0.000 | 2.417 | 0.18369 | 0.00004 | −3.806 | 0.289 | −3.543 | 6.387 |
+| `lsun_church_A3_s1` | 3.00 | 0.03 | 1.6537 | 4.809 | −0.885 | +2.077 | 0.4122 [0.4098, 0.4149] | 326.9 | 0.000 | 0.000 | 0.000 | 0.000 | 2.473 | 0.19473 | 0.00001 | −4.183 | 0.289 | −3.817 | 6.771 |
 
 ## Pre-registered reading (M7-diagnostics/README.md, applied literally)
 
@@ -99,7 +108,8 @@ Column definitions:
 
 At δ = 1.25σ all four runs are under-dispersed (variance ratio 0.29 to 0.88). Already at 2σ every
 run is over-dispersed (variance ratio 1.3 to 4.6). Precision, density and coverage fall to zero in
-every run at both δ > 1.25σ.
+every run at both δ > 1.25σ. At δ ≥ 2σ, ρ is 1.18 to 6.77 in every run (0.06 to 0.35 at 1.25σ): the
+within-seed variance exceeds what the blur removed, which confirms the noise reading.
 
 The added variance goes mostly to the finest scales. In the 64–96 c/img octave the log10 ratio
 moves from −0.11…−2.37 to +0.67…+2.08. On Churches the coarse octaves (0.5–4 c/img) end further below zero at

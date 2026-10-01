@@ -41,6 +41,35 @@ def test_collect_task_returns_one_row_per_delta(swept):
     assert record["meta"] == {"x": 1}
 
 
+def test_the_d23_share_is_none_without_constants_and_computed_with_them(swept, tmp_path):
+    """The synthetic dataset has no committed constants; a matching document gives I_w and rho."""
+    import math
+
+    from ihdm.analysis.inherited import within_seed_share
+
+    record = collect.collect_task(swept, "r", "off", [0.02], 750, 0.01, {})
+    row = record["rows"][0]
+    assert row["I_w_d23"] is None and row["rho_d23"] is None and row["d23_note"]
+
+    document = {
+        "schema_version": 1,
+        "datasets": {row["dataset"]: {
+            "n_pix": 96, "sha256": row["dataset_sha256"], "sum_power": 50.0,
+            "sigmas": {f"{row['sigma_max']:g}": {
+                "sigma_max": row["sigma_max"], "share_predicted": 0.2, "mean_term": 0.0,
+                "radial": {"centres": [1.0], "predicted": [0.5], "corrected": [0.5]},
+            }},
+        }},
+    }
+    path = tmp_path / "constants.json"
+    path.write_text(json.dumps(document))
+    shares = collect.d23_shares(row, path)
+    expected = within_seed_share(row["diversity_pix"], 3, 96, 50.0)
+    assert shares["I_w_d23"] == pytest.approx(expected)
+    assert shares["rho_d23"] == pytest.approx((1.0 - expected) / 0.8)
+    assert math.isfinite(shares["rho_d23"])
+
+
 def test_collect_task_refuses_a_missing_delta(swept):
     with pytest.raises(collect.CollectError):
         collect.collect_task(swept, "ixi_A0_s1", "off", [0.03], 750, 0.01, {})

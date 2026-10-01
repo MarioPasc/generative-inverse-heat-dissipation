@@ -5,6 +5,12 @@
 one row per noise level (LSD, octaves, variance ratio, the Inception block, ``M``, diversity and the
 inherited band, with their provenance). ``merge`` runs locally on the copied-back task JSONs and
 writes ``docs/RESULTS/delta_sweep/delta_sweep.json`` with the reproduction anchor checked.
+
+``inherited_measured`` is the pre-registered share, biased under a non-zero mean image (D23).
+Every row also carries the D23 within-seed share ``I_w = 1 - M/(M-1) D_pix (W^2-1) / sum P_ref``
+(``ihdm.analysis.inherited.within_seed_share``, constants from
+``docs/RESULTS/inherited_band_constants.json`` matched by dataset, sha256 and sigma_max) and
+``rho = (1 - I_w) / (1 - I)``, the within-seed variance relative to what the blur removed.
 """
 
 from __future__ import annotations
@@ -17,6 +23,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ihdm.analysis.inherited import DEFAULT_CONSTANTS_PATH, load_constants, within_seed_share
 from ihdm.metrics.run_eval import metrics_dirname
 
 #: The stored ``lsd_060000`` of each run at delta = 1.25 sigma (docs/RESULTS/tables/t7_t_tau.md).
@@ -102,6 +109,46 @@ def task_row(shadow: Path, amp: str, delta: float, step: int) -> dict[str, Any]:
         "amp": ckpt["amp"],
         "sampling_log": summary["sampling"]["log"],
         "config_sha256": summary["run"]["config_sha256"],
+        "dataset": summary["run"]["dataset"],
+        "dataset_sha256": summary["dataset_sha256"],
+    }
+
+
+def d23_shares(row: dict[str, Any], constants_path: Path | None = DEFAULT_CONSTANTS_PATH
+               ) -> dict[str, Any]:
+    """Return the D23 within-seed share ``I_w`` and ``rho`` of one row.
+
+    Parameters
+    ----------
+    row : dict[str, Any]
+        A row of :func:`task_row` (needs ``dataset``, ``dataset_sha256``, ``sigma_max``,
+        ``diversity_pix`` and ``n_per_seed``).
+    constants_path : Path or None
+        The D23 constants file.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``I_w_d23``, ``rho_d23``, the constants used and their source; ``None`` values with the
+        reason when the constants do not apply.
+    """
+    constants = load_constants(constants_path)
+    entry, reason = constants.lookup(
+        str(row["dataset"]), str(row["dataset_sha256"]), float(row["sigma_max"])
+    )
+    if entry is None:
+        return {"I_w_d23": None, "rho_d23": None, "d23_note": reason}
+    share_w = within_seed_share(
+        float(row["diversity_pix"]), float(row["n_per_seed"]), entry.n_pix, entry.sum_power
+    )
+    removed = 1.0 - entry.share_predicted
+    return {
+        "I_w_d23": share_w,
+        "rho_d23": (1.0 - share_w) / removed if removed > 0.0 else None,
+        "d23_share_predicted": entry.share_predicted,
+        "d23_sum_power_ref": entry.sum_power,
+        "d23_n_pix": entry.n_pix,
+        "d23_constants": constants.label,
     }
 
 
@@ -115,6 +162,7 @@ def collect_task(
         row = task_row(shadow, amp, delta, step)
         row["sigma"] = float(sigma)
         row["delta_over_sigma"] = float(delta) / float(sigma)
+        row.update(d23_shares(row))
         rows.append(row)
     return {
         "run_id": run_id,
