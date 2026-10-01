@@ -25,22 +25,29 @@ not claim significance anywhere ([`tables/README.md`](tables/README.md), "Read t
 
 | claim of the proposal | outcome | verdict |
 |---|---|---|
-| **H1a** W/8 costs memorisation and diversity on both groups | Seed copying rises on every dataset: the seed-NN fraction goes from 0.01–0.06 to 0.56–0.76, $M_{lp}$ falls 72–84% and $D_{lp}$ falls 92–97% | supported |
-| **H1b** that cost is *smaller* on MRI than on photographs | The relative falls are about equal ($M_{lp}$ −77% vs −84%, $D_{lp}$ −95% vs −97%), and four of five raw-scale interactions point the other way. The photograph models produce almost no within-seed diversity at W/2, so they had nothing to lose (§5) | **not supported**; the comparison is not interpretable |
+| **H1a** W/8 costs memorisation and diversity "in every cell" | Seed copying rises on every dataset: the seed-NN fraction goes from 0.01–0.06 to 0.56–0.76, $M_{lp}$ falls 72–84% and $D_{lp}$ falls 92–97%. But $M$ *rises* on both photograph sets (+25%, +31%), and $D_{pix}$ does not move on Churches | partly supported: copying everywhere, the pixel-space falls on MRI only |
+| **H1b** that cost is *smaller* on MRI than on photographs | The relative falls in the low-pass endpoints are about equal ($M_{lp}$ −77% vs −84%, $D_{lp}$ −95% vs −97%). In pixel space MRI loses more: $D_{pix}$ −23% vs +4%. On IXI at most 0.8 of the 7.9 points of within-seed variance lost can sit in the band the prior pins (§5) | **not supported**: the MRI cost is larger, and most of it is not inheritance |
 | **H1c** MRI fidelity does not worsen at W/8 | IXI LSD −68%, KID −63%, FID −51%, precision +14%; OASIS-1 shows the same pattern | supported (fidelity improves) |
-| **H1d** samples inherit the predicted share of the seed's variance | On IXI the change in within-seed share equals the predicted change ($\Delta I_w$ = +0.079 against $\Delta I$ = +0.076). OASIS-1 overshoots (+0.125 against +0.041). The photograph sets show none of the predicted +0.27 | supported on IXI only |
-| **H2a** IXI-matched spacing improves MRI fidelity | A2−A0 on IXI: LSD −11%, KID −11%, FID −9%, both seeds agree. The gain is small and sits in the 0.5–4 cycles/image band | weak support, in the predicted direction |
+| **H1d** samples inherit the predicted *share* of the seed's variance ("about 5% on MRI against 30% on photographs") | Within-seed share at W/8: $I_w$ = 0.74 (IXI) and 0.93 (Churches), against the predicted $I$ = 0.08 and 0.29. On IXI the change ($\Delta I_w$ +0.079) happens to equal $\Delta I$ (+0.076); the bound of §5 shows this is a coincidence | **not supported**: the levels are far off because every model under-disperses |
+| **H2a** IXI-matched spacing improves MRI fidelity | A2−A0 on IXI: LSD −11%, KID −11%, FID −9%, both seeds agree; about a sixth of the terminal blur's effect. On top of W/8 (A3 against A1) the two seeds disagree, so nothing is detectable | weak support on its own, in the predicted direction |
 | **H2b** faster convergence ($T_\tau$) | The pre-registered $T_\tau$ is degenerate: the LSD curves are non-monotone, so the first crossing fires at 5k in most runs | not testable as designed |
 | **H2c** the same spacing hurts photographs (crossover) | Churches A2−A0: LSD not detectable (the two seeds disagree, −0.35 and +0.22); KID −44% and FID −32%, both seeds agree | **not observed**; if anything the spacing helps |
 | **A2′** control (photographs with their own matched spacing) | Better LSD than A2 (−0.35), worse KID (+0.086) and recall (−0.14). The samples are grainy texture without structure | LSD rewards noise; no support for "own spectrum is better" |
-| **O3** transfer of the A3 signs to OASIS-1 and Bedrooms | IXI → OASIS-1: every computable row keeps its sign (14/14). Churches → Bedrooms: 11/15; the four exceptions are $D_{pix}$ and the three inherited-band readings, all near zero on both photograph sets | supported, but see §7: A3's effect is mostly the terminal blur, which is fitted to nothing |
+| **O3** transfer of the A3 signs to OASIS-1 and Bedrooms | IXI → OASIS-1: all 13 endpoints keep their sign (the degenerate $T_\tau$ rows left out). Churches → Bedrooms: 9 of 13. The exceptions are $D_{pix}$ (Churches +4%, not detectable; Bedrooms −16%) and the three inherited-band readings, which are near zero on both sets | supported, but see §7: A3's effect is mostly the terminal blur, which is fitted to nothing |
 
 **The finding the proposal did not anticipate:** almost everything that moves in this experiment
-is the variance of the samples. Every model under-disperses: its samples are too alike at every
-scale. W/8 helps because the prior hands over the coarse variance that the reverse chain fails to
-generate. The photograph models fail outright at this budget (Inception precision 0.3% on Churches
-A0, 1.2% on Bedrooms A0, against 63% on IXI A0), so every MRI-against-photograph interaction
-compares a working model with a failed one.
+is the variance of the samples.
+
+- **Every model under-disperses.** Its samples are too alike at almost every scale: 227 of the 240
+  final octave errors are negative, and the 13 positive ones are ≤ +0.045.
+- **W/8 makes each sample a closer function of its seed** (our reading of §4–§5, not a tested
+  claim). The prior pins the 0.5–2 cycles/image
+  bands. The chain then fills in the 2–4 c/img band and finer structure more consistently with the
+  seed: between-seed variance rises while within-seed variance falls (§4, §5). Fidelity measured
+  on training-seeded samples and copying therefore rise together.
+- **The photograph models fail outright at this budget.** Their samples land almost nowhere on the
+  real-image manifold (§3), so every MRI-against-photograph interaction compares a working model
+  with a failed one.
 
 ---
 
@@ -55,7 +62,7 @@ compares a working model with a failed one.
 | model | released IHDM code, CIFAR-scale U-Net (61 M parameters), K = 200, σ = 0.01, δ = 1.25σ, prior noise on | `00-overview.md` D4 |
 | recipe | batch 16, Adam lr 1e-4 (D19), warm-up 1,000, clip 1.0, fp16 AMP, EMA 0.999, **60,000 iterations** (40k extended by resume, D22) | `submissions.md` §8 |
 | evaluation | EMA weights. LSD curve: 12 checkpoints (5k…60k) × 500 frozen training seeds, with common random numbers across checkpoints and arms (D17). Final set: 2,000 training-seeded samples (LSD, KID, FID, precision/recall/density/coverage, $M$). Held-out set: 40 seeds × 50 samples (diversity, inherited band). Reference: the 800-image `ref` split. Sampling in fp16 (D20) | `05-metrics.md`; `evaluation_plan.md` |
-| compute | A100 40 GB: 1.70 it/s, ≈ 10 h of training per run (≈ 300 A100-h for 30 runs); 5.4–6.7 h of sampling per run (≈ 180 A100-h). Not counted: the failed first array and run 11's retries | `submissions.md`; `summary.json` `sampling.log` |
+| compute | A100 40 GB: 1.70 it/s, ≈ 10 h of training per run (≈ 300 A100-h for 30 runs); 5.4–6.8 h of sampling per run (≈ 200 A100-h). Not counted: the failed first array and run 11's retries | `submissions.md`; `summary.json` `sampling.log` |
 
 **Deviations from the proposal**, all recorded as decisions in `00-overview.md`:
 
@@ -64,7 +71,7 @@ compares a working model with a failed one.
 - **D21:** run 11 (`lsun_church_A3_s3`) needed 3 attempts and carries 6 skipped fp16 steps.
 - **D20:** sampling ran in fp16. The LSD moves by 5e-5, 0.1% of the IXI noise floor.
 - **D23:** the pre-registered inherited-share estimator is biased when the mean image is not zero. It is corrected at reading time.
-- **Budget:** the proposal estimated 150 A100-h; the campaign used ≈ 480.
+- **Budget:** the proposal estimated 150 A100-h of training at 20k iterations, with sampling extra. Training took ≈ 300 A100-h (2×, because of the 60k length), and the whole campaign ≈ 500.
 
 **Training sanity** ([`figures/fig7`](figures/fig7_training_sanity.png), table 8). `check_array`
 reports 30/30 runs healthy, with no abort and no skipped step during the extension. Loss curves are
@@ -88,14 +95,18 @@ quality. Compared with the released LSUN Churches config
 | framing | whole scene resized to 128² | native-resolution 192² centre crop (a zoomed-in part of the scene) |
 | U-Net | `channel_mult (1,2,3,4,5)`, attention at 3 levels | CIFAR-scale `(1,2,2,2)`, attention at 2 levels (both 128 base channels, 4 res-blocks, dropout 0.1) |
 | K | 400 | 200 |
+| prior and top level | no noise on the prior draw; level K not trained | δ-noise on the prior and level K trained, as the paper's text states (D3) |
 | optimisation | batch 32, lr 2e-5, warm-up 5,000, `n_iters` 1.3M | batch 16, lr 1e-4, warm-up 1,000, 60k |
 | images seen | up to 41.6M (1.3M × 32) | 0.96M (60k × 16), i.e. 300 epochs over 3,200 images |
 
 The project's notes record an IHDM FID of 45.06 for LSUN Churches 128²
 (`projects/GenAI/learning/02-spectral-bias-and-experiments.md`). Our FID (258 on Churches A0) is
 not comparable to it: 800 references bias FID upward, and the data and resolution differ. The
-Inception precision makes the same point without that caveat: 0.3% of Churches A0 samples fall
-inside the real-image manifold (k = 5), against 63% on IXI A0. The grids
+Inception precision points the same way: 0.3% of Churches A0 samples fall inside the real-image
+manifold (k = 5), against 63% on IXI A0. `05-metrics.md` §7 rules out comparing Inception metrics
+across datasets as an endpoint, and precision depends on the reference set. With the same
+N_ref = 800 and k = 5 on both sides, though, a 200-fold gap is far beyond any reference effect, and
+it is used here only as a diagnostic of failure. The grids
 ([`figures/fig6`](figures/fig6_grids.png)) show blurry, structureless blobs on both photograph
 sets at A0.
 
@@ -137,9 +148,10 @@ compare them with A0 on the same seeds (tables 2a, 2b).
 
 **A3 against A0** (table 2a/2b, all seeds agree in sign on every row below):
 
-- **IXI.** LSD −0.164 (−68%), KID −0.029 (−63%), FID −28.7, recall +0.125, coverage +0.31. The
-  A3 LSD (0.078) is 1.7× the subject-grouped noise floor of 0.047 (`metrics_bracket.md` §1);
-  A0's is 5.2×.
+- **IXI.** LSD −0.164 (−68%), KID −0.029 (−63%), FID −28.7, recall +0.125, coverage +0.31.
+  Against the noise floors of `metrics_bracket.md` §1, the A3 LSD (0.078) is 1.7× the
+  subject-grouped 400-vs-400 floor (0.047) and 4.6× the train-vs-ref distance (0.017); A0's
+  (0.242) is 5.2× and 14×.
 - **Churches.** LSD −0.37 (−31%; per seed −0.82, −0.04, −0.26), KID −0.149 (−48%),
   precision from 0.003 to 0.089. The A3 LSD (0.83) is still 36× the Churches floor (0.023).
 - **Decomposition** (table 4, seeds 1–2). On IXI, A1 carries 90% of A3's LSD gain and 101% of
@@ -147,31 +159,52 @@ compare them with A0 on the same seeds (tables 2a, 2b).
   the terminal blur, not the spacing.** On Churches, A1 alone carries 105% of the LSD gain. On
   KID, A1 and A2 each carry about 100% (sum 2.0), so on photographs the two knobs do not add up.
 
-**Where in frequency the gain lives** ([`figures/fig2`](figures/fig2_lsd_octaves.png);
-*exploratory*, X2). The octave errors split at 4 cycles/image. Below it, a σ = 24 px prior keeps
-part of the seed ($d_K^2$ ≈ 0.54 at 1 c/img, 0.08 at 2); above it, no arm's prior carries
-anything ($d_K^2 < 10^{-4}$):
+**Where in frequency the gain lives** ([`figures/fig2`](figures/fig2_lsd_octaves.png); final 2k
+set, seed means). How much of the seed a σ_B,max = 24 px prior keeps falls off fast with
+frequency ($d_K^2$ is the share of a mode's variance that survives the terminal blur):
 
-| dataset | octave RMS 0.5–4 c/img, A0 → A3 | octave RMS 4–96 c/img, A0 → A3 |
-|---|---|---|
-| IXI | 0.285 → 0.033 (−88%; all seeds) | 0.161 → 0.082 (−49%; all seeds) |
-| Churches | 0.678 → 0.057 (−92%; all seeds) | 1.36 → 1.04 (−23%; the seeds disagree) |
-| OASIS-1 | 0.290 → 0.032 (−89%) | 0.168 → 0.132 (−21%) |
-| Bedrooms | 0.691 → 0.061 (−91%) | 1.67 → 1.26 (−25%) |
+| frequency | $d_K^2$ at σ = 24 px |
+|---|---|
+| 1 c/img | 0.54 |
+| 2 c/img | 0.085 |
+| 2.8 c/img | 0.008 |
+| 4 c/img | 5e-5 |
 
-A0's biggest error on MRI is a deficit at 1–4 c/img: log10 ratios of −0.29 and −0.38 on IXI at
-60k, i.e. the samples carry 41–51% of the reference's variance there. In a brain slice the 1–2
-c/img band is the head outline and the 2–4 band the ventricles and the white-matter ring
-(`learning/03-terminal-blur-scaffolding.md`, the brain row of its octave figure). W/8 removes the
-deficit almost entirely because the prior *hands those bands over* from the seed. On IXI A3 also halves the error above 4
-c/img, which no prior carries. Two readings fit that: the shorter chain gives 200 levels to 5.6
-octaves instead of 7.6, so each level has a smaller step; or edges whose positions are
-inherited become easier to sharpen. These data cannot separate the two.
+So only the 0.5–2 c/img octaves can be handed over in any amount; from about 2.5 c/img up, the
+chain must generate. The per-octave errors $\log_{10}\bar P_S - \log_{10}\bar P_R$, A0 → A3:
+
+| dataset | 1–2 c/img | 2–4 c/img | 4–8 c/img | 8–16 c/img |
+|---|---|---|---|---|
+| IXI | −0.30 → +0.04 | −0.39 → −0.04 | −0.19 → −0.12 | −0.13 → −0.07 |
+| OASIS-1 | −0.38 → −0.00 | −0.33 → −0.05 | −0.21 → −0.13 | −0.14 → −0.10 |
+| Churches | −0.71 → −0.01 | −0.94 → −0.10 | −1.11 → −0.49 | −1.26 → −0.74 |
+| Bedrooms | −0.69 → −0.02 | −0.98 → −0.10 | −1.25 → −0.49 | −1.49 → −0.72 |
+
+*(Exploratory, X2:* the octave RMS above 4 c/img falls from 0.161 to 0.082 on IXI, i.e. −49% with
+all seeds agreeing; on Churches it falls 23% and the seeds disagree.*)*
+
+- **A0's biggest error on MRI is a deficit at 1–4 c/img.** The samples carry 41–50% of the
+  reference's variance there. In a brain slice, the 1–2 c/img band is the head outline and the
+  2–4 band the ventricles and the white-matter ring (`learning/03-terminal-blur-scaffolding.md`,
+  the brain row of its octave figure).
+- **W/8 removes nearly all of that deficit, in both octaves.** In the 1–2 band the prior can hand
+  part of it over. In the 2–4 band it cannot ($d_K^2$ ≤ 0.085, about 0.008 at the band's centre),
+  so there the W/8 chain *generates* the missing variance.
+- **The gain continues above 4 c/img**, where nothing is inherited: −0.19 → −0.12 and
+  −0.13 → −0.07 on IXI.
+- **Three readings fit the generated part:**
+  1. the shorter chain gives its 200 levels to 5.6 octaves instead of 7.6, so each step is
+     smaller;
+  2. structure whose position the seed fixes is easier to generate;
+  3. the chain conditions more strongly on the seed (§5).
+
+  These data cannot separate the three.
 
 **The fidelity samples are seeded from training images**, by design and as in the paper (Alg. 2).
-A3's better LSD and KID and its higher copying (§5) are therefore one mechanism read twice: samples
-that inherit a training image's layout look more like real data. No fidelity number here comes
-from samples seeded by unseen images.
+Part of A3's better LSD and KID comes from the inherited 0.5–2 c/img content of training images,
+which is the same thing the copying metrics of §5 detect. The rest is generated by the chain. No
+fidelity number here comes from samples seeded by unseen images, so the two parts cannot be
+separated.
 
 ---
 
@@ -197,7 +230,7 @@ Seed means (tables 1b, 1c; ρ is *exploratory*, X1):
 - ρ = (1 − $I_w$)/(1 − $I$) is the share of the removed variance the chain actually
   regenerates.
 
-**Copying rises with W/8 everywhere (H1a).**
+**Copying rises with W/8 everywhere (H1a, first half).**
 
 - The share of samples whose nearest training image is their own seed goes from 0.06 to 0.72
   (IXI), 0.02 to 0.56 (OASIS-1), 0.01 to 0.62 (Churches) and 0.01 to 0.76 (Bedrooms).
@@ -206,33 +239,58 @@ Seed means (tables 1b, 1c; ρ is *exploratory*, X1):
 - This is the privacy cost the proposal's ethics paragraph anticipated. Under a W/8 prior a
   sample is, at coarse scale, a copy of a training image.
 
-**H1b is not supported, and the comparison cannot be read as intended.**
+**The pixel-space falls are MRI-only (H1a, second half).** H1 expected $M$ and within-seed
+diversity to fall "in every cell".
 
-- Relative falls are about equal: $M_{lp}$ −77% (IXI) against −84% (Churches); $D_{lp}$ −95%
-  against −97%.
-- On the raw scale (table 3), four of the five memorisation and diversity interactions point
-  *against* H1 (MRI loses more), and all seeds agree:
-  - $M$ −0.170;
-  - $M_{lp}$ −0.213;
-  - seed-NN fraction +0.045;
-  - $D_{pix}$ −0.0028.
-- Only $D_{lp}$ (+5.6e-4) points H1's way.
+- **MRI:** $M$ falls 4% (IXI) and 9% (OASIS-1), and $D_{pix}$ falls 23% and 28%.
+- **Photographs:** $M$ *rises* 25% (Churches) and 31% (Bedrooms), and $D_{pix}$ does not move on
+  Churches (+4%, the seeds disagree).
 
-The mechanism columns explain why.
+**H1b is not supported.**
 
-- **IXI behaves as the spectral argument predicts.** Its within-seed variance falls by 7.9 points
-  of population variance, against a predicted 7.6 ($\Delta I_w$ = +0.079 vs $\Delta I$ = +0.076,
-  table 3). This is the "small cost on MRI" the proposal argued for.
-- **Churches loses nothing** (+0.3 points against a predicted 27.1). At W/2 the Churches model
-  already regenerates only 6.5% of the removed variance (ρ = 0.065): 50 samples from one blurred
-  seed are nearly identical. W/8 pins the low band, but there was almost no within-seed variance
-  there to lose.
-- **The photograph side therefore has a floor effect.** It is not evidence of a "large cost on
-  photographs".
-- **The proposal's negative-result branch also fails.** It read equal falls as "the reverse chain
-  regenerates the coarse layout regardless of the seed". The data say the opposite: ρ ≪ 1 on every
-  dataset at W/2 (0.34–0.45 MRI, 0.06 photographs). The chain *under*-generates; it does not
-  over-generate.
+- **The low-pass endpoints:** the relative falls are about equal, $M_{lp}$ −77% (IXI) against −84%
+  (Churches) and $D_{lp}$ −95% against −97%.
+- **The readable raw-scale interactions disagree with each other** (table 3; all seeds agree on
+  each):
+  - $M_{lp}$ −0.213 (MRI loses more, against H1);
+  - $D_{pix}$ −0.0028 (MRI loses more, against H1);
+  - $D_{lp}$ +5.6e-4 (for H1).
+- **Two more interactions point against H1:** $M$ −0.170 and seed-NN +0.045. Both are discounted
+  below.
+
+**Where the MRI diversity loss comes from.**
+
+- **The size of the loss.** IXI's within-seed variance falls by 7.9 points of population
+  variance (0.342 → 0.262).
+- **The bound.** Suppose the chain kept regenerating each mode as it did at W/2. The pinning by the
+  prior could then remove at most the A0 within-seed variance in the modes a σ = 24 prior carries.
+  For every mode $d_K^2(24) \le d_K^2(16)$, so that variance is bounded by the σ = 16 low-pass
+  diversity $D_{lp}$(A0). On IXI that bound is **0.8 points** (2.8e-4 / 0.0114 × 0.342), and also
+  0.8 on OASIS-1 (observed 12.5).
+- **Consequence.** At least 90% of the MRI loss happens in modes the prior does not pin: the W/8
+  chain generates less within-seed variance at mid and fine scales. ρ falls from 0.34 to 0.28 on
+  IXI and from 0.45 to 0.34 on OASIS-1. This is not inheritance. It fits the reading of §4: at W/8
+  the output is a closer function of the seed.
+- **The apparent agreement with the prediction is a coincidence.** $\Delta I_w$ = +0.079 against
+  $\Delta I$ = +0.076 on IXI. $\Delta I$ assumes the chain regenerates exactly what the blur
+  removes (ρ = 1), which no model does here, and OASIS-1 does not repeat the match (+0.125
+  against +0.041).
+
+**Why the photograph side cannot answer H1.**
+
+- **Churches loses nothing** (+0.3 points, against a predicted 27.1).
+- **At W/2 the Churches model already regenerates only 6.5%** of the removed variance (ρ = 0.065):
+  50 samples from one blurred seed are nearly identical.
+- **The same bound allows Churches at most 1.7 points** of loss in the pinned modes, more than
+  IXI's 0.8. So the asymmetry is not a floor in the pinned band. MRI loses diversity in the
+  unpinned bands, and the photograph models have almost none there to lose.
+- **Conclusion.** Neither group shows the mechanism H1 described: inheriting a small (MRI) or
+  large (photographs) share of the population variance.
+
+**The proposal's negative-result branch also fails.** It read equal falls as "the reverse chain
+regenerates the coarse layout regardless of the seed". The data say the opposite: ρ ≪ 1 on every
+dataset at W/2 (0.34–0.45 MRI, 0.06 photographs). The chain *under*-generates; it does not
+over-generate.
 
 Three endpoints need a caveat.
 
@@ -260,15 +318,27 @@ Three endpoints need a caveat.
 | FID | −5.2 | −9% |
 | precision | +0.006 | +1% |
 
-The effect is in the predicted direction and both seeds agree on each row. It sits in the
-0.5–4 c/img octaves (octave RMS −0.052) and not above 4 c/img (−0.005, not detectable). This is
-consistent with what the matched schedule does: it moves levels from σ_B 0.5–1 px and 32–96 px
-into 1–8 px (`data_profile.md` §5). The effect is about a tenth of the terminal-blur effect.
+The effect is in the predicted direction, and both seeds agree on each row.
 
-H2's convergence claim cannot be tested as pre-registered. $T_\tau$ fires at 5k in most runs
-(table 7) because the LSD curves are non-monotone (§8). The *exploratory* settling step (table 9)
-is 17.5k for A2 against 55k for A0 (per seed 30k and 5k against 55k and 55k): descriptive only,
-from two seeds.
+- **Where it sits.** In the 1–4 c/img octaves (seed means). At 1–2 c/img A0 is −0.30 and A2
+  −0.24; at 2–4 c/img A0 is −0.39 and A2 −0.35. Above 4 c/img the octave RMS changes by −0.005,
+  not detectable.
+- **Why that fits.** The matched schedule moves levels from σ_B 0.5–1 px and 32–96 px into
+  1–8 px (`data_profile.md` §5).
+- **Size on its own.** About a sixth of the terminal blur's effect (table 4: share A2 = 0.17 for
+  LSD, KID and FID).
+- **Size on top of W/8.** A3 against A1 shows nothing detectable. Per seed, LSD −0.034 and
+  +0.001, KID +0.0014 and −0.0010: the two seeds disagree.
+
+**H2's convergence claim cannot be tested as pre-registered.** $T_\tau$ fires at 5k in 24 of 30
+runs (table 7), for two reasons:
+
+- **18 of the 24 are non-A0 arms whose first checkpoint is already below A0's final LSD.** On IXI
+  the W/8 arms start below it. On the photographs every curve starts low and rises (§8).
+- **The other 6 are A0 runs whose own curve dips** below its final value early.
+
+The *exploratory* settling step (table 9) is 17.5k for A2 against 55k for A0 (per seed 30k and 5k
+against 55k and 55k). It is descriptive only, from two seeds.
 
 **Photographs (table 2b, table 5).** H2 predicted a loss for Churches under the IXI-matched
 spacing, because it starves the coarsest octaves that carry a quarter of the photographs'
@@ -284,18 +354,23 @@ variance. That loss does not appear:
   - recall −0.14 (A2′ worse).
 - **A2′ against A0:** LSD −0.41, KID not detectable.
 
-The metrics disagree, and the grids decide between them. A2′ samples are grainy texture with no
-structure; A2 samples show coherent towers and façades. A2 even reproduces the "shutterstock"
-watermark present in the training images (`$R/runs/lsun_church_A2_s1/grid_final.png` against
-`…/lsun_church_A2p_s1/grid_final.png`, with `$R` as in §12). The
-*exploratory* split shows where A2′'s LSD advantage comes from: its error above 4 c/img is lower
-than A2's (−0.53), while its total variance ratio is the same (0.33 against 0.33). A2′ moves
-variance into the fine bands, and LSD rewards any variance there, noise included.
+The metrics disagree. The trainer's monitoring grids are weak evidence, since they hold 8 samples
+from seed 1 only, but they side with KID. The A2′ samples are grainy texture with no structure.
+About 3 of the 8 A2 samples show a coherent tower or façade, and A2 even reproduces the
+"shutterstock" watermark present in the training images (`$R/runs/lsun_church_A2_s1/grid_final.png`
+against `…/lsun_church_A2p_s1/grid_final.png`, with `$R` as in §12).
 
-**Verdict on H2.** On MRI the matched spacing gives a small, consistent gain, about a tenth of the
-terminal blur's. On photographs the crossover is not observed: the IXI-matched spacing *improves*
-the Inception metrics of a model that is still failing. The A2′ control does not show that
-matching the photographs' own spectrum is better.
+The *exploratory* split shows where A2′'s LSD advantage comes from:
+
+- its error above 4 c/img is lower than A2's (−0.53);
+- its total variance ratio is the same as A2's (0.33 against 0.33).
+
+A2′ moves variance into the fine bands, and LSD rewards any variance there, noise included.
+
+**Verdict on H2.** On MRI the matched spacing on its own gives a small, consistent gain, about a
+sixth of the terminal blur's, and nothing detectable on top of W/8. On photographs the crossover is
+not observed: the IXI-matched spacing *improves* the Inception metrics of a model that is still
+failing. The A2′ control does not show that matching the photographs' own spectrum is better.
 
 ---
 
@@ -311,11 +386,15 @@ Table 6, signs only (2 transfer seeds):
 | $M_{lp}$ | −77% | −72% | −84% | −84% |
 | $D_{pix}$ | −23% | −28% | +4% | −16% |
 
-- **IXI → OASIS-1.** The sign agrees on all 14 computable endpoints, and the magnitudes are
-  similar.
-- **Churches → Bedrooms.** The sign agrees on 11 of 15. The four exceptions are $D_{pix}$ and the
-  three inherited-band readings. Those are near zero on both photograph sets ($|\Delta|$ ≤ 0.05
-  on the shares), where the floor effect of §5 dominates.
+The two $T_\tau$ rows are left out of the counts below: they are degenerate (§6), and on Churches
+and Bedrooms they are 0 on both sides.
+
+- **IXI → OASIS-1.** The sign agrees on all 13 remaining endpoints. The fidelity effects are about
+  a quarter smaller on OASIS-1 (LSD −52% against −68%, KID −49% against −63%). The $I_w$ change
+  is 1.6× larger.
+- **Churches → Bedrooms.** The sign agrees on 9 of 13. The four exceptions:
+  - $D_{pix}$: +4% on Churches (not detectable), −16% on Bedrooms (both seeds);
+  - the three inherited-band readings, which are near zero on both sets ($|\Delta|$ ≤ 0.05).
 - **No OASIS-1 sign flip.** The proposal's negative branch would have read one as "the schedule is
   tied to its fitting cohort".
 
@@ -331,9 +410,10 @@ whether the fitted spacing transfers.
 
 *(All of this section is exploratory, X3 and [`exploratory/fx1_dispersion`](exploratory/fx1_dispersion.png).)*
 
-- **Every model under-disperses.** The per-octave errors are negative in almost every band, every
-  arm and every dataset ([`figures/fig2`](figures/fig2_lsd_octaves.png)): the samples carry less
-  between-image variance than real images at every scale.
+- **Every model under-disperses.** 227 of the 240 final per-octave errors are negative
+  ([`figures/fig2`](figures/fig2_lsd_octaves.png)). The 13 positive ones are ≤ +0.045 and sit in
+  the 0.5–2 c/img octaves of the W/8 arms. The samples carry less between-image variance than
+  real images almost everywhere.
 - **The octave RMS splits exactly** into a level (the mean log-variance error, a broadband deficit)
   and a shape (its spread across octaves).
 - **The level dominates.** Over all 360 checkpoint records, the octave RMS tracks LSD at
@@ -346,8 +426,18 @@ whether the fitted spacing transfers.
 In practice, a lower LSD in these tables mostly means "more varied samples". That is also why
 A2′'s noisy texture wins on LSD (§6).
 
-**The non-monotone LSD curve** (fig. 1, table 7) is a dip in sample variance. Every A0 curve
-peaks at 15–20k, exactly where its variance ratio bottoms out (X3, seed means):
+**The non-monotone LSD curve** (fig. 1, table 7) goes with a dip in sample variance, but the two
+dips are not exact matches.
+
+- Every A0 seed-mean curve peaks at 15–20k, in the same window in which the variance ratio is
+  lowest (X3). Single runs peak at 10–20k.
+- On OASIS-1 the variance ratio's minimum is at 10k, not 20k, and per run 5 of the 10 A0 curves
+  peak at a different checkpoint from their variance minimum.
+- The tighter link is with the octave *level* (the log-mean error, which weights every octave
+  equally). Within runs LSD correlates with |level| at r = 0.97, and with |log10 variance ratio|
+  at only r = 0.76.
+
+Seed means at three checkpoints:
 
 | dataset, A0 | at 5k | at the LSD peak | at 60k |
 |---|---|---|---|
@@ -358,17 +448,20 @@ peaks at 15–20k, exactly where its variance ratio bottoms out (X3, seed means)
 
 - **The W/8 arms on MRI do not dip.** Their LSD falls monotonically from 5k and their variance
   ratio rises (IXI A3 0.76 → 0.89, OASIS-1 A3 0.66 → 0.82).
-- **The MRI A0 models recover their variance** by 60k. The photograph A0 models fall to about 30%
-  of the reference variance by 10–15k and stay there; their 5k samples carry about twice the
-  variance of their 60k samples (Churches 0.60 against 0.29).
-- **Consequence for $T_\tau$.** The first-crossing $T_\tau$ fires at 5k because the 5k model is
-  more varied, not because it is better.
+- **The MRI A0 models recover their variance** by 60k (IXI 0.64 at 5k, 0.67 at 60k).
+- **The photograph A0 models do not.** Churches falls from 0.60 at 5k to 0.31 at 10k and stays
+  near 0.29. Bedrooms sits at 0.23–0.31 throughout.
+- **What this means for $T_\tau$.** On IXI A0 the 5k LSD is lower than the 60k LSD although its
+  variance ratio is slightly *lower* (0.64 against 0.67): the 5k samples have a flatter error
+  across octaves, not more total variance. Most of $T_\tau$'s degeneracy is the cross-arm effect
+  of §6, not this curve shape.
 
 **Why the samples are too alike: a hypothesis, not a result.**
 
-- The IHDM sampler adds noise of standard deviation δ = 1.25σ = 0.0125 per step. The chain cannot
-  change the lowest modes "beyond what the small δ noise permits" (`learning/01-ihdm-method.md`
-  §7.3, DERIVED).
+- The IHDM sampler adds noise of standard deviation δ = 1.25σ = 0.0125 per step. For the lowest
+  modes, the chain cannot change the prior's pattern "beyond what the small δ noise permits"
+  (`learning/01-ihdm-method.md` §7.5, item 3, DERIVED). The note says this for the lowest modes
+  only.
 - A denoiser trained with MSE predicts the conditional mean. With little injected noise its
   samples drift toward the average, i.e. they lose variance.
 - δ is a sampling-only hyperparameter (`learning/01` §6.4, VERIFIED). Retuning it costs no
@@ -379,21 +472,27 @@ peaks at 15–20k, exactly where its variance ratio bottoms out (X3, seed means)
 ## 9. Threats to validity, by impact
 
 1. **The photograph models failed at this budget** (§3). This bounds every MRI-against-photograph
-   interaction: the photo side shows floor effects on diversity (ρ ≈ 0.06–0.09), oscillating
-   checkpoints, and $M$ values driven by blur.
-2. **Fidelity is measured on training-seeded samples** (§4). At W/8 fidelity and copying cannot be
-   separated.
+   interaction: the photograph side generates almost no within-seed diversity (ρ ≈ 0.06–0.09), its
+   checkpoints oscillate, and its $M$ values are driven by blur. The diagnostic M7 tests why.
+2. **Fidelity is measured on training-seeded samples** (§4). At W/8 the inherited part of the
+   fidelity gain and the copying cannot be separated.
 3. **LSD is mostly a variance measure** (§8). It rewards noise (A2′), and its non-monotone curve
    breaks the pre-registered $T_\tau$.
 4. **Seeds.** With 2–3 seeds, "CI excludes 0" means sign agreement, and no p can be below 0.1. A2,
    the arm that carries H2, has 2 seeds.
 5. **The pre-registered inherited share is biased** under a non-zero mean image (D23). We read
    $I_w$ instead; the pre-registered column stays in the tables, labelled.
-6. **Deviations** D19–D23 (§2), and the budget at about 3× the proposal's estimate.
+6. **Deviations.** D19–D23 (§2), and training compute at 2× the proposal's estimate.
 7. **FID** uses 800 references, so it is biased upward; its interval can lie above the point.
    KID is the headline.
-8. **The proposal's motivation numbers are stale** (they predate N4 and the final profile;
-   `data_profile.md`):
+8. **The noise floor depends on sample sizes.** LSD floors (`metrics_bracket.md` §1) are 0.047
+   for 400 against 400 real images grouped by subject, and 0.017 for train against ref (3,200
+   against 800). The final LSD uses 2,000 samples against 800, so IXI A3's 0.078 is 1.7–4.6× the
+   floor, depending on which one applies.
+9. **The proposal's motivation numbers are stale** (`data_profile.md`). The proposal's coarse
+   share (~1%) and inherited share (~5%) match the archived *unregistered* profile (coarse 0.8% /
+   0.4%, inherited at W/8 5.5% / 2.8%). Registration is what changed them; N4 moved IXI's coarse
+   share only from 3.99% to 4.08%. The proposal's α = 3.6–3.7 matches no column of the profile.
 
    | quantity | proposal | final profile |
    |---|---|---|
@@ -410,37 +509,46 @@ peaks at 15–20k, exactly where its variance ratio bottoms out (X3, seed means)
 
 1. "On brain MRI, a terminal blur of W/8 instead of the paper's W/2 lowers the log-spectral
    distance by 68% and KID by 63% on IXI. The signs hold on OASIS-1 (−52%, −49%). Nearly all of
-   the gain comes from the terminal blur; the IXI-matched spacing adds about a tenth of it."
+   the gain comes from the terminal blur. The IXI-matched spacing alone gives about a sixth of
+   that effect, and adds nothing detectable on top of W/8."
 2. "The gain has a price: at W/8 between 56% and 76% of samples have their own training seed (on
    MRI, a slice of the seed's subject) as nearest training image, against at most 6% at W/2."
-3. "On IXI the diversity lost at W/8 equals the amount our spectral measurement predicts (7.9
-   against 7.6 points of population variance). The comparison with photographs is not
-   interpretable: at our budget the photograph models generate almost no diversity from a given
-   prior state at either blur, and their samples are far from the data (Inception precision
-   ≤ 1.2% at W/2)."
+3. "On MRI the shorter blur also lowers the diversity of samples drawn from one seed (IXI: from 34%
+   to 26% of the population variance). At least 90% of that loss lies in frequency bands the prior
+   does not carry, so it is not the inheritance our spectral argument predicted. The comparison
+   with photographs is not interpretable: at our budget the photograph models generate almost no
+   diversity from a given prior state at either blur, and their samples are far from the data."
 4. "The predicted cost of the IXI-matched spacing on photographs did not appear. Under that
    spacing, Churches improved on the Inception metrics."
-5. "Every model under-disperses. LSD in our experiments mostly measures this variance deficit, and
-   its non-monotone course over training breaks the pre-registered convergence endpoint $T_\tau$."
+5. *(Exploratory.)* "Every model under-disperses. LSD in our experiments mostly measures this
+   broadband variance deficit. Its pre-registered convergence endpoint $T_\tau$ is degenerate,
+   mainly because the W/8 arms start below the paper arm's final LSD."
 
 ---
 
-## 11. Cheap follow-ups, if time allows
+## 11. Follow-ups
 
-Ordered by information per GPU-hour. None of them is needed for the report.
+**Running (wave W14, approved 2026-10-01; `docs/SPECIFICATIONS/M7-diagnostics/`).** The readings
+of both were written before any run existed.
 
-1. **δ sweep at sampling time** (zero training).
-   - Sample the 60k EMA checkpoints of IXI A0/A3 and Churches A0/A3 (seed 1) at
-     δ ∈ {1.25, 2, 3}·σ, 500 seeds each.
-   - Cost: ≈ 0.3 A100-h per run and δ value, about 4 A100-h in total.
-   - It tests whether the under-dispersion of §8 is a sampler setting rather than a training
-     limit.
-2. **Fidelity from unseen seeds.** KID on the existing 40 × 50 held-out-seeded samples (in the
+1. **The photograph-failure diagnostic (T7.1 → T7.3).** Churches A0, seed 1, with the 60k recipe
+   unchanged, changing one factor per run:
+   - a 128² whole-scene resize of the same 4,000 photos;
+   - 192² crops with 32,000 training images and the same reference set.
+
+   It tells whether resolution and framing, or data size, lifts the failure.
+2. **The δ sweep (T7.2).** The 60k checkpoints of IXI and Churches, A0 and A3, seed 1, sampled at
+   δ ∈ {1.25, 2, 3}·σ. Zero training, ≤ 10 A100-h. It tests whether the under-dispersion of §8 is a
+   sampler setting.
+
+**Not scheduled.**
+
+1. **Fidelity from unseen seeds.** KID on the existing 40 × 50 held-out-seeded samples (in the
    evaluation tars, CPU). It separates A3's fidelity gain from inheritance, with the caveat that
    the seed subjects belong to the `ref` split.
-3. **A photograph model that works.** Churches A0 at lr 2e-5 on more images or more iterations,
-   before any dataset × arm interaction is read again.
-4. **The per-mode re-centred inherited-band estimator** (handoff §13.3; tars, CPU). It is
+2. **A photograph model that works.** Churches A0 at lr 2e-5 on more images or more iterations,
+   before any dataset × arm interaction is read again. M7 tells which lever to pull first.
+3. **The per-mode re-centred inherited-band estimator** (handoff §13.3; tars, CPU). It is
    superseded for the report by $I_w$.
 
 ---
