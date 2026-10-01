@@ -64,7 +64,7 @@ The it/s excludes the eval, checkpoint and grid steps (≈ 120 evals, 24 grids, 
 checkpoints over 60k: roughly 20 min at 128², 30 min at 192²), which the 1.3 covers. A TIMEOUT is
 recoverable: resubmitting the same command resumes from `checkpoints-meta/checkpoint.pth`.
 
-## 4. Production submission (prepared; submitted only after `main`'s GO)
+## 4. Production submission (GO from `main` on 2026-10-01; submitted 09:39Z)
 
 Both requests passed `sbatch --test-only` on 2026-10-01 (test jobs 2550715 and 2550716; Slurm's
 worst-case start bound was 2026-10-16, while the smoke, whose bound was 16 h out, started within 5
@@ -82,10 +82,30 @@ Defaults the launcher applies: `N_ITERS=60000`, `QOS=medium_uma`,
 `~/execs/ihdm/logs/diag_train_<jobid>_<index>.{out,err}`. The full `sbatch` lines are printed by
 the launcher and in §2 of the log.
 
-| run | array job id | submitted | first-task check |
-|---|---|---|---|
-| `lsun_church_r128_A0_s1` | (after GO) | | |
-| `lsun_church_n32k_A0_s1` | (after GO) | | |
+| run | array job id (task) | submitted (UTC) | `--time` | first-task check |
+|---|---|---|---|---|
+| `lsun_church_r128_A0_s1` | **2550808** (`2550808_0`) | 2026-10-01T09:39:05Z | 06:00:00 | **pending**: PENDING (`Priority`) at 10:10Z |
+| `lsun_church_n32k_A0_s1` | **2550811** (`2550811_1`) | 2026-10-01T09:39:11Z | 13:00:00 | **pending**: PENDING (`Priority`) at 10:10Z |
+
+**First-task check, still to do** (neither task started within the 30 min watched): when a task
+runs, its `.out` must show `CELL index=<0|1> run_id=lsun_church_<r128|n32k>_A0_s1 …` and
+`N_ITERS: 60000`; its first `metrics.jsonl` rows must be finite `train` lines at steps 0, 50, …
+with `lr` ramping over the 1,000-step warm-up, and an `eval` line at step 0. Expect ≈ 3.66 it/s
+(r128) and ≈ 1.71 it/s (n32k), and `config.json` with `data.image_size` 128 / 192. At the end,
+`check_run.py <run> --data-root <data root> --lr 1e-4` must PASS (as in §2).
+
+Both launches printed `GIT_SHA b483fcf9ae4df2a0be9ed5e53781ff4eb203f9b5`, `N_ITERS 60000`, QOS
+`medium_uma`, run root `fscratch/runs/ihdm_diag`; the `--test-only` probes of the real submission
+(2550807, 2550810) gave worst-case start bounds of 2026-10-13. Logs:
+`~/execs/ihdm/logs/diag_train_2550808_0.{out,err}` and `diag_train_2550811_1.{out,err}`.
+
+Monitoring:
+
+```bash
+ssh picasso 'sacct -j 2550808,2550811 -X -o JobID,State,Elapsed,Start,NodeList'
+ssh picasso 'grep -m1 "^CELL" ~/execs/ihdm/logs/diag_train_2550808_0.out ~/execs/ihdm/logs/diag_train_2550811_1.out'
+ssh picasso 'tail -n 2 /mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm_diag/lsun_church_*_A0_s1/metrics.jsonl'
+```
 
 ## 5. Clean-up for `main`
 
