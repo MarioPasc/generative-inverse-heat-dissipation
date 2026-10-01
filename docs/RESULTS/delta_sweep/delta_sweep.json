@@ -1,0 +1,981 @@
+{
+ "anchor": {
+  "delta": 0.0125,
+  "passed": true,
+  "runs": {
+   "ixi_A0_s1": {
+    "difference": -3.500000000000725e-05,
+    "ok": true,
+    "reproduced": 0.249665,
+    "stored": 0.2497
+   },
+   "ixi_A3_s1": {
+    "difference": -3.0000000000030003e-06,
+    "ok": true,
+    "reproduced": 0.083997,
+    "stored": 0.084
+   },
+   "lsun_church_A0_s1": {
+    "difference": 0.00036999999999998145,
+    "ok": true,
+    "reproduced": 1.44537,
+    "stored": 1.445
+   },
+   "lsun_church_A3_s1": {
+    "difference": 1.1000000000094268e-05,
+    "ok": true,
+    "reproduced": 0.641611,
+    "stored": 0.6416
+   }
+  },
+  "tolerance": 0.003
+ },
+ "array_job_id": "2550585",
+ "copied_back_to": "~/execs/ihdm/diag_eval/delta_sweep/",
+ "description": "delta sweep at checkpoint 60,000 (EMA), fp16, batch 32: the frozen 500-seed LSD set (rng 2026, same noise stream across delta) feeds LSD, octaves, variance ratio and, via --final-from-lsd, KID/FID/precision/recall/density/coverage and M; held-out diversity 40 seeds x 5 feeds D_pix, D_lp and the inherited band.",
+ "git_sha": "b0306769fad5dd301d4f1b76b01fbed2ce89445e",
+ "hardware": "1x A100 per task (Picasso exa nodes), fp16 autocast, sample batch 32",
+ "production_lsd_060000_full_precision": {
+  "ixi_A0_s1": 0.249665,
+  "ixi_A3_s1": 0.083997,
+  "lsun_church_A0_s1": 1.44537,
+  "lsun_church_A3_s1": 0.641611
+ },
+ "sacct": [
+  {
+   "elapsed": "01:31:59",
+   "job": "2550585_0",
+   "node": "exa04",
+   "raw_id": "2550609",
+   "state": "COMPLETED"
+  },
+  {
+   "elapsed": "01:35:03",
+   "job": "2550585_1",
+   "node": "exa01",
+   "raw_id": "2550613",
+   "state": "COMPLETED"
+  },
+  {
+   "elapsed": "01:39:06",
+   "job": "2550585_2",
+   "node": "exa02",
+   "raw_id": "2550705",
+   "state": "COMPLETED"
+  },
+  {
+   "elapsed": "01:33:54",
+   "job": "2550585_3",
+   "node": "exa03",
+   "raw_id": "2550585",
+   "state": "COMPLETED"
+  }
+ ],
+ "tasks": [
+  {
+   "amp": "fp16",
+   "created": "2026-10-01T10:52:32.356463+00:00",
+   "deltas": [
+    0.0125,
+    0.02,
+    0.03
+   ],
+   "meta": {
+    "array_job_id": "2550585",
+    "dataset": "ixi",
+    "eval_extra_args": "",
+    "git_sha": "b0306769fad5dd301d4f1b76b01fbed2ce89445e",
+    "job_id": "2550609",
+    "node": "exa04",
+    "task_id": "0"
+   },
+   "rows": [
+    {
+     "M": 0.931691,
+     "M_lp": 1.10294,
+     "amp": "fp16",
+     "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+     "config_sha256": "779d1d23ed34add5db3aff350f0bc4e23624f361fd50ecd1808da1af5afcbebc",
+     "delta": 0.0125,
+     "delta_over_sigma": 1.25,
+     "diversity_lp": 0.000222118,
+     "diversity_pix": 0.00936046,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.27375,
+      "density": 0.2956,
+      "fid": 58.0886,
+      "fid_ci_high": 65.5114,
+      "fid_ci_low": 59.7741,
+      "kid": 0.0417856,
+      "kid_ci_high": 0.0460582,
+      "kid_ci_low": 0.0382835,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.584,
+      "recall": 0.38625
+     },
+     "inherited_measured": -0.767367,
+     "inherited_measured_low_band": -2.92567,
+     "inherited_predicted": 0.00343245,
+     "inherited_predicted_low_band": 0.0107554,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.249665,
+     "lsd_octaves": {
+      "0.5-1": -0.00129218,
+      "1-2": -0.325414,
+      "16-32": -0.189124,
+      "2-4": -0.383651,
+      "32-64": -0.155647,
+      "4-8": -0.166196,
+      "64-96": -0.212195,
+      "8-16": -0.13918
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1213.12,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 486.301,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_list_sha256_lsd": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_nn_fraction": 0.038,
+     "sigma": 0.01,
+     "sigma_max": 96.0,
+     "step": 60000,
+     "variance_ratio": 0.651431
+    },
+    {
+     "M": 2.17089,
+     "M_lp": 3.04474,
+     "amp": "fp16",
+     "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+     "config_sha256": "779d1d23ed34add5db3aff350f0bc4e23624f361fd50ecd1808da1af5afcbebc",
+     "delta": 0.02,
+     "delta_over_sigma": 2.0,
+     "diversity_lp": 0.00153287,
+     "diversity_pix": 0.0971995,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 315.814,
+      "fid_ci_high": 324.745,
+      "fid_ci_low": 317.914,
+      "kid": 0.274801,
+      "kid_ci_high": 0.282326,
+      "kid_ci_low": 0.268982,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.095
+     },
+     "inherited_measured": -2.88488,
+     "inherited_measured_low_band": -0.277704,
+     "inherited_predicted": 0.00343245,
+     "inherited_predicted_low_band": 0.0107554,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.681436,
+     "lsd_octaves": {
+      "0.5-1": 0.0527506,
+      "1-2": -0.529595,
+      "16-32": 0.18765,
+      "2-4": -0.379887,
+      "32-64": 0.957462,
+      "4-8": 0.133606,
+      "64-96": 1.51768,
+      "8-16": 0.112504
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1213.76,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 486.777,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_list_sha256_lsd": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_nn_fraction": 0.004,
+     "sigma": 0.01,
+     "sigma_max": 96.0,
+     "step": 60000,
+     "variance_ratio": 3.39449
+    },
+    {
+     "M": 2.1791,
+     "M_lp": 3.57906,
+     "amp": "fp16",
+     "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+     "config_sha256": "779d1d23ed34add5db3aff350f0bc4e23624f361fd50ecd1808da1af5afcbebc",
+     "delta": 0.03,
+     "delta_over_sigma": 3.0,
+     "diversity_lp": 0.00129278,
+     "diversity_pix": 0.0839148,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 356.771,
+      "fid_ci_high": 366.702,
+      "fid_ci_low": 358.296,
+      "kid": 0.399484,
+      "kid_ci_high": 0.411166,
+      "kid_ci_low": 0.390746,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.0
+     },
+     "inherited_measured": -2.77876,
+     "inherited_measured_low_band": -2.85181,
+     "inherited_predicted": 0.00343245,
+     "inherited_predicted_low_band": 0.0107554,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.598733,
+     "lsd_octaves": {
+      "0.5-1": 0.118598,
+      "1-2": -0.512492,
+      "16-32": 0.321228,
+      "2-4": 0.315046,
+      "32-64": 0.648642,
+      "4-8": 0.791375,
+      "64-96": 1.01927,
+      "8-16": 0.38156
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1212.98,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.976,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_list_sha256_lsd": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_nn_fraction": 0.008,
+     "sigma": 0.01,
+     "sigma_max": 96.0,
+     "step": 60000,
+     "variance_ratio": 3.0282
+    }
+   ],
+   "run_id": "ixi_A0_s1",
+   "step": 60000
+  },
+  {
+   "amp": "fp16",
+   "created": "2026-10-01T10:55:58.799472+00:00",
+   "deltas": [
+    0.0125,
+    0.02,
+    0.03
+   ],
+   "meta": {
+    "array_job_id": "2550585",
+    "dataset": "ixi",
+    "eval_extra_args": "",
+    "git_sha": "b0306769fad5dd301d4f1b76b01fbed2ce89445e",
+    "job_id": "2550613",
+    "node": "exa01",
+    "task_id": "1"
+   },
+   "rows": [
+    {
+     "M": 0.871239,
+     "M_lp": 0.234749,
+     "amp": "fp16",
+     "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
+     "config_sha256": "9b4d8d2eb170994f77d4cc7d8206c5697130e59924b0d9365da01f9894fd2d15",
+     "delta": 0.0125,
+     "delta_over_sigma": 1.25,
+     "diversity_lp": 1.25614e-05,
+     "diversity_pix": 0.00725351,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.5175,
+      "density": 0.476,
+      "fid": 34.0213,
+      "fid_ci_high": 41.0902,
+      "fid_ci_low": 37.6061,
+      "kid": 0.0175069,
+      "kid_ci_high": 0.0199342,
+      "kid_ci_low": 0.0154586,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.698,
+      "recall": 0.57125
+     },
+     "inherited_measured": 0.0763109,
+     "inherited_measured_low_band": -0.0494523,
+     "inherited_predicted": 0.0795447,
+     "inherited_predicted_low_band": 0.24925,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.083997,
+     "lsd_octaves": {
+      "0.5-1": 0.0122466,
+      "1-2": 0.0385252,
+      "16-32": -0.0584118,
+      "2-4": -0.0360136,
+      "32-64": -0.0241842,
+      "4-8": -0.136207,
+      "64-96": -0.107634,
+      "8-16": -0.0671986
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1211.73,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.82,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_list_sha256_lsd": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_nn_fraction": 0.686,
+     "sigma": 0.01,
+     "sigma_max": 24.0,
+     "step": 60000,
+     "variance_ratio": 0.882426
+    },
+    {
+     "M": 1.34607,
+     "M_lp": 0.672908,
+     "amp": "fp16",
+     "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
+     "config_sha256": "9b4d8d2eb170994f77d4cc7d8206c5697130e59924b0d9365da01f9894fd2d15",
+     "delta": 0.02,
+     "delta_over_sigma": 2.0,
+     "diversity_lp": 2.93638e-05,
+     "diversity_pix": 0.0295516,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 312.262,
+      "fid_ci_high": 322.173,
+      "fid_ci_low": 311.664,
+      "kid": 0.417075,
+      "kid_ci_high": 0.428501,
+      "kid_ci_low": 0.405949,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.2375
+     },
+     "inherited_measured": -0.356729,
+     "inherited_measured_low_band": 0.297334,
+     "inherited_predicted": 0.0795447,
+     "inherited_predicted_low_band": 0.24925,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.395485,
+     "lsd_octaves": {
+      "0.5-1": -0.011797,
+      "1-2": -0.00928753,
+      "16-32": 0.31154,
+      "2-4": -0.214864,
+      "32-64": 0.684038,
+      "4-8": -0.333925,
+      "64-96": 0.665355,
+      "8-16": -0.107307
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1211.77,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.733,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_list_sha256_lsd": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_nn_fraction": 0.192,
+     "sigma": 0.01,
+     "sigma_max": 24.0,
+     "step": 60000,
+     "variance_ratio": 1.32895
+    },
+    {
+     "M": 2.38216,
+     "M_lp": 1.61165,
+     "amp": "fp16",
+     "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
+     "config_sha256": "9b4d8d2eb170994f77d4cc7d8206c5697130e59924b0d9365da01f9894fd2d15",
+     "delta": 0.03,
+     "delta_over_sigma": 3.0,
+     "diversity_lp": 0.00140372,
+     "diversity_pix": 0.113142,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 349.964,
+      "fid_ci_high": 356.186,
+      "fid_ci_low": 351.5,
+      "kid": 0.352957,
+      "kid_ci_high": 0.360947,
+      "kid_ci_low": 0.346829,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.0
+     },
+     "inherited_measured": -3.27402,
+     "inherited_measured_low_band": 0.424271,
+     "inherited_predicted": 0.0795447,
+     "inherited_predicted_low_band": 0.24925,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.81474,
+     "lsd_octaves": {
+      "0.5-1": -0.0565966,
+      "1-2": 0.0149194,
+      "16-32": 0.331742,
+      "2-4": -0.601377,
+      "32-64": 1.37758,
+      "4-8": -0.618318,
+      "64-96": 1.66565,
+      "8-16": -0.19843
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1211.53,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.24,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_list_sha256_lsd": "e51c999eb99c3308927fb7acf4557743cdb8da0b336d3bba16c296690b5934d6",
+     "seed_nn_fraction": 0.026,
+     "sigma": 0.01,
+     "sigma_max": 24.0,
+     "step": 60000,
+     "variance_ratio": 3.81294
+    }
+   ],
+   "run_id": "ixi_A3_s1",
+   "step": 60000
+  },
+  {
+   "amp": "fp16",
+   "created": "2026-10-01T11:04:03.461588+00:00",
+   "deltas": [
+    0.0125,
+    0.02,
+    0.03
+   ],
+   "meta": {
+    "array_job_id": "2550585",
+    "dataset": "lsun_church",
+    "eval_extra_args": "",
+    "git_sha": "b0306769fad5dd301d4f1b76b01fbed2ce89445e",
+    "job_id": "2550705",
+    "node": "exa02",
+    "task_id": "2"
+   },
+   "rows": [
+    {
+     "M": 0.536524,
+     "M_lp": 0.673157,
+     "amp": "fp16",
+     "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
+     "config_sha256": "e68a64f7af62089e4c28d2a127d3c94c45cbf6b9d3333e833951ed02c684ec86",
+     "delta": 0.0125,
+     "delta_over_sigma": 1.25,
+     "diversity_lp": 0.000713846,
+     "diversity_pix": 0.00228777,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0075,
+      "density": 0.0028,
+      "fid": 233.34,
+      "fid_ci_high": 245.125,
+      "fid_ci_low": 236.999,
+      "kid": 0.243809,
+      "kid_ci_high": 0.251078,
+      "kid_ci_low": 0.237286,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.014,
+      "recall": 0.015
+     },
+     "inherited_measured": 0.769316,
+     "inherited_measured_low_band": 0.67062,
+     "inherited_predicted": 0.01791,
+     "inherited_predicted_low_band": 0.0269859,
+     "low_band_sigma_px": 8.0,
+     "lsd": 1.44537,
+     "lsd_octaves": {
+      "0.5-1": -0.0509931,
+      "1-2": -0.691572,
+      "16-32": -1.59401,
+      "2-4": -0.942595,
+      "32-64": -1.91257,
+      "4-8": -1.15117,
+      "64-96": -2.36804,
+      "8-16": -1.31646
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1211.44,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.856,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_list_sha256_lsd": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_nn_fraction": 0.016,
+     "sigma": 0.01,
+     "sigma_max": 96.0,
+     "step": 60000,
+     "variance_ratio": 0.285077
+    },
+    {
+     "M": 1.9355,
+     "M_lp": 0.503244,
+     "amp": "fp16",
+     "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
+     "config_sha256": "e68a64f7af62089e4c28d2a127d3c94c45cbf6b9d3333e833951ed02c684ec86",
+     "delta": 0.02,
+     "delta_over_sigma": 2.0,
+     "diversity_lp": 0.000283006,
+     "diversity_pix": 0.126284,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 363.723,
+      "fid_ci_high": 370.036,
+      "fid_ci_low": 364.581,
+      "kid": 0.417726,
+      "kid_ci_high": 0.424541,
+      "kid_ci_low": 0.412468,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.0
+     },
+     "inherited_measured": -2.18475,
+     "inherited_measured_low_band": 0.880211,
+     "inherited_predicted": 0.01791,
+     "inherited_predicted_low_band": 0.0269859,
+     "low_band_sigma_px": 8.0,
+     "lsd": 1.08135,
+     "lsd_octaves": {
+      "0.5-1": -0.355456,
+      "1-2": -1.41094,
+      "16-32": 0.939888,
+      "2-4": -1.23412,
+      "32-64": 1.391,
+      "4-8": -0.77381,
+      "64-96": 1.38551,
+      "8-16": 0.0342052
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1211.02,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.629,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_list_sha256_lsd": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_nn_fraction": 0.002,
+     "sigma": 0.01,
+     "sigma_max": 96.0,
+     "step": 60000,
+     "variance_ratio": 3.3576
+    },
+    {
+     "M": 2.29126,
+     "M_lp": 0.428169,
+     "amp": "fp16",
+     "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
+     "config_sha256": "e68a64f7af62089e4c28d2a127d3c94c45cbf6b9d3333e833951ed02c684ec86",
+     "delta": 0.03,
+     "delta_over_sigma": 3.0,
+     "diversity_lp": 0.000123019,
+     "diversity_pix": 0.159057,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 367.633,
+      "fid_ci_high": 372.663,
+      "fid_ci_low": 368.04,
+      "kid": 0.462027,
+      "kid_ci_high": 0.468854,
+      "kid_ci_low": 0.457128,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.045
+     },
+     "inherited_measured": -2.94872,
+     "inherited_measured_low_band": 0.971337,
+     "inherited_predicted": 0.01791,
+     "inherited_predicted_low_band": 0.0269859,
+     "low_band_sigma_px": 8.0,
+     "lsd": 1.27401,
+     "lsd_octaves": {
+      "0.5-1": -0.829946,
+      "1-2": -1.94367,
+      "16-32": 1.29254,
+      "2-4": -1.44433,
+      "32-64": 1.42744,
+      "4-8": -0.889498,
+      "64-96": 1.23255,
+      "8-16": 0.102584
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1211.47,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 485.562,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_list_sha256_lsd": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_nn_fraction": 0.002,
+     "sigma": 0.01,
+     "sigma_max": 96.0,
+     "step": 60000,
+     "variance_ratio": 3.96959
+    }
+   ],
+   "run_id": "lsun_church_A0_s1",
+   "step": 60000
+  },
+  {
+   "amp": "fp16",
+   "created": "2026-10-01T12:07:28.562507+00:00",
+   "deltas": [
+    0.0125,
+    0.02,
+    0.03
+   ],
+   "meta": {
+    "array_job_id": "2550585",
+    "dataset": "lsun_church",
+    "eval_extra_args": "",
+    "git_sha": "b0306769fad5dd301d4f1b76b01fbed2ce89445e",
+    "job_id": "2550585",
+    "node": "exa03",
+    "task_id": "3"
+   },
+   "rows": [
+    {
+     "M": 0.671565,
+     "M_lp": 0.11233,
+     "amp": "fp16",
+     "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
+     "config_sha256": "3e3d87ce563edbb1943ccb6bbbfde2dff8f6d682e83ef3c2f094b288ae212957",
+     "delta": 0.0125,
+     "delta_over_sigma": 1.25,
+     "diversity_lp": 2.34529e-05,
+     "diversity_pix": 0.00303628,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.02875,
+      "density": 0.0172,
+      "fid": 212.683,
+      "fid_ci_high": 228.055,
+      "fid_ci_low": 215.149,
+      "kid": 0.219005,
+      "kid_ci_high": 0.228479,
+      "kid_ci_low": 0.209205,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.052,
+      "recall": 0.04
+     },
+     "inherited_measured": 0.793272,
+     "inherited_measured_low_band": 0.778542,
+     "inherited_predicted": 0.288618,
+     "inherited_predicted_low_band": 0.434876,
+     "low_band_sigma_px": 8.0,
+     "lsd": 0.641611,
+     "lsd_octaves": {
+      "0.5-1": 0.0155059,
+      "1-2": -0.0109186,
+      "16-32": -0.927276,
+      "2-4": -0.119122,
+      "32-64": -0.807703,
+      "4-8": -0.514223,
+      "64-96": -0.773456,
+      "8-16": -0.763592
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1213.73,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 486.265,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_list_sha256_lsd": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_nn_fraction": 0.618,
+     "sigma": 0.01,
+     "sigma_max": 24.0,
+     "step": 60000,
+     "variance_ratio": 0.647773
+    },
+    {
+     "M": 2.4166,
+     "M_lp": 0.421258,
+     "amp": "fp16",
+     "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
+     "config_sha256": "3e3d87ce563edbb1943ccb6bbbfde2dff8f6d682e83ef3c2f094b288ae212957",
+     "delta": 0.02,
+     "delta_over_sigma": 2.0,
+     "diversity_lp": 3.8647e-05,
+     "diversity_pix": 0.183686,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 363.982,
+      "fid_ci_high": 367.8,
+      "fid_ci_low": 364.171,
+      "kid": 0.474372,
+      "kid_ci_high": 0.478028,
+      "kid_ci_low": 0.470906,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.0
+     },
+     "inherited_measured": -3.80621,
+     "inherited_measured_low_band": 0.619673,
+     "inherited_predicted": 0.288618,
+     "inherited_predicted_low_band": 0.434876,
+     "low_band_sigma_px": 8.0,
+     "lsd": 1.1859,
+     "lsd_octaves": {
+      "0.5-1": -1.27197,
+      "1-2": -1.37961,
+      "16-32": 0.0362168,
+      "2-4": -1.58123,
+      "32-64": 0.871488,
+      "4-8": -1.18565,
+      "64-96": 2.01355,
+      "8-16": -0.601608
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1215.63,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 487.549,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_list_sha256_lsd": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_nn_fraction": 0.002,
+     "sigma": 0.01,
+     "sigma_max": 24.0,
+     "step": 60000,
+     "variance_ratio": 4.56394
+    },
+    {
+     "M": 2.47261,
+     "M_lp": 0.39634,
+     "amp": "fp16",
+     "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
+     "config_sha256": "3e3d87ce563edbb1943ccb6bbbfde2dff8f6d682e83ef3c2f094b288ae212957",
+     "delta": 0.03,
+     "delta_over_sigma": 3.0,
+     "diversity_lp": 1.28553e-05,
+     "diversity_pix": 0.194731,
+     "final_set": "lsd",
+     "inception": {
+      "coverage": 0.0,
+      "density": 0.0,
+      "fid": 326.93,
+      "fid_ci_high": 329.917,
+      "fid_ci_low": 327.545,
+      "kid": 0.412235,
+      "kid_ci_high": 0.414907,
+      "kid_ci_low": 0.409756,
+      "n_reference": 800,
+      "n_samples": 500,
+      "precision": 0.0,
+      "recall": 0.0
+     },
+     "inherited_measured": -4.18277,
+     "inherited_measured_low_band": 0.453374,
+     "inherited_predicted": 0.288618,
+     "inherited_predicted_low_band": 0.434876,
+     "low_band_sigma_px": 8.0,
+     "lsd": 1.65366,
+     "lsd_octaves": {
+      "0.5-1": -2.56262,
+      "1-2": -2.6131,
+      "16-32": -0.142378,
+      "2-4": -2.19834,
+      "32-64": 0.736151,
+      "4-8": -1.53106,
+      "64-96": 2.07745,
+      "8-16": -0.843057
+     },
+     "n_diversity_seeds": 40,
+     "n_lsd_samples": 500,
+     "n_per_seed": 5,
+     "sample_batch": 32,
+     "sample_rng_seed": 2026,
+     "sampling_log": [
+      {
+       "elapsed_s": 1215.67,
+       "reused": false,
+       "set": "lsd",
+       "step": 60000
+      },
+      {
+       "elapsed_s": 487.356,
+       "reused": false,
+       "set": "heldout",
+       "step": 60000
+      }
+     ],
+     "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_list_sha256_lsd": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+     "seed_nn_fraction": 0.002,
+     "sigma": 0.01,
+     "sigma_max": 24.0,
+     "step": 60000,
+     "variance_ratio": 4.80911
+    }
+   ],
+   "run_id": "lsun_church_A3_s1",
+   "step": 60000
+  }
+ ],
+ "ticket": "T7.2"
+}
