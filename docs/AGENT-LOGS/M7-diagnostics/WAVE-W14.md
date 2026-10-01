@@ -192,3 +192,10 @@ Main pastes them into each log's §1 at merge time.
     - Accepted assumption: "KID" means the KID point estimate.
     - Submission order: the baseline now; r128 and n32k each when its training run is DONE.
     - Mario to delete `~/execs/ihdm/diag_eval/photo_smoke`.
+16. **T7.3 progress** (agent head `6c7bc16`).
+    - The baseline evaluation (2555780_0) completed in 1:40:18. Its LSD anchors at 45k–60k equal
+      production to 6 digits.
+    - Baseline late window: precision 0.0090, KID 0.2331, variance ratio ≈ 0.285. The lift
+      thresholds are therefore precision ≥ 0.10 and KID ≤ 0.1166.
+    - The r128 evaluation (2559459) was submitted at 17:23, as soon as its DONE appeared.
+    - n32k is due ≈ 23:00. Main scheduled a one-shot reminder at 22:47 to resume the agent.
