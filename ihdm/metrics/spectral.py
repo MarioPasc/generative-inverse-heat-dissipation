@@ -7,7 +7,27 @@ Everything here is a pure function over numpy arrays layered on the primitives o
 
 Units, as everywhere in the project: a "mode" is an orthonormal 2-D DCT-II coefficient ``(i, j)``
 with radial index ``n = sqrt(i^2 + j^2)`` carrying ``n / 2`` cycles per image; the DC mode is
-excluded from every quantity; the binned quantities stop at 96 cycles per image.
+excluded from every quantity; the binned quantities stop at 96 cycles per image at ``W = 192``.
+
+**The W rule** (T7.2; proposed amendment of ``05-metrics.md`` §1, §3-§5). The frozen constants
+were defined at ``W = 192``. For an image side ``W >= 128`` (:data:`GRID_SCALING_MIN_WIDTH`) every
+grid scales with ``W`` (:func:`spectral_grid`):
+
+* the fine grid is ``n_bins`` log-spaced bins from 0.5 to ``W / 2`` cycles per image, of which the
+  LSD keeps the populated ones;
+* the octave edges are the powers of two from 0.5 that lie below ``W / 2``, then ``W / 2`` itself
+  (``0.5, 1, ..., 64, 96`` at 192; ``0.5, 1, ..., 32, 64`` at 128, seven bins, the last labelled
+  ``"32-64"``);
+* the low band of the inherited share is ``8 W / 192`` px and the low-pass length-scale of
+  ``D_lp`` and ``M_lp`` is ``16 W / 192`` px, i.e. both are fixed in cycles per image (the low band
+  is ``n <= 10.80``, 5.40 cycles per image, at every ``W``).
+
+At ``W = 192`` the rule reproduces the frozen constants bit for bit. **For ``W < 128`` the frozen
+``W = 192`` constants are kept unchanged** (``legacy=True``). This branch exists only so that the
+96² synthetic fixture of ``tests/metrics/test_run_eval.py``, whose outputs ``tests/analysis``
+depends on (e.g. it reads ``lsd_octaves['64-96']``), stays byte-identical; real datasets are only
+ever 128² or 192². The functions that take no image (``log_bin_edges``, ``log_bin_centres`` without
+``n_pix``) keep the frozen 0.5-96 grid, which ``ihdm.stats.bootstrap`` and ``ihdm.analysis`` use.
 
 Two places where the implementation departs from the ticket's restatement of the contract, both
 derived in ``docs/AGENT-LOGS/M4-metrics/T4.1-spectral-metrics.md`` §2:
@@ -24,7 +44,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -42,16 +62,21 @@ from ihdm.spectral.power import (
 )
 
 __all__ = [
+    "GRID_SCALING_MIN_WIDTH",
     "InheritedResult",
     "LOW_BAND_SIGMA_PX",
     "LsdResult",
     "MIN_CYCLES_PER_IMAGE",
     "N_LOG_BINS",
+    "REFERENCE_SIGMA_LP_PX",
+    "REFERENCE_WIDTH",
+    "SpectralGrid",
     "inherited_band",
     "log_bin_centres",
     "log_bin_edges",
     "lsd",
     "radial_log_profile",
+    "spectral_grid",
     "t_tau",
 ]
 
@@ -69,6 +94,16 @@ N_LOG_BINS: int = 48
 #: this, i.e. when a blur of this sigma leaves it standing. At ``W = 192`` this is ``n <= 10.80``,
 #: i.e. 5.40 cycles per image. Only used when a caller passes ``low_band_sigma_px``.
 LOW_BAND_SIGMA_PX: float = 8.0
+
+#: Low-pass length-scale of ``D_lp`` and ``M_lp`` at the reference side (``05-metrics.md`` §3, §4).
+REFERENCE_SIGMA_LP_PX: float = 16.0
+
+#: The image side at which the frozen constants above were defined.
+REFERENCE_WIDTH: int = 192
+
+#: Smallest image side whose grids scale with ``W`` (the W rule of the module docstring); below it
+#: the frozen ``W = 192`` constants are kept, for the 96² test fixture only.
+GRID_SCALING_MIN_WIDTH: int = 128
 
 #: Images transformed at a time by the chunked helpers.
 CHUNK: int = 256
@@ -193,17 +228,136 @@ def _stack_power(images: Any, name: str, min_images: int = 2) -> tuple[np.ndarra
 # --------------------------------------------------------------------------------------------
 
 
-def log_bin_edges(n_bins: int = N_LOG_BINS) -> np.ndarray:
+def _log_edges(max_cycles: float, n_bins: int) -> np.ndarray:
+    """``n_bins`` log-spaced bins between 0.5 and ``max_cycles`` cycles per image."""
+    if n_bins < 2:
+        raise MetricError(f"n_bins must be at least 2, got {n_bins}")
+    return np.logspace(math.log10(MIN_CYCLES_PER_IMAGE), math.log10(max_cycles), n_bins + 1)
+
+
+@dataclass(frozen=True, eq=False)
+class SpectralGrid:
+    """Every binning and length-scale of the evaluation at one image side (the W rule).
+
+    Parameters
+    ----------
+    n_pix : int
+        Image side ``W`` in pixels.
+    n_bins : int
+        Number of bins of the fine log grid.
+    max_cycles : float
+        High edge of the fine grid and of the octaves, in cycles per image.
+    log_edges : numpy.ndarray
+        ``n_bins + 1`` edges of the fine grid, in cycles per image.
+    octave_edges : tuple[float, ...]
+        Edges of the octave bins, in cycles per image.
+    octave_labels : tuple[str, ...]
+        ``"lo-hi"`` label of every octave bin.
+    low_band_sigma_px : float
+        Low band of the inherited share, in pixels.
+    sigma_lp_px : float
+        Low-pass length-scale of ``D_lp`` and ``M_lp``, in pixels.
+    legacy : bool
+        Whether the frozen ``W = 192`` constants were kept because ``W < 128``.
+    """
+
+    n_pix: int
+    n_bins: int
+    max_cycles: float
+    log_edges: np.ndarray = field(repr=False)
+    octave_edges: tuple[float, ...]
+    octave_labels: tuple[str, ...]
+    low_band_sigma_px: float
+    sigma_lp_px: float
+    legacy: bool
+
+    @property
+    def log_centres(self) -> np.ndarray:
+        """Geometric centres of the fine bins, in cycles per image."""
+        return np.sqrt(self.log_edges[:-1] * self.log_edges[1:])
+
+
+def _octave_edges(max_cycles: float) -> tuple[float, ...]:
+    """The powers of two from 0.5 that lie below ``max_cycles``, then ``max_cycles``."""
+    edges: list[float] = []
+    edge = MIN_CYCLES_PER_IMAGE
+    while edge < max_cycles:
+        edges.append(edge)
+        edge *= 2.0
+    edges.append(float(max_cycles))
+    return tuple(edges)
+
+
+def spectral_grid(n_pix: int, n_bins: int = N_LOG_BINS) -> SpectralGrid:
+    """Return the evaluation grid of an image side (the W rule of the module docstring).
+
+    Parameters
+    ----------
+    n_pix : int
+        Image side ``W`` in pixels.
+    n_bins : int
+        Number of bins of the fine log grid.
+
+    Returns
+    -------
+    SpectralGrid
+        For ``W >= 128`` the grids scaled with ``W``; for ``W < 128`` the frozen ``W = 192``
+        constants. At ``W = 192`` both give the same values bit for bit.
+
+    Raises
+    ------
+    MetricError
+        If ``n_pix`` is smaller than two or ``n_bins`` smaller than two.
+    """
+    n_pix = int(n_pix)
+    if n_pix < 2:
+        raise MetricError(f"n_pix must be at least 2, got {n_pix}")
+    if n_pix < GRID_SCALING_MIN_WIDTH:
+        # Legacy branch, kept ONLY for the 96² synthetic fixture of tests/metrics/test_run_eval.py
+        # (tests/analysis reads its lsd_octaves['64-96'] and its low band at 8 px): scaling at
+        # W = 96 would change every number of that fixture. Real datasets are 128² or 192².
+        return SpectralGrid(
+            n_pix=n_pix,
+            n_bins=int(n_bins),
+            max_cycles=float(MAX_CYCLES_PER_IMAGE),
+            log_edges=_log_edges(MAX_CYCLES_PER_IMAGE, n_bins),
+            octave_edges=tuple(float(edge) for edge in OCTAVE_EDGES),
+            octave_labels=tuple(OCTAVE_LABELS),
+            low_band_sigma_px=LOW_BAND_SIGMA_PX,
+            sigma_lp_px=REFERENCE_SIGMA_LP_PX,
+            legacy=True,
+        )
+    max_cycles = n_pix / 2.0
+    octaves = _octave_edges(max_cycles)
+    return SpectralGrid(
+        n_pix=n_pix,
+        n_bins=int(n_bins),
+        max_cycles=max_cycles,
+        log_edges=_log_edges(max_cycles, n_bins),
+        octave_edges=octaves,
+        octave_labels=tuple(
+            f"{lo:g}-{hi:g}" for lo, hi in zip(octaves[:-1], octaves[1:], strict=True)
+        ),
+        low_band_sigma_px=LOW_BAND_SIGMA_PX * n_pix / REFERENCE_WIDTH,
+        sigma_lp_px=REFERENCE_SIGMA_LP_PX * n_pix / REFERENCE_WIDTH,
+        legacy=False,
+    )
+
+
+def log_bin_edges(n_bins: int = N_LOG_BINS, *, n_pix: int | None = None) -> np.ndarray:
     """Edges of the fine radial grid, in cycles per image.
 
-    ``n_bins`` bins log-spaced between 0.5 and 96 cycles per image (``05-metrics.md`` §1). The
-    grid does not depend on the image size, so profiles of different runs are directly
-    comparable; bins that hold no mode of the grid in use are dropped by the consumers.
+    ``n_bins`` bins log-spaced between 0.5 and 96 cycles per image (``05-metrics.md`` §1) when
+    ``n_pix`` is ``None``: the frozen grid, which does not depend on the image size, so profiles
+    of different runs are directly comparable; bins that hold no mode of the grid in use are
+    dropped by the consumers. With ``n_pix`` the grid of :func:`spectral_grid` (the W rule).
 
     Parameters
     ----------
     n_bins : int
         Number of bins.
+    n_pix : int or None
+        Image side; ``None`` keeps the frozen 0.5-96 grid.
 
     Returns
     -------
@@ -215,27 +369,27 @@ def log_bin_edges(n_bins: int = N_LOG_BINS) -> np.ndarray:
     MetricError
         If ``n_bins`` is smaller than two.
     """
-    if n_bins < 2:
-        raise MetricError(f"n_bins must be at least 2, got {n_bins}")
-    return np.logspace(
-        math.log10(MIN_CYCLES_PER_IMAGE), math.log10(MAX_CYCLES_PER_IMAGE), n_bins + 1
-    )
+    if n_pix is not None:
+        return spectral_grid(n_pix, n_bins).log_edges
+    return _log_edges(MAX_CYCLES_PER_IMAGE, n_bins)
 
 
-def log_bin_centres(n_bins: int = N_LOG_BINS) -> np.ndarray:
+def log_bin_centres(n_bins: int = N_LOG_BINS, *, n_pix: int | None = None) -> np.ndarray:
     """Geometric centres of the bins of :func:`log_bin_edges`, in cycles per image.
 
     Parameters
     ----------
     n_bins : int
         Number of bins.
+    n_pix : int or None
+        Image side; ``None`` keeps the frozen 0.5-96 grid.
 
     Returns
     -------
     numpy.ndarray
         ``n_bins`` centres.
     """
-    edges = log_bin_edges(n_bins)
+    edges = log_bin_edges(n_bins, n_pix=n_pix)
     return np.sqrt(edges[:-1] * edges[1:])
 
 
@@ -269,8 +423,8 @@ def radial_log_profile(
     The stack is converted to float (integers divided by 255), the per-image DC is removed, the
     per-mode variance ``P`` of ``05-metrics.md`` §1 is taken over the stack (which mean-centres
     across images and excludes the DC mode), and ``P`` is averaged over the modes falling in each
-    of the ``n_bins`` log-spaced bins between 0.5 and 96 cycles per image. Modes above 96 cycles
-    per image are outside the grid and do not enter.
+    of the ``n_bins`` log-spaced bins between 0.5 and 96 cycles per image (``W / 2`` for
+    ``W >= 128``, :func:`spectral_grid`). Modes above the grid do not enter.
 
     Parameters
     ----------
@@ -291,7 +445,8 @@ def radial_log_profile(
         If the stack is malformed, holds fewer than two images, or holds a non-finite value.
     """
     power, _ = _stack_power(images, "images")
-    return log_bin_centres(n_bins), _log10_profile(power, log_bin_edges(n_bins))
+    grid = spectral_grid(power.shape[0], n_bins)
+    return grid.log_centres, _log10_profile(power, grid.log_edges)
 
 
 # --------------------------------------------------------------------------------------------
@@ -308,9 +463,10 @@ class LsdResult:
     lsd : float
         RMS over the populated log bins of ``log10 P_samples - log10 P_reference``.
     octaves : dict[str, float]
-        Signed ``log10`` difference of the mean per-mode variance on the eight octave bins, keyed
-        by the labels of ``ihdm.spectral.power.octave_bins``; positive means the samples carry too
-        much variance in that band.
+        Signed ``log10`` difference of the mean per-mode variance on the octave bins of the grid
+        (:func:`spectral_grid`: the eight bins of ``ihdm.spectral.power.octave_bins`` at
+        ``W = 192``, seven ending at ``"32-64"`` at ``W = 128``); positive means the samples carry
+        too much variance in that band.
     variance_ratio : float
         ``sum P_samples / sum P_reference`` over every non-DC mode.
     n_samples : int
@@ -326,18 +482,22 @@ class LsdResult:
     n_reference: int
 
 
-def _octave_difference(power_a: np.ndarray, power_b: np.ndarray) -> dict[str, float]:
+def _octave_difference(
+    power_a: np.ndarray, power_b: np.ndarray, grid: SpectralGrid | None = None
+) -> dict[str, float]:
     """Signed log10 difference of the octave-binned mean per-mode variance.
 
     Parameters
     ----------
     power_a, power_b : numpy.ndarray
         Per-mode variances of the same shape.
+    grid : SpectralGrid or None
+        The grid whose octaves are used; ``None`` takes :func:`spectral_grid` of the shape.
 
     Returns
     -------
     dict[str, float]
-        One entry per octave label of ``ihdm.spectral.power``.
+        One entry per octave label of the grid.
 
     Raises
     ------
@@ -345,11 +505,13 @@ def _octave_difference(power_a: np.ndarray, power_b: np.ndarray) -> dict[str, fl
         If an octave bin is empty or holds no variance in either spectrum, so that its logarithm
         is undefined.
     """
-    edges = np.asarray(OCTAVE_EDGES, dtype=np.float64)
+    if grid is None:
+        grid = spectral_grid(power_a.shape[0])
+    edges = np.asarray(grid.octave_edges, dtype=np.float64)
     profile_a = radial_profile(power_a, edges)
     profile_b = radial_profile(power_b, edges)
     out: dict[str, float] = {}
-    for label, value_a, value_b in zip(OCTAVE_LABELS, profile_a, profile_b, strict=True):
+    for label, value_a, value_b in zip(grid.octave_labels, profile_a, profile_b, strict=True):
         if not (np.isfinite(value_a) and np.isfinite(value_b) and value_a > 0 and value_b > 0):
             raise MetricError(
                 f"octave bin {label} cycles/image holds no usable variance "
@@ -366,7 +528,7 @@ def lsd(samples: np.ndarray, reference: np.ndarray, n_bins: int = N_LOG_BINS) ->
     base-10 logarithms of the mean per-mode variance. Bins that hold no mode of the ``W`` grid, or
     whose variance is zero in either stack, are dropped from the RMS; at ``W = 192`` and
     ``n_bins = 48`` that leaves 43 bins, the same 43 for every stack, so the metric stays a fixed
-    functional of the two spectra. The reference stack must be the ``ref`` split of the dataset,
+    functional of the two spectra. The grid follows the image side (:func:`spectral_grid`). The reference stack must be the ``ref`` split of the dataset,
     never the training split.
 
     Parameters
@@ -397,9 +559,9 @@ def lsd(samples: np.ndarray, reference: np.ndarray, n_bins: int = N_LOG_BINS) ->
             f"image size mismatch: samples {power_s.shape}, reference {power_r.shape}"
         )
 
-    edges = log_bin_edges(n_bins)
-    log_s = _log10_profile(power_s, edges)
-    log_r = _log10_profile(power_r, edges)
+    grid = spectral_grid(power_s.shape[0], n_bins)
+    log_s = _log10_profile(power_s, grid.log_edges)
+    log_r = _log10_profile(power_r, grid.log_edges)
     usable = np.isfinite(log_s) & np.isfinite(log_r)
     if int(usable.sum()) < 2:
         raise MetricError(
@@ -415,7 +577,7 @@ def lsd(samples: np.ndarray, reference: np.ndarray, n_bins: int = N_LOG_BINS) ->
 
     return LsdResult(
         lsd=value,
-        octaves=_octave_difference(power_s, power_r),
+        octaves=_octave_difference(power_s, power_r, grid),
         variance_ratio=float(power_s.sum()) / total_r,
         n_samples=n_samples,
         n_reference=n_reference,
@@ -608,7 +770,8 @@ def inherited_band(
     sigma_max : float
         Terminal blur ``sigma_{B,max}`` of the run, in pixels.
     n_bins : int
-        Number of log-spaced bins of the reported profiles.
+        Number of log-spaced bins of the reported profiles, on the grid of
+        :func:`spectral_grid` at the image side.
     low_band_sigma_px : float or None
         When given, both shares are restricted to the modes whose characteristic blur scale is at
         least this many pixels (see :func:`_low_band_mask`). The default ``None`` sums over every
@@ -664,7 +827,8 @@ def inherited_band(
         residual, power_ref, out=np.zeros_like(residual), where=power_ref > 0.0
     )
 
-    edges = log_bin_edges(n_bins)
+    grid = spectral_grid(n_pix, n_bins)
+    edges = grid.log_edges
     band = np.ones((n_pix, n_pix), dtype=bool)
     band[0, 0] = False
     if low_band_sigma_px is not None:
@@ -677,7 +841,7 @@ def inherited_band(
     return InheritedResult(
         radial_measured=radial_profile(ratio, edges),
         radial_predicted=radial_profile(predicted_modes, edges),
-        centres=log_bin_centres(n_bins),
+        centres=grid.log_centres,
         share_measured=1.0 - float(residual[band].sum()) / total_ref,
         share_predicted=float(inherited_share(banded_ref, sigma_max)),
         sigma_max=float(sigma_max),

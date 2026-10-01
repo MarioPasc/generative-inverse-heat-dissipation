@@ -1,0 +1,1126 @@
+{
+ "default_path": {
+  "192": {
+   "metrics/ckpt_000750.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "checkpoint_sha256": "str",
+     "lsd": "float",
+     "lsd_octaves": {
+      "0.5-1": "float",
+      "1-2": "float",
+      "16-32": "float",
+      "2-4": "float",
+      "32-64": "float",
+      "4-8": "float",
+      "64-96": "float",
+      "8-16": "float"
+     },
+     "n_reference": "int",
+     "n_samples": "int",
+     "n_seeds": "int",
+     "sample_batch": "int",
+     "sample_rng_seed": "int",
+     "samples_dir": "str",
+     "seed_list": "str",
+     "seed_list_sha256": "str",
+     "step": "int",
+     "variance_ratio": "float"
+    },
+    "sha256": "e06938d92b7887b067619912a55deb71bf12ad921dd4c52e28ad3d467cb834c5"
+   },
+   "metrics/final.json": {
+    "keys": {
+     "M": "float",
+     "M_lp": "float",
+     "amp": "str",
+     "checkpoint": "str",
+     "checkpoint_sha256": "str",
+     "d_heldout_median": "float",
+     "d_samples_median": "float",
+     "diversity_lp": "float",
+     "diversity_per_seed_lp": "list",
+     "diversity_per_seed_pix": "list",
+     "diversity_pix": "float",
+     "inception": "NoneType",
+     "inception_note": "str",
+     "inherited_measured": "float",
+     "inherited_measured_low_band": "float",
+     "inherited_predicted": "float",
+     "inherited_predicted_low_band": "float",
+     "intermediate_lsd": "float",
+     "low_band_sigma_px": "float",
+     "lsd": "float",
+     "lsd_octaves": {
+      "0.5-1": "float",
+      "1-2": "float",
+      "16-32": "float",
+      "2-4": "float",
+      "32-64": "float",
+      "4-8": "float",
+      "64-96": "float",
+      "8-16": "float"
+     },
+     "n_diversity_seeds": "int",
+     "n_heldout": "int",
+     "n_per_seed": "int",
+     "n_reference": "int",
+     "n_samples": "int",
+     "n_train": "int",
+     "note": "str",
+     "pca": {
+      "component_files": "list",
+      "explained_variance": "list",
+      "n_components": "int",
+      "sample_scores": [
+       [
+        "list"
+       ]
+      ],
+      "seed_scores": [
+       "list"
+      ]
+     },
+     "per_sample_files": "list",
+     "radial": {
+      "centres": "list",
+      "measured": "list",
+      "n_bins": "int",
+      "n_bins_dropped": "int",
+      "predicted": "list"
+     },
+     "sample_batch": "int",
+     "seed_list": "str",
+     "seed_list_sha256": "str",
+     "seed_nn_fraction": "float",
+     "sigma_max": "float",
+     "step": "int",
+     "variance_ratio": "float"
+    },
+    "sha256": "97320c23ecfe395d7be092b28d53e5d12ec2a1d856305e5b8722698d8d7d9ca6"
+   },
+   "metrics/final_memorisation_per_sample_d.npy": {
+    "sha256": "99886d2be85f4312a4ac85ef8210491af22ea5516f5ac1e5f01791bf0efb1a98"
+   },
+   "metrics/final_memorisation_per_sample_nn.npy": {
+    "sha256": "2e611074148edb8449e8a2a8b381960ce55a0c1dd677a52f7e39eb972b606afd"
+   },
+   "metrics/final_pca_components.npy": {
+    "sha256": "329a18db8d7561b3dae79006a8c07f83ca9268e2e1870f1b09b48232f4c3038a"
+   },
+   "metrics/final_pca_mean.npy": {
+    "sha256": "f96d62a81e54308ba2344182081a83c723a4b843f2ed8af158c060375e596d0c"
+   },
+   "metrics/final_pca_train_scores.npy": {
+    "sha256": "d9f75304083468e5d0a720436f3d6a9d2f1092a18415957b226e3da47a28feb8"
+   },
+   "metrics/summary.json": {
+    "keys": {
+     "a0_final_lsd": "NoneType",
+     "checkpoint_selection": "str",
+     "checkpoint_steps": "list",
+     "created": "str",
+     "dataset_sha256": "str",
+     "env": {
+      "n_heldout": "int",
+      "n_reference": "int",
+      "n_train": "int",
+      "python": "str"
+     },
+     "final": {
+      "M": "float",
+      "M_lp": "float",
+      "amp": "str",
+      "checkpoint": "str",
+      "checkpoint_sha256": "str",
+      "d_heldout_median": "float",
+      "d_samples_median": "float",
+      "diversity_lp": "float",
+      "diversity_pix": "float",
+      "has_inception": "bool",
+      "inception": "NoneType",
+      "inception_note": "str",
+      "inherited_measured": "float",
+      "inherited_measured_low_band": "float",
+      "inherited_predicted": "float",
+      "inherited_predicted_low_band": "float",
+      "intermediate_lsd": "float",
+      "low_band_sigma_px": "float",
+      "lsd": "float",
+      "lsd_octaves": {
+       "0.5-1": "float",
+       "1-2": "float",
+       "16-32": "float",
+       "2-4": "float",
+       "32-64": "float",
+       "4-8": "float",
+       "64-96": "float",
+       "8-16": "float"
+      },
+      "n_diversity_seeds": "int",
+      "n_heldout": "int",
+      "n_per_seed": "int",
+      "n_reference": "int",
+      "n_samples": "int",
+      "n_train": "int",
+      "note": "str",
+      "per_sample_files": "list",
+      "sample_batch": "int",
+      "seed_list": "str",
+      "seed_list_sha256": "str",
+      "seed_nn_fraction": "float",
+      "sigma_max": "float",
+      "step": "int",
+      "variance_ratio": "float"
+     },
+     "final_step": "int",
+     "git_sha": "str",
+     "lsd_by_step": {
+      "750": "float"
+     },
+     "run": {
+      "K": "int",
+      "arm": "str",
+      "blur_sigma_max": "float",
+      "config_sha256": "str",
+      "dataset": "str",
+      "run_id": "str",
+      "schedule_name": "str",
+      "seed": "int"
+     },
+     "sampling": {
+      "amp": "str",
+      "batch": "int",
+      "device": "str",
+      "log": [
+       {
+        "elapsed_s": "float",
+        "reused": "bool",
+        "set": "str",
+        "step": "int"
+       }
+      ],
+      "n_final": "int",
+      "n_lsd": "int",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "rng_seed_final": "int",
+      "rng_seed_intermediate": "int"
+     },
+     "seed_lists": {
+      "final_path": "str",
+      "final_rule": "str",
+      "final_sha256": "str",
+      "intermediate_path": "str",
+      "intermediate_rule": "str",
+      "intermediate_sha256": "str"
+     },
+     "t_tau": "NoneType",
+     "t_tau_note": "str",
+     "variance_ratio_by_step": {
+      "750": "float"
+     }
+    },
+    "sha256": "68771a54d628978906ed6fceed2615eadaf7ceacae2d6cd5c2b9f8b6ffa8423d"
+   },
+   "samples/000750/final/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "str",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "3df6fc843c221f8e5f81bdf92ea76d943d24f70db341dcc6495b5e274207b8dc"
+   },
+   "samples/000750/final/samples.npy": {
+    "sha256": "675c25c13306618d5427d018405d38e4e5a4040ed611fe08df6fbf704657ad78"
+   },
+   "samples/000750/final/seed_idx.npy": {
+    "sha256": "1a9238416057c237dc92502f34c82738eda2dd1024fe71d7115786fa94f8f0d2"
+   },
+   "samples/000750/final/seeds.npy": {
+    "sha256": "45f1f3f3d427bf131ae6ba1b4f47fbf3ebf0f577cb798618cd2b0e0f1b17550d"
+   },
+   "samples/000750/heldout/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "NoneType",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "a180cfae2eb6f0f2855bac5b7b0673ca87de6918d3c7b0a1a805df4f0005fbcc"
+   },
+   "samples/000750/heldout/samples.npy": {
+    "sha256": "7f03a1df1f200af65a6879f64d7e7416188a4e8c2c907e859cde5ba0e9f28d45"
+   },
+   "samples/000750/heldout/seed_idx.npy": {
+    "sha256": "2e73469b896f51865185d73c50c94652d2234e83f2bad4f4486ba8e7b45d24fe"
+   },
+   "samples/000750/heldout/seeds.npy": {
+    "sha256": "3ae1f0c4771bc12fff072f83d1189507d88cca8d52c8d6274995a900e8a452cd"
+   },
+   "samples/000750/lsd/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "str",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "f61e8a7edfefa7eee7888fbadea3f549e33ab8bf5dbbdc444880757699d0114c"
+   },
+   "samples/000750/lsd/samples.npy": {
+    "sha256": "a6caafbe2c87c7e59062aa1d90fa640c3a9a881f5ae4972a42d8d616c693e2cb"
+   },
+   "samples/000750/lsd/seed_idx.npy": {
+    "sha256": "39191e88c595c18daa4e6d2edd11c564e9328392e38de3b8982c8557ffaf87f9"
+   },
+   "samples/000750/lsd/seeds.npy": {
+    "sha256": "f797875b73a68a653f3d9345597c404be63ecb7fba5ca6b3331b51cbfa52ac38"
+   }
+  },
+  "96": {
+   "metrics/ckpt_000250.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "checkpoint_sha256": "str",
+     "lsd": "float",
+     "lsd_octaves": {
+      "0.5-1": "float",
+      "1-2": "float",
+      "16-32": "float",
+      "2-4": "float",
+      "32-64": "float",
+      "4-8": "float",
+      "64-96": "float",
+      "8-16": "float"
+     },
+     "n_reference": "int",
+     "n_samples": "int",
+     "n_seeds": "int",
+     "sample_batch": "int",
+     "sample_rng_seed": "int",
+     "samples_dir": "str",
+     "seed_list": "str",
+     "seed_list_sha256": "str",
+     "step": "int",
+     "variance_ratio": "float"
+    },
+    "sha256": "0d3c26498169091617cc0871a49784f5837bb47d1f1ae37360e4f693b343a1a7"
+   },
+   "metrics/ckpt_000750.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "checkpoint_sha256": "str",
+     "lsd": "float",
+     "lsd_octaves": {
+      "0.5-1": "float",
+      "1-2": "float",
+      "16-32": "float",
+      "2-4": "float",
+      "32-64": "float",
+      "4-8": "float",
+      "64-96": "float",
+      "8-16": "float"
+     },
+     "n_reference": "int",
+     "n_samples": "int",
+     "n_seeds": "int",
+     "sample_batch": "int",
+     "sample_rng_seed": "int",
+     "samples_dir": "str",
+     "seed_list": "str",
+     "seed_list_sha256": "str",
+     "step": "int",
+     "variance_ratio": "float"
+    },
+    "sha256": "08ecef55f10d5d32d2d896beb9b025b2058d4a57e0705ea87e278ebec73cf2bf"
+   },
+   "metrics/final.json": {
+    "keys": {
+     "M": "float",
+     "M_lp": "float",
+     "amp": "str",
+     "checkpoint": "str",
+     "checkpoint_sha256": "str",
+     "d_heldout_median": "float",
+     "d_samples_median": "float",
+     "diversity_lp": "float",
+     "diversity_per_seed_lp": "list",
+     "diversity_per_seed_pix": "list",
+     "diversity_pix": "float",
+     "inception": "NoneType",
+     "inception_note": "str",
+     "inherited_measured": "float",
+     "inherited_measured_low_band": "float",
+     "inherited_predicted": "float",
+     "inherited_predicted_low_band": "float",
+     "intermediate_lsd": "float",
+     "low_band_sigma_px": "float",
+     "lsd": "float",
+     "lsd_octaves": {
+      "0.5-1": "float",
+      "1-2": "float",
+      "16-32": "float",
+      "2-4": "float",
+      "32-64": "float",
+      "4-8": "float",
+      "64-96": "float",
+      "8-16": "float"
+     },
+     "n_diversity_seeds": "int",
+     "n_heldout": "int",
+     "n_per_seed": "int",
+     "n_reference": "int",
+     "n_samples": "int",
+     "n_train": "int",
+     "note": "str",
+     "pca": {
+      "component_files": "list",
+      "explained_variance": "list",
+      "n_components": "int",
+      "sample_scores": [
+       [
+        "list"
+       ]
+      ],
+      "seed_scores": [
+       "list"
+      ]
+     },
+     "per_sample_files": "list",
+     "radial": {
+      "centres": "list",
+      "measured": "list",
+      "n_bins": "int",
+      "n_bins_dropped": "int",
+      "predicted": "list"
+     },
+     "sample_batch": "int",
+     "seed_list": "str",
+     "seed_list_sha256": "str",
+     "seed_nn_fraction": "float",
+     "sigma_max": "float",
+     "step": "int",
+     "variance_ratio": "float"
+    },
+    "sha256": "f68e9b46b7b98ffae8cc1057a19ae51fa14b2bad95a2fb03455ae95ce33f20fc"
+   },
+   "metrics/final_memorisation_per_sample_d.npy": {
+    "sha256": "33140ebc9c0c19a754f2e509db8d6d16fd77bbb279b97c71045d248efd596c84"
+   },
+   "metrics/final_memorisation_per_sample_nn.npy": {
+    "sha256": "b31a415fc04d4057510746b51349a49675bfa244e2a652b4771643715e92121d"
+   },
+   "metrics/final_pca_components.npy": {
+    "sha256": "bc3c44773892118289adb0799baa4c2ca485fa8a445d949e85c3cedc727f588c"
+   },
+   "metrics/final_pca_mean.npy": {
+    "sha256": "d913d5daa58d12ebec17424d7b891614a2a07486276661db6bb52684f4e47613"
+   },
+   "metrics/final_pca_train_scores.npy": {
+    "sha256": "a6f9bb54399738a991bff69e6e47cf7859dae5f2ecbfa78a737c1033707c4e15"
+   },
+   "metrics/summary.json": {
+    "keys": {
+     "a0_final_lsd": "NoneType",
+     "checkpoint_selection": "str",
+     "checkpoint_steps": "list",
+     "created": "str",
+     "dataset_sha256": "str",
+     "env": {
+      "n_heldout": "int",
+      "n_reference": "int",
+      "n_train": "int",
+      "python": "str"
+     },
+     "final": {
+      "M": "float",
+      "M_lp": "float",
+      "amp": "str",
+      "checkpoint": "str",
+      "checkpoint_sha256": "str",
+      "d_heldout_median": "float",
+      "d_samples_median": "float",
+      "diversity_lp": "float",
+      "diversity_pix": "float",
+      "has_inception": "bool",
+      "inception": "NoneType",
+      "inception_note": "str",
+      "inherited_measured": "float",
+      "inherited_measured_low_band": "float",
+      "inherited_predicted": "float",
+      "inherited_predicted_low_band": "float",
+      "intermediate_lsd": "float",
+      "low_band_sigma_px": "float",
+      "lsd": "float",
+      "lsd_octaves": {
+       "0.5-1": "float",
+       "1-2": "float",
+       "16-32": "float",
+       "2-4": "float",
+       "32-64": "float",
+       "4-8": "float",
+       "64-96": "float",
+       "8-16": "float"
+      },
+      "n_diversity_seeds": "int",
+      "n_heldout": "int",
+      "n_per_seed": "int",
+      "n_reference": "int",
+      "n_samples": "int",
+      "n_train": "int",
+      "note": "str",
+      "per_sample_files": "list",
+      "sample_batch": "int",
+      "seed_list": "str",
+      "seed_list_sha256": "str",
+      "seed_nn_fraction": "float",
+      "sigma_max": "float",
+      "step": "int",
+      "variance_ratio": "float"
+     },
+     "final_step": "int",
+     "git_sha": "str",
+     "lsd_by_step": {
+      "250": "float",
+      "750": "float"
+     },
+     "run": {
+      "K": "int",
+      "arm": "str",
+      "blur_sigma_max": "float",
+      "config_sha256": "str",
+      "dataset": "str",
+      "run_id": "str",
+      "schedule_name": "str",
+      "seed": "int"
+     },
+     "sampling": {
+      "amp": "str",
+      "batch": "int",
+      "device": "str",
+      "log": [
+       {
+        "elapsed_s": "float",
+        "reused": "bool",
+        "set": "str",
+        "step": "int"
+       }
+      ],
+      "n_final": "int",
+      "n_lsd": "int",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "rng_seed_final": "int",
+      "rng_seed_intermediate": "int"
+     },
+     "seed_lists": {
+      "final_path": "str",
+      "final_rule": "str",
+      "final_sha256": "str",
+      "intermediate_path": "str",
+      "intermediate_rule": "str",
+      "intermediate_sha256": "str"
+     },
+     "t_tau": "NoneType",
+     "t_tau_note": "str",
+     "variance_ratio_by_step": {
+      "250": "float",
+      "750": "float"
+     }
+    },
+    "sha256": "fa4b3c0fd28279f7912da8cfad3e29a8094f1b2758800169e2ea9fb74bb8f12b"
+   },
+   "samples/000250/lsd/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "str",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "0553cfe2e322a1b4331b698c85f1825c7062db7e27b3c21204afe41884daeee5"
+   },
+   "samples/000250/lsd/samples.npy": {
+    "sha256": "77528a7c07c7fe848818d346712b18d6342628d3a7a59bf1196c09e0389b3ec9"
+   },
+   "samples/000250/lsd/seed_idx.npy": {
+    "sha256": "39191e88c595c18daa4e6d2edd11c564e9328392e38de3b8982c8557ffaf87f9"
+   },
+   "samples/000250/lsd/seeds.npy": {
+    "sha256": "733133280079626d266316b97621c5aef460d689ec3cafe3a046784db4168a69"
+   },
+   "samples/000750/final/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "str",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "fee317a6367ab071c5f843436081edfb3984d7ce7816d2b5968342d35cc05968"
+   },
+   "samples/000750/final/samples.npy": {
+    "sha256": "0ee0fced376501995cd92ba7f1b2a1c448d6669659955e6f805297752d3b5132"
+   },
+   "samples/000750/final/seed_idx.npy": {
+    "sha256": "1a9238416057c237dc92502f34c82738eda2dd1024fe71d7115786fa94f8f0d2"
+   },
+   "samples/000750/final/seeds.npy": {
+    "sha256": "6226c7ca0b300680366748824ab1e16cf0d318638da4a53c4fd5fe247799f976"
+   },
+   "samples/000750/heldout/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "NoneType",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "97adb8430fe27a7fd1ad161782c00a271ab74243f346cc4db042e10c8239da6f"
+   },
+   "samples/000750/heldout/samples.npy": {
+    "sha256": "024dc33789462ad7a04444b7092b9d68ac0c8830f91940cd386b6ddef8143ba6"
+   },
+   "samples/000750/heldout/seed_idx.npy": {
+    "sha256": "2e73469b896f51865185d73c50c94652d2234e83f2bad4f4486ba8e7b45d24fe"
+   },
+   "samples/000750/heldout/seeds.npy": {
+    "sha256": "c1d74a96f427a1071ed5345b734a9ff4e8d6a536d9060f831d8b885e9f887b07"
+   },
+   "samples/000750/lsd/request.json": {
+    "keys": {
+     "amp": "str",
+     "checkpoint": "str",
+     "created": "str",
+     "dataset_root": "str",
+     "device": "str",
+     "elapsed_s": "float",
+     "s_per_chain": "float",
+     "seed_list": "str",
+     "seed_source": "str",
+     "set": "str",
+     "shape": "list",
+     "signature": {
+      "amp": "bool",
+      "batch_size": "int",
+      "checkpoint_sha256": "str",
+      "delta": "float",
+      "device_type": "str",
+      "n_per_seed": "int",
+      "n_seeds": "int",
+      "prior_noise": "bool",
+      "rng_seed": "int",
+      "seed_idx_sha256": "str",
+      "set": "str",
+      "start_level": "int"
+     },
+     "step": "int"
+    },
+    "sha256": "7e9590b4308c2cf186810640bbc9db2b954d19e4d08c1b8d8425c4f0c470a90f"
+   },
+   "samples/000750/lsd/samples.npy": {
+    "sha256": "77528a7c07c7fe848818d346712b18d6342628d3a7a59bf1196c09e0389b3ec9"
+   },
+   "samples/000750/lsd/seed_idx.npy": {
+    "sha256": "39191e88c595c18daa4e6d2edd11c564e9328392e38de3b8982c8557ffaf87f9"
+   },
+   "samples/000750/lsd/seeds.npy": {
+    "sha256": "733133280079626d266316b97621c5aef460d689ec3cafe3a046784db4168a69"
+   }
+  }
+ },
+ "metric_layer": {
+  "192": {
+   "diversity": {
+    "D_lp": "0x1.23482ec4cab13p-9",
+    "D_pix": "0x1.e6306cad24d9cp-8",
+    "per_seed_lp": [
+     "0x1.05a55d46edd1ep-9",
+     "0x1.7230faff3aac8p-9",
+     "0x1.e40468106f2a7p-10"
+    ],
+    "per_seed_pix": [
+     "0x1.d3de0be63f3b7p-8",
+     "0x1.031f080813bdfp-7",
+     "0x1.d8752a1107d5fp-8"
+    ]
+   },
+   "inherited": {
+    "inherited_measured": "0x1.096aea42f8482p-1",
+    "inherited_measured_low_band": "0x1.33e9a72550988p-1",
+    "inherited_predicted": "0x1.86b5014c0b6b7p-6",
+    "inherited_predicted_low_band": "0x1.39ac9580162aap-5",
+    "low_band_sigma_px": "0x1.0000000000000p+3",
+    "radial": {
+     "centres": [
+      "0x1.0e6937403ced2p-1",
+      "0x1.779aba7470872p-1",
+      "0x1.04dc161bac29cp+0",
+      "0x1.230e3433b6aefp+0",
+      "0x1.6a56695e84c9cp+0",
+      "0x1.9447a551be6cep+0",
+      "0x1.c313c444f9cbap+0",
+      "0x1.f74aa4f9c721dp+0",
+      "0x1.18c666c41c388p+1",
+      "0x1.3946ac6fb0dd2p+1",
+      "0x1.5d8a0eb2f4508p+1",
+      "0x1.860009abb8d98p+1",
+      "0x1.b325011fd670ep+1",
+      "0x1.e583bee732562p+1",
+      "0x1.0edb8eccf90d8p+2",
+      "0x1.2e35f2514d827p+2",
+      "0x1.51316db5db112p+2",
+      "0x1.78398d04fe3fep+2",
+      "0x1.a3c64f408b32bp+2",
+      "0x1.d45d9749f0c27p+2",
+      "0x1.054a63bf21405p+3",
+      "0x1.2389467bcaa49p+3",
+      "0x1.45486ffbca431p+3",
+      "0x1.6aef9fd152b88p+3",
+      "0x1.94f297f4a3e56p+3",
+      "0x1.c3d280a46cbcap+3",
+      "0x1.f81f7577f2c52p+3",
+      "0x1.193d2033dc55fp+4",
+      "0x1.39cb240f55a36p+4",
+      "0x1.5e1ddbc1c2dacp+4",
+      "0x1.86a4f28d03557p+4",
+      "0x1.b3dd00cfeb885p+4",
+      "0x1.e6510b12004e4p+4",
+      "0x1.0f4e16b30ab56p+5",
+      "0x1.2eb5bc22dd675p+5",
+      "0x1.51c0024fbdee1p+5",
+      "0x1.78d8a2bdd34ccp+5",
+      "0x1.a477cf2c54160p+5",
+      "0x1.d523a319a7128p+5",
+      "0x1.05b8e006bcaa0p+6",
+      "0x1.24048cce2634ep+6",
+      "0x1.45d1fb555bf0fp+6",
+      "0x1.6b89170d26be3p+6"
+     ],
+     "measured": [
+      "0x1.35362908f539fp-2",
+      "0x1.69f73e3e34dbbp-2",
+      "0x1.33a2d7e43486bp-2",
+      "0x1.f8946bad1ca14p-2",
+      "0x1.819cd055c9e1cp-1",
+      "0x1.6c25617fc9cefp-1",
+      "0x1.2bd324b372c3dp+0",
+      "0x1.14c195a098084p-1",
+      "0x1.ef95f8fb3c027p-2",
+      "0x1.f0f54d48657f7p-2",
+      "0x1.7693e8d1890a4p-1",
+      "0x1.ccda7716ff062p-1",
+      "0x1.2c09e690dc47dp-1",
+      "0x1.083654ffc7b9bp-1",
+      "0x1.b8b4e80353796p-1",
+      "0x1.659c25ebcb3f8p-1",
+      "0x1.88a94a3aa8dacp-1",
+      "0x1.d692f7cd53dd9p-1",
+      "0x1.568a36758a93bp-1",
+      "0x1.9b3b9266a06aap-1",
+      "0x1.62e398b93a9bap-1",
+      "0x1.6f8377d9943bcp-1",
+      "0x1.8f580aceaee3ap-1",
+      "0x1.90d63f56f9dbep-1",
+      "0x1.7cae56443cb0bp-1",
+      "0x1.6925e03262378p-1",
+      "0x1.8ad67caa7370ep-1",
+      "0x1.91190b6215d7ap-1",
+      "0x1.883e45b7ca7f2p-1",
+      "0x1.7e029eaf68eb4p-1",
+      "0x1.850bb1dd5c6e6p-1",
+      "0x1.8034676237c1dp-1",
+      "0x1.85fbf1b16fe0dp-1",
+      "0x1.6d9f30efa64c2p-1",
+      "0x1.950286908f543p-1",
+      "0x1.835e3efe31c07p-1",
+      "0x1.7a90e17a1eaa7p-1",
+      "0x1.7e06e4fad04a4p-1",
+      "0x1.72eedf8c9d2c1p-1",
+      "0x1.7dab18196699ep-1",
+      "0x1.81bca41c1f807p-1",
+      "0x1.831cc241ad49ap-1",
+      "0x1.82062ee438cdfp-1"
+     ],
+     "n_bins": 43,
+     "n_bins_dropped": 5,
+     "predicted": [
+      "0x1.d49471516592ep-1",
+      "0x1.fc51587061521p-1",
+      "0x1.fff9387536afcp-1",
+      "0x1.ffff6cd140ef5p-1",
+      "0x1.ffffffe904facp-1",
+      "0x1.fffffffef163ep-1",
+      "0x1.fffffffffff96p-1",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0"
+     ]
+    },
+    "sigma_max": "0x1.8000000000000p+6"
+   },
+   "lsd": {
+    "lsd": "0x1.421019f38eaa7p-2",
+    "lsd_octaves": {
+     "0.5-1": "-0x1.5d66a91145c4cp-1",
+     "1-2": "-0x1.67f3cbdc2f194p-2",
+     "16-32": "-0x1.ee42d2448e8c8p-3",
+     "2-4": "-0x1.d94dd3305c72ep-3",
+     "32-64": "-0x1.0bdd1a75d94f8p-2",
+     "4-8": "-0x1.1373bb46ea08cp-2",
+     "64-96": "-0x1.079a976093a90p-2",
+     "8-16": "-0x1.07207a9809210p-2"
+    },
+    "n_reference": 12,
+    "n_samples": 10,
+    "variance_ratio": "0x1.b74f1f7ab6b65p-2"
+   },
+   "memorisation": {
+    "M": "0x1.d262e4c089fdep-1",
+    "M_lp": "0x1.d175c9afbf67ap-1",
+    "seed_nn_fraction": "0x0.0p+0"
+   }
+  },
+  "96": {
+   "diversity": {
+    "D_lp": "0x1.67f67002ae0a3p-8",
+    "D_pix": "0x1.b0415562ad79bp-6",
+    "per_seed_lp": [
+     "0x1.ab83266117731p-8",
+     "0x1.92def735cf6e7p-8",
+     "0x1.f30264e24679cp-9"
+    ],
+    "per_seed_pix": [
+     "0x1.d028b10afaf4cp-6",
+     "0x1.aab0d3ea4b207p-6",
+     "0x1.95ea7b32c257ap-6"
+    ]
+   },
+   "inherited": {
+    "inherited_measured": "0x1.3fe1afd47cfa6p-2",
+    "inherited_measured_low_band": "0x1.2ce3d62667f9ap-2",
+    "inherited_predicted": "0x1.d75e16c5246e7p-7",
+    "inherited_predicted_low_band": "0x1.fabef1aac2865p-6",
+    "low_band_sigma_px": "0x1.0000000000000p+3",
+    "radial": {
+     "centres": [
+      "0x1.0e6937403ced2p-1",
+      "0x1.779aba7470872p-1",
+      "0x1.04dc161bac29cp+0",
+      "0x1.230e3433b6aefp+0",
+      "0x1.6a56695e84c9cp+0",
+      "0x1.9447a551be6cep+0",
+      "0x1.c313c444f9cbap+0",
+      "0x1.f74aa4f9c721dp+0",
+      "0x1.18c666c41c388p+1",
+      "0x1.3946ac6fb0dd2p+1",
+      "0x1.5d8a0eb2f4508p+1",
+      "0x1.860009abb8d98p+1",
+      "0x1.b325011fd670ep+1",
+      "0x1.e583bee732562p+1",
+      "0x1.0edb8eccf90d8p+2",
+      "0x1.2e35f2514d827p+2",
+      "0x1.51316db5db112p+2",
+      "0x1.78398d04fe3fep+2",
+      "0x1.a3c64f408b32bp+2",
+      "0x1.d45d9749f0c27p+2",
+      "0x1.054a63bf21405p+3",
+      "0x1.2389467bcaa49p+3",
+      "0x1.45486ffbca431p+3",
+      "0x1.6aef9fd152b88p+3",
+      "0x1.94f297f4a3e56p+3",
+      "0x1.c3d280a46cbcap+3",
+      "0x1.f81f7577f2c52p+3",
+      "0x1.193d2033dc55fp+4",
+      "0x1.39cb240f55a36p+4",
+      "0x1.5e1ddbc1c2dacp+4",
+      "0x1.86a4f28d03557p+4",
+      "0x1.b3dd00cfeb885p+4",
+      "0x1.e6510b12004e4p+4",
+      "0x1.0f4e16b30ab56p+5",
+      "0x1.2eb5bc22dd675p+5",
+      "0x1.51c0024fbdee1p+5",
+      "0x1.78d8a2bdd34ccp+5",
+      "0x1.a477cf2c54160p+5",
+      "0x1.d523a319a7128p+5",
+      "0x1.05b8e006bcaa0p+6"
+     ],
+     "measured": [
+      "0x1.1f3ba25d9eff3p+0",
+      "0x1.29e3d5892a3b1p-1",
+      "0x1.059a58255fd18p-1",
+      "0x1.6ce37cbb58b20p-1",
+      "0x1.7ce4508b94748p-1",
+      "0x1.0d41113407042p-1",
+      "0x1.feda71103c434p-1",
+      "0x1.13ea7c2094791p-1",
+      "0x1.8a6ce0e91710dp-1",
+      "0x1.421a0963bcfa1p-1",
+      "0x1.fc83cdf0c396bp+0",
+      "0x1.b9cdf18df113dp-1",
+      "0x1.115008f1b0148p+0",
+      "0x1.eb06bf9b03d3ap-1",
+      "0x1.57f30853a0678p-1",
+      "0x1.abf0180696684p-1",
+      "0x1.b2a464692772dp-1",
+      "0x1.540f82577554dp-1",
+      "0x1.c75ebf184f214p-1",
+      "0x1.075fc41025266p+0",
+      "0x1.dba4a676aea86p-1",
+      "0x1.b7f0d0bf453a6p-1",
+      "0x1.9e31db653a26ap-1",
+      "0x1.85b5b51dd0e2ap-1",
+      "0x1.96ec6f17a11b8p-1",
+      "0x1.76f23a75b3081p-1",
+      "0x1.a784f21be890ap-1",
+      "0x1.9a558e9b1abe6p-1",
+      "0x1.bbe10d43b48dap-1",
+      "0x1.9fdeba8497186p-1",
+      "0x1.a4be214aaad34p-1",
+      "0x1.ab11e5df2b1c4p-1",
+      "0x1.9863a5346bf01p-1",
+      "0x1.937cf9e4a27a7p-1",
+      "0x1.965eaed308859p-1",
+      "0x1.87ad3ebd7d594p-1",
+      "0x1.96282c4fd937bp-1",
+      "0x1.9430b9a38a4a6p-1",
+      "0x1.862423eec13c3p-1",
+      "0x1.8dc78f6ea5408p-1"
+     ],
+     "n_bins": 40,
+     "n_bins_dropped": 8,
+     "predicted": [
+      "0x1.d49471516592ep-1",
+      "0x1.fc51587061521p-1",
+      "0x1.fff9387536afcp-1",
+      "0x1.ffff6cd140ef5p-1",
+      "0x1.ffffffe904facp-1",
+      "0x1.fffffffef163ep-1",
+      "0x1.fffffffffff96p-1",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0",
+      "0x1.0000000000000p+0"
+     ]
+    },
+    "sigma_max": "0x1.8000000000000p+5"
+   },
+   "lsd": {
+    "lsd": "0x1.fb37d22c2d516p-3",
+    "lsd_octaves": {
+     "0.5-1": "-0x1.f51ec42d4aa40p-4",
+     "1-2": "-0x1.f863b015bc390p-4",
+     "16-32": "-0x1.e4428465828d0p-3",
+     "2-4": "-0x1.f8c6c948adb50p-3",
+     "32-64": "-0x1.e22edf77a2aa0p-3",
+     "4-8": "-0x1.c75a5f674d0d0p-3",
+     "64-96": "-0x1.c9c7af168f560p-3",
+     "8-16": "-0x1.03a4a3fd707b0p-2"
+    },
+    "n_reference": 12,
+    "n_samples": 10,
+    "variance_ratio": "0x1.496c0eb1717bcp-1"
+   },
+   "memorisation": {
+    "M": "0x1.d1064ef33242bp-1",
+    "M_lp": "0x1.0d2f55d3f24e3p+0",
+    "seed_nn_fraction": "0x1.999999999999ap-3"
+   }
+  }
+ }
+}
