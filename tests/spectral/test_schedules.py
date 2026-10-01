@@ -29,6 +29,8 @@ from ihdm.spectral.schedules import (
 FROZEN_NAMES = (
     "log_W2", "log_W8", "ixi_W2", "ixi_W8", "lsun_church_W2", "oasis1_W8", "lsun_bedroom_W2",
 )
+# Added after the freeze by `build_schedules --add` (M7 diagnostic, T7.1); terminal blur 64.
+ADDED_NAMES = ("log_W2_128",)
 
 
 def _meta(spec: ScheduleSpec) -> dict[str, object]:
@@ -227,18 +229,18 @@ def test_save_schedule_rejects_an_array_off_contract(tmp_path: Path) -> None:
 
 
 def test_the_frozen_schedules_validate() -> None:
-    """The seven committed files pass ``validate_schedule`` (``docs/HARNESSES/data.md`` §5)."""
+    """The committed files pass ``validate_schedule`` (``docs/HARNESSES/data.md`` §5)."""
     sched_dir = repo_root() / "schedules"
     found = sorted(p.stem for p in sched_dir.glob("*.npy"))
-    assert found == sorted(FROZEN_NAMES)
-    for name in FROZEN_NAMES:
+    assert found == sorted(FROZEN_NAMES + ADDED_NAMES)
+    for name in FROZEN_NAMES + ADDED_NAMES:
         assert validate_schedule(sched_dir / f"{name}.npy") == []
 
 
 def test_the_frozen_index_is_complete() -> None:
     """Every entry of ``schedules.json`` carries the fields of ``04-run-artifacts.md`` §1."""
     table = json.loads((repo_root() / "schedules" / "schedules.json").read_text())
-    assert sorted(table) == sorted(FROZEN_NAMES)
+    assert sorted(table) == sorted(FROZEN_NAMES + ADDED_NAMES)
     required = {
         "kind", "sigma_min", "sigma_max", "K", "fitted_on", "n_images", "images_sha256",
         "levels_per_octave", "spread", "sha256", "created", "git_sha",
@@ -247,7 +249,7 @@ def test_the_frozen_index_is_complete() -> None:
         assert required <= set(entry), name
         assert entry["sigma_min"] == 0.5
         assert entry["K"] == 200
-        assert entry["sigma_max"] in (96.0, 24.0)
+        assert entry["sigma_max"] in ((96.0, 24.0) if name in FROZEN_NAMES else (64.0,))
         assert sum(entry["levels_per_octave"].values()) == 200
         if entry["kind"] == "matched":
             assert entry["fitted_on"].endswith("/train")
