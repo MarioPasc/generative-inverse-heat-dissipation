@@ -31,6 +31,12 @@ Two diagnostics of M7 (T7.2) extend the request without changing the default pat
 * ``final_from_lsd`` reuses the final checkpoint's LSD set (the frozen 500, training-seeded) as the
   final set of KID/FID/precision/recall and ``M`` instead of drawing the 2 000-seed final set.
 
+A third (T7.3) adds ``inception_steps``: at every listed checkpoint the Inception metrics (KID with
+its interval, FID, precision, recall, density, coverage) and ``M`` / ``M_lp`` / seed-NN fraction
+are computed on that step's LSD set and stored in its ``ckpt_<step>.json`` (``inception`` and
+``memorisation`` blocks) and in ``summary.json`` (``inception_by_step``,
+``memorisation_by_step``). Without it nothing changes: no key, no file, no number.
+
 The binnings and length-scales follow the image side by the W rule of ``ihdm.metrics.spectral``
 (``spectral_grid``); at ``W = 192`` they are the frozen constants.
 """
@@ -200,6 +206,10 @@ class EvalRequest:
     final_from_lsd : bool
         Reuse the final checkpoint's LSD set as the final set of the Inception metrics and ``M``
         instead of drawing the ``n_final`` set (``final.json`` then records ``final_set: "lsd"``).
+    inception_steps : tuple[int, ...] or None
+        Checkpoints at which the Inception metrics and ``M`` are also computed on the step's LSD
+        set (T7.3); every one must be among the steps ``ckpts`` selects. ``None`` (the default)
+        computes them at the final step only, as before.
     """
 
     run: Path
@@ -221,6 +231,7 @@ class EvalRequest:
     amp: str = "off"
     delta: float | None = None
     final_from_lsd: bool = False
+    inception_steps: tuple[int, ...] | None = None
 
 
 # --------------------------------------------------------------------------------------------
@@ -1043,8 +1054,17 @@ def _memorisation_record(
     device: str,
     out_dir: Path,
     sigma_lp: float = SIGMA_LP,
+    prefix: str = "final",
 ) -> dict[str, Any]:
-    """Return the memorisation block; the per-sample arrays go to ``.npy`` beside the JSON."""
+    """Return the memorisation block; the per-sample arrays go to ``.npy`` beside the JSON.
+
+    ``prefix`` names the two arrays (``<prefix>_memorisation_per_sample_{d,nn}.npy``):
+    ``"final"`` for the final record, ``"ckpt_<step:06d>"`` for a per-step record (T7.3).
+    """
+    names = [
+        f"{prefix}_memorisation_per_sample_d.npy",
+        f"{prefix}_memorisation_per_sample_nn.npy",
+    ]
     rows = views.train_rows(seed_idx)
     result = memorisation_ratio(
         samples,
@@ -1055,8 +1075,8 @@ def _memorisation_record(
         sigma_lp=sigma_lp,
         device=device,
     )
-    np.save(out_dir / "final_memorisation_per_sample_d.npy", result.per_sample_d)
-    np.save(out_dir / "final_memorisation_per_sample_nn.npy", result.per_sample_nn)
+    np.save(out_dir / names[0], result.per_sample_d)
+    np.save(out_dir / names[1], result.per_sample_nn)
     return {
         "M": result.M,
         "M_lp": result.M_lp,
@@ -1066,10 +1086,7 @@ def _memorisation_record(
         "n_samples": result.n_samples,
         "n_train": result.n_train,
         "n_heldout": result.n_heldout,
-        "per_sample_files": [
-            "final_memorisation_per_sample_d.npy",
-            "final_memorisation_per_sample_nn.npy",
-        ],
+        "per_sample_files": names,
         "note": (
             "M is two-sided: M << 1 is copying, M >> 1 is a model whose samples are off the "
             "data manifold. It is only readable as 'copying or not' once LSD and KID say the "
@@ -1187,6 +1204,7 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
     lists = ensure_seed_lists(dataset_root)
     table = checkpoint_table(workdir)
     steps, selection = select_checkpoints(table, request.ckpts)
+    inception_steps = _check_inception_steps(request, steps)
     final_step = max(table)
     device = _resolve_device(request.device, config)
     metrics_dir = workdir / metrics_dirname(amp, delta)
@@ -1254,6 +1272,11 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
             per_step[step] = record
         logger.info("step %d: LSD %.4f", step, per_step[step]["lsd"])
 
+        if step in inception_steps:
+            per_step[step] = _step_inception(
+                request, step, views, lsd_set, device, metrics_dir, record_path, per_step[step]
+            )
+
         if step == final_step:
             final_record = _evaluate_final(
                 request, workdir, step, ckpt_path, config, dataset_root, views, lists,
@@ -1269,6 +1292,8 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
         request, config, payload_identity, views, lists, per_step, final_record, steps,
         selection, final_step, device, sampling_log,
     )
+    if inception_steps:
+        _add_inception_by_step(summary, per_step, inception_steps)
     write_json(metrics_dir / "summary.json", summary)
 
     if request.gate is not None:
@@ -1286,6 +1311,147 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
         write_json(metrics_dir / "summary.json", summary)
 
     return summary
+
+
+#: Keys of the Inception block copied into ``summary["inception_by_step"]`` (T7.3).
+_INCEPTION_SUMMARY_KEYS: tuple[str, ...] = (
+    "kid", "kid_ci_low", "kid_ci_high", "fid", "fid_ci_low", "fid_ci_high", "precision",
+    "recall", "density", "coverage", "k", "n_samples", "n_reference", "n_boot",
+)
+
+#: Keys of the memorisation block copied into ``summary["memorisation_by_step"]`` (T7.3).
+_MEMORISATION_SUMMARY_KEYS: tuple[str, ...] = (
+    "M", "M_lp", "seed_nn_fraction", "d_samples_median", "d_heldout_median", "n_samples",
+)
+
+
+def _check_inception_steps(request: EvalRequest, steps: list[int]) -> tuple[int, ...]:
+    """Return the validated ``inception_steps`` of a request, sorted; empty when not requested.
+
+    Parameters
+    ----------
+    request : EvalRequest
+        The evaluation request.
+    steps : list[int]
+        The checkpoints ``request.ckpts`` selected.
+
+    Returns
+    -------
+    tuple[int, ...]
+        The steps at which the Inception metrics and ``M`` are computed on the LSD set.
+
+    Raises
+    ------
+    MetricError
+        If the option names no step, is combined with ``skip_inception``, or names a step that is
+        not evaluated (it has no LSD set to score).
+    """
+    if request.inception_steps is None:
+        return ()
+    wanted = tuple(sorted({int(step) for step in request.inception_steps}))
+    if not wanted:
+        raise MetricError("inception_steps names no step")
+    if request.skip_inception:
+        raise MetricError(
+            "inception_steps asks for the Inception metrics that skip_inception turns off"
+        )
+    absent = [step for step in wanted if step not in steps]
+    if absent:
+        raise MetricError(
+            f"inception_steps {absent} are not among the evaluated checkpoints {steps}; "
+            "add them to --ckpts"
+        )
+    return wanted
+
+
+def _step_inception(
+    request: EvalRequest,
+    step: int,
+    views: DatasetViews,
+    lsd_set: SampleSet,
+    device: str,
+    metrics_dir: Path,
+    record_path: Path,
+    record: dict[str, Any],
+) -> dict[str, Any]:
+    """Add the Inception and memorisation blocks of one checkpoint to its record (T7.3).
+
+    Both blocks are computed on the step's LSD set (the frozen training-seeded list) against the
+    ``ref`` split, exactly as ``final.json`` computes them on its final set; the per-sample arrays
+    of ``M`` go to ``ckpt_<step>_memorisation_per_sample_{d,nn}.npy``. A record that already holds
+    both blocks is kept when its LSD set was reused, the request is not forced and the stored
+    block used the same ``k`` and number of resamples.
+
+    Parameters
+    ----------
+    request : EvalRequest
+        The evaluation request.
+    step : int
+        The checkpoint.
+    views : DatasetViews
+        The dataset views.
+    lsd_set : SampleSet
+        The step's LSD set.
+    device : str
+        Torch device string.
+    metrics_dir : Path
+        The result-file tree.
+    record_path : Path
+        The step's ``ckpt_<step>.json``.
+    record : dict[str, Any]
+        The step's LSD record.
+
+    Returns
+    -------
+    dict[str, Any]
+        The record with its ``inception`` and ``memorisation`` blocks, also written to
+        ``record_path``.
+    """
+    stored = record.get("inception")
+    if (
+        isinstance(stored, dict)
+        and isinstance(record.get("memorisation"), dict)
+        and lsd_set.reused
+        and not request.force
+        and stored.get("k") == request.k
+        and stored.get("n_boot") == request.n_boot_inception
+    ):
+        logger.info("step %d: reusing the Inception and memorisation blocks of %s", step,
+                    record_path)
+        return record
+    grid = spectral_grid(int(lsd_set.samples.shape[-1]))
+    updated = dict(record)
+    updated["inception"] = _inception_record(request, views, lsd_set, device)
+    updated["memorisation"] = _memorisation_record(
+        lsd_set.flat, views, lsd_set.seed_idx, device, metrics_dir,
+        sigma_lp=grid.sigma_lp_px, prefix=f"ckpt_{step:06d}",
+    )
+    write_json(record_path, updated)
+    logger.info(
+        "step %d: KID %.4f, precision %.4f, recall %.4f, M %.4f",
+        step, updated["inception"]["kid"], updated["inception"]["precision"],
+        updated["inception"]["recall"], updated["memorisation"]["M"],
+    )
+    return updated
+
+
+def _add_inception_by_step(
+    summary: dict[str, Any],
+    per_step: dict[int, dict[str, Any]],
+    inception_steps: tuple[int, ...],
+) -> None:
+    """Add ``inception_by_step``, ``memorisation_by_step`` and the step list to a summary."""
+    summary["inception_by_step"] = {
+        int(step): {key: per_step[step]["inception"].get(key) for key in _INCEPTION_SUMMARY_KEYS}
+        for step in inception_steps
+    }
+    summary["memorisation_by_step"] = {
+        int(step): {
+            key: per_step[step]["memorisation"].get(key) for key in _MEMORISATION_SUMMARY_KEYS
+        }
+        for step in inception_steps
+    }
+    summary["sampling"]["inception_steps"] = [int(step) for step in inception_steps]
 
 
 def _evaluate_final(

@@ -13,6 +13,11 @@ holds (D16, D22): the eight steps 5 000, …, 40 000 of a 40k run, twelve on a 6
 ``samples[_amp-<mode>]_delta-0.02/`` and ``metrics[_amp-<mode>]_delta-0.02/`` (T7.2);
 ``--final-from-lsd`` computes the Inception metrics and ``M`` on the final step's LSD set instead
 of drawing the 2 000-seed final set.
+
+``--inception-steps 45000,50000,55000,60000`` (T7.3) also computes KID, FID, precision, recall,
+density, coverage and ``M`` at each listed step, on that step's LSD set, into its
+``ckpt_<step>.json`` and into ``summary.json["inception_by_step"]``; every listed step must be among
+``--ckpts``.
 """
 
 from __future__ import annotations
@@ -105,9 +110,27 @@ def build_parser() -> argparse.ArgumentParser:
         "precision/recall and M instead of drawing the --n-final set",
     )
     parser.add_argument(
+        "--inception-steps", default=None,
+        help="comma-separated checkpoint steps (each among --ckpts) at which KID/FID, "
+        "precision/recall/density/coverage and M are also computed on the step's LSD set",
+    )
+    parser.add_argument(
         "--force", action="store_true", help="redraw samples and rewrite result files"
     )
     return parser
+
+
+def _parse_steps(value: str | None, flag: str) -> tuple[int, ...] | None:
+    """Return the steps of a comma-separated option, or ``None`` when it is absent."""
+    if value is None:
+        return None
+    parts = [part.strip() for part in str(value).split(",") if part.strip()]
+    if not parts:
+        raise MetricError(f"{flag} names no step")
+    try:
+        return tuple(int(part) for part in parts)
+    except ValueError as error:
+        raise MetricError(f"{flag} wants integer steps, got {value!r}") from error
 
 
 def _parse_gate(value: str | None) -> tuple[int, int] | None:
@@ -161,6 +184,7 @@ def request_from_args(args: argparse.Namespace) -> EvalRequest:
         amp=str(args.amp),
         delta=None if args.delta is None else float(args.delta),
         final_from_lsd=bool(args.final_from_lsd),
+        inception_steps=_parse_steps(args.inception_steps, "--inception-steps"),
     )
 
 
@@ -208,6 +232,12 @@ def main(argv: list[str] | None = None) -> int:
         f"amp={request.amp}{'' if request.delta is None else f' delta={request.delta!r}'} "
         f"-> {Path(request.run) / metrics_dirname(request.amp, request.delta)}"
     )
+    for step, block in summary.get("inception_by_step", {}).items():
+        memorisation = summary.get("memorisation_by_step", {}).get(step, {})
+        print(
+            f"STEP {step} kid={block['kid']} precision={block['precision']} "
+            f"recall={block['recall']} fid={block['fid']} M={memorisation.get('M')}"
+        )
     if summary.get("gate"):
         gate = summary["gate"]
         print(
