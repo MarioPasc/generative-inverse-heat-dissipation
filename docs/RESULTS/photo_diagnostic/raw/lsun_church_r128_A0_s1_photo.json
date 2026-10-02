@@ -1,0 +1,287 @@
+{
+ "amp": "fp16",
+ "created": "2026-10-01T16:11:12.389666+00:00",
+ "dataset_sha256": "d386aeebfc0096e5ce939179770ab9c813cd3a2ef3df1d98263692953a812333",
+ "env": {
+  "n_heldout": 760,
+  "n_reference": 800,
+  "n_train": 3200,
+  "python": "3.11.16"
+ },
+ "eval_git_sha": "unknown",
+ "final": {
+  "diversity_lp": 0.00122831,
+  "diversity_pix": 0.00481268,
+  "final_set": "lsd",
+  "inherited_measured": 0.63794,
+  "inherited_predicted": 0.01992,
+  "n_diversity_seeds": 40,
+  "n_per_seed": 5,
+  "sigma_max": 64.0,
+  "step": 60000
+ },
+ "identity": {
+  "K": 200,
+  "arm": "A0",
+  "blur_sigma_max": 64.0,
+  "config_sha256": "961ac194c0a512d9fe6542bfaf742a40e228a42cb63c9d7f0427a76a1704738d",
+  "dataset": "lsun_church_r128",
+  "run_id": "lsun_church_r128_A0_s1",
+  "schedule_name": "log_W2_128",
+  "seed": 1
+ },
+ "meta": {
+  "array_job_id": "2559459",
+  "dataset": "lsun_church_r128",
+  "eval_extra_args": "",
+  "evaluate_seconds": 2890,
+  "git_sha": "7986b59b5c8d50db375ddcd505e8c5ac69275893",
+  "job_id": "2559459",
+  "node": "exa01",
+  "run_dir": "/mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm_diag/lsun_church_r128_A0_s1",
+  "task_id": "1"
+ },
+ "rows": [
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "c98e1dc7eae15d7b48d8a0901e8b824ca932d5d73557a0339073abdd8f6f9329",
+   "inception": {
+    "coverage": 0.0825,
+    "density": 0.074,
+    "fid": 151.73,
+    "fid_ci_high": 164.384,
+    "fid_ci_low": 154.746,
+    "k": 5,
+    "kid": 0.145479,
+    "kid_ci_high": 0.151955,
+    "kid_ci_low": 0.138973,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.172,
+    "recall": 0.115
+   },
+   "lsd": 0.781754,
+   "lsd_octaves": {
+    "0.5-1": -0.0201985,
+    "1-2": -0.581605,
+    "16-32": -0.871041,
+    "2-4": -0.743186,
+    "32-64": -0.854256,
+    "4-8": -0.802813,
+    "8-16": -0.846135
+   },
+   "memorisation": {
+    "M": 0.599514,
+    "M_lp": 0.710605,
+    "d_heldout_median": 25.1756,
+    "d_samples_median": 15.0931,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.008
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+   "step": 45000,
+   "variance_ratio": 0.384315
+  },
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "1f4b87d28837d6e6e359ac932e283cf1a96ae9c6a176c96872bf5bbe0eb416f1",
+   "inception": {
+    "coverage": 0.10125,
+    "density": 0.1216,
+    "fid": 141.462,
+    "fid_ci_high": 153.852,
+    "fid_ci_low": 144.606,
+    "k": 5,
+    "kid": 0.135834,
+    "kid_ci_high": 0.141235,
+    "kid_ci_low": 0.129264,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.218,
+    "recall": 0.0375
+   },
+   "lsd": 0.741092,
+   "lsd_octaves": {
+    "0.5-1": -0.0248608,
+    "1-2": -0.597063,
+    "16-32": -0.808467,
+    "2-4": -0.741562,
+    "32-64": -0.79465,
+    "4-8": -0.766506,
+    "8-16": -0.771537
+   },
+   "memorisation": {
+    "M": 0.612072,
+    "M_lp": 0.702644,
+    "d_heldout_median": 25.1756,
+    "d_samples_median": 15.4093,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.012
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+   "step": 50000,
+   "variance_ratio": 0.386507
+  },
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "115f933872f879875ee9258d294cc251e06512f9282204128b9c86f327928afa",
+   "inception": {
+    "coverage": 0.165,
+    "density": 0.1736,
+    "fid": 128.161,
+    "fid_ci_high": 140.757,
+    "fid_ci_low": 131.718,
+    "k": 5,
+    "kid": 0.117481,
+    "kid_ci_high": 0.123805,
+    "kid_ci_low": 0.111887,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.244,
+    "recall": 0.1325
+   },
+   "lsd": 0.766593,
+   "lsd_octaves": {
+    "0.5-1": -0.0265273,
+    "1-2": -0.551809,
+    "16-32": -0.857517,
+    "2-4": -0.74199,
+    "32-64": -0.850989,
+    "4-8": -0.768922,
+    "8-16": -0.818234
+   },
+   "memorisation": {
+    "M": 0.613174,
+    "M_lp": 0.707006,
+    "d_heldout_median": 25.1756,
+    "d_samples_median": 15.437,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.012
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+   "step": 55000,
+   "variance_ratio": 0.38808
+  },
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "9781680bd325c8bbf38b46e3dbc373486936485fda7d4161680e94283e935bd3",
+   "inception": {
+    "coverage": 0.09375,
+    "density": 0.076,
+    "fid": 146.77,
+    "fid_ci_high": 160.234,
+    "fid_ci_low": 149.804,
+    "k": 5,
+    "kid": 0.138248,
+    "kid_ci_high": 0.145531,
+    "kid_ci_low": 0.130931,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.15,
+    "recall": 0.1075
+   },
+   "lsd": 0.786246,
+   "lsd_octaves": {
+    "0.5-1": -0.0237017,
+    "1-2": -0.514301,
+    "16-32": -0.908073,
+    "2-4": -0.69157,
+    "32-64": -0.895602,
+    "4-8": -0.795706,
+    "8-16": -0.86219
+   },
+   "memorisation": {
+    "M": 0.612227,
+    "M_lp": 0.718296,
+    "d_heldout_median": 25.1756,
+    "d_samples_median": 15.4132,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.014
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c",
+   "step": 60000,
+   "variance_ratio": 0.394764
+  }
+ ],
+ "run_id": "lsun_church_r128_A0_s1",
+ "sampling": {
+  "amp": "fp16",
+  "batch": 32,
+  "device": "cuda",
+  "final_from_lsd": true,
+  "inception_steps": [
+   45000,
+   50000,
+   55000,
+   60000
+  ],
+  "log": [
+   {
+    "elapsed_s": 521.346,
+    "reused": false,
+    "set": "lsd",
+    "step": 45000
+   },
+   {
+    "elapsed_s": 520.851,
+    "reused": false,
+    "set": "lsd",
+    "step": 50000
+   },
+   {
+    "elapsed_s": 520.897,
+    "reused": false,
+    "set": "lsd",
+    "step": 55000
+   },
+   {
+    "elapsed_s": 520.894,
+    "reused": false,
+    "set": "lsd",
+    "step": 60000
+   },
+   {
+    "elapsed_s": 209.513,
+    "reused": false,
+    "set": "heldout",
+    "step": 60000
+   }
+  ],
+  "n_final": 2000,
+  "n_lsd": 500,
+  "n_per_seed": 5,
+  "n_seeds": 40,
+  "rng_seed_final": 0,
+  "rng_seed_intermediate": 2026
+ },
+ "seed_lists": {
+  "final_path": "/mnt/home/users/tic_163_uma/mpascual/fscratch/datasets/spectral_allocation_heat_diffusion_project/lsun_church_r128/eval_seeds_final_2000.npy",
+  "final_rule": "2000 indices of splits['train'] drawn with replacement with numpy.random.default_rng(0)",
+  "final_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+  "intermediate_path": "/mnt/home/users/tic_163_uma/mpascual/fscratch/datasets/spectral_allocation_heat_diffusion_project/lsun_church_r128/eval_seeds_500.npy",
+  "intermediate_rule": "500 indices of splits['train'] drawn without replacement with numpy.random.default_rng(2026)",
+  "intermediate_sha256": "50eda5fa51e9efc313a19a8f36f459bf3a999b649a492469739cdada1b6edc0c"
+ },
+ "steps": [
+  45000,
+  50000,
+  55000,
+  60000
+ ]
+}

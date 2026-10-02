@@ -1,0 +1,291 @@
+{
+ "amp": "fp16",
+ "created": "2026-10-02T08:03:53.284115+00:00",
+ "dataset_sha256": "d21f24623dc16770d72c1f491f04525f1c4a4b114439f55d46f1d09d0b7bb915",
+ "env": {
+  "n_heldout": 760,
+  "n_reference": 800,
+  "n_train": 32000,
+  "python": "3.11.16"
+ },
+ "eval_git_sha": "unknown",
+ "final": {
+  "diversity_lp": 0.000865891,
+  "diversity_pix": 0.003766,
+  "final_set": "lsd",
+  "inherited_measured": 0.722486,
+  "inherited_predicted": 0.01791,
+  "n_diversity_seeds": 40,
+  "n_per_seed": 5,
+  "sigma_max": 96.0,
+  "step": 60000
+ },
+ "identity": {
+  "K": 200,
+  "arm": "A0",
+  "blur_sigma_max": 96.0,
+  "config_sha256": "dda9ea4e4c1278645ab2a14130c359ba095bdd91abc93309587de798478f310a",
+  "dataset": "lsun_church_n32k",
+  "run_id": "lsun_church_n32k_A0_s1",
+  "schedule_name": "log_W2",
+  "seed": 1
+ },
+ "meta": {
+  "array_job_id": "2570346",
+  "dataset": "lsun_church_n32k",
+  "eval_extra_args": "",
+  "evaluate_seconds": 6700,
+  "git_sha": "7986b59b5c8d50db375ddcd505e8c5ac69275893",
+  "job_id": "2570346",
+  "node": "exa01",
+  "run_dir": "/mnt/home/users/tic_163_uma/mpascual/fscratch/runs/ihdm_diag/lsun_church_n32k_A0_s1",
+  "task_id": "2"
+ },
+ "rows": [
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "7c1a40e19afe59dd1a36ce878d98ee3f04e1b75bf79684cd28c0099cb8186ffc",
+   "inception": {
+    "coverage": 0.0025,
+    "density": 0.0008,
+    "fid": 260.42,
+    "fid_ci_high": 272.381,
+    "fid_ci_low": 262.862,
+    "k": 5,
+    "kid": 0.312342,
+    "kid_ci_high": 0.320585,
+    "kid_ci_low": 0.304659,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.004,
+    "recall": 0.005
+   },
+   "lsd": 0.946327,
+   "lsd_octaves": {
+    "0.5-1": -0.0615743,
+    "1-2": -0.731207,
+    "16-32": -1.11997,
+    "2-4": -0.886478,
+    "32-64": -0.934258,
+    "4-8": -0.964599,
+    "64-96": -0.977194,
+    "8-16": -1.04916
+   },
+   "memorisation": {
+    "M": 0.502611,
+    "M_lp": 0.687791,
+    "d_heldout_median": 36.8536,
+    "d_samples_median": 18.523,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.002
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "0dd6c7c7e8e969932afb65cafb3c0244353f5cddcdd7209b5d160c990b00adf9",
+   "step": 45000,
+   "variance_ratio": 0.301321
+  },
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "d8774e1e5a72e2b3f7247653b5268588757de4bc50b82343f05266ea2cf4be74",
+   "inception": {
+    "coverage": 0.00875,
+    "density": 0.0076,
+    "fid": 223.486,
+    "fid_ci_high": 235.654,
+    "fid_ci_low": 226.253,
+    "k": 5,
+    "kid": 0.249443,
+    "kid_ci_high": 0.257228,
+    "kid_ci_low": 0.240643,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.026,
+    "recall": 0.0025
+   },
+   "lsd": 0.882577,
+   "lsd_octaves": {
+    "0.5-1": -0.0692937,
+    "1-2": -0.598705,
+    "16-32": -1.03279,
+    "2-4": -0.736374,
+    "32-64": -0.940654,
+    "4-8": -0.876676,
+    "64-96": -1.10858,
+    "8-16": -0.952493
+   },
+   "memorisation": {
+    "M": 0.525751,
+    "M_lp": 0.714131,
+    "d_heldout_median": 36.8536,
+    "d_samples_median": 19.3758,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.0
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "0dd6c7c7e8e969932afb65cafb3c0244353f5cddcdd7209b5d160c990b00adf9",
+   "step": 50000,
+   "variance_ratio": 0.325491
+  },
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "448b62d37c957a8c0a86c67bb256f806664572d1132cea64f2b10f6172b924da",
+   "inception": {
+    "coverage": 0.01375,
+    "density": 0.0072,
+    "fid": 224.981,
+    "fid_ci_high": 238.339,
+    "fid_ci_low": 226.739,
+    "k": 5,
+    "kid": 0.254433,
+    "kid_ci_high": 0.263247,
+    "kid_ci_low": 0.245926,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.024,
+    "recall": 0.01
+   },
+   "lsd": 0.975713,
+   "lsd_octaves": {
+    "0.5-1": -0.0609241,
+    "1-2": -0.670807,
+    "16-32": -1.14068,
+    "2-4": -0.8681,
+    "32-64": -1.05043,
+    "4-8": -0.956805,
+    "64-96": -1.19099,
+    "8-16": -1.02185
+   },
+   "memorisation": {
+    "M": 0.50036,
+    "M_lp": 0.689173,
+    "d_heldout_median": 36.8536,
+    "d_samples_median": 18.4401,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.004
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "0dd6c7c7e8e969932afb65cafb3c0244353f5cddcdd7209b5d160c990b00adf9",
+   "step": 55000,
+   "variance_ratio": 0.305713
+  },
+  {
+   "amp": "fp16",
+   "checkpoint_sha256": "bfbf460d48e358a3e8369533bc72f38bb19e685ef92d82364705a1e96f64be1c",
+   "inception": {
+    "coverage": 0.0125,
+    "density": 0.0068,
+    "fid": 235.203,
+    "fid_ci_high": 248.193,
+    "fid_ci_low": 237.379,
+    "k": 5,
+    "kid": 0.274325,
+    "kid_ci_high": 0.284137,
+    "kid_ci_low": 0.264399,
+    "n_boot": 200,
+    "n_reference": 800,
+    "n_samples": 500,
+    "precision": 0.022,
+    "recall": 0.01375
+   },
+   "lsd": 0.899261,
+   "lsd_octaves": {
+    "0.5-1": -0.0596531,
+    "1-2": -0.628665,
+    "16-32": -1.07649,
+    "2-4": -0.814033,
+    "32-64": -0.923693,
+    "4-8": -0.911642,
+    "64-96": -0.997408,
+    "8-16": -0.978774
+   },
+   "memorisation": {
+    "M": 0.517406,
+    "M_lp": 0.707642,
+    "d_heldout_median": 36.8536,
+    "d_samples_median": 19.0683,
+    "n_samples": 500,
+    "seed_nn_fraction": 0.004
+   },
+   "n_samples": 500,
+   "sample_batch": 32,
+   "sample_rng_seed": 2026,
+   "seed_list_sha256": "0dd6c7c7e8e969932afb65cafb3c0244353f5cddcdd7209b5d160c990b00adf9",
+   "step": 60000,
+   "variance_ratio": 0.320275
+  }
+ ],
+ "run_id": "lsun_church_n32k_A0_s1",
+ "sampling": {
+  "amp": "fp16",
+  "batch": 32,
+  "device": "cuda",
+  "final_from_lsd": true,
+  "inception_steps": [
+   45000,
+   50000,
+   55000,
+   60000
+  ],
+  "log": [
+   {
+    "elapsed_s": 1213.29,
+    "reused": false,
+    "set": "lsd",
+    "step": 45000
+   },
+   {
+    "elapsed_s": 1212.57,
+    "reused": false,
+    "set": "lsd",
+    "step": 50000
+   },
+   {
+    "elapsed_s": 1212.55,
+    "reused": false,
+    "set": "lsd",
+    "step": 55000
+   },
+   {
+    "elapsed_s": 1212.7,
+    "reused": false,
+    "set": "lsd",
+    "step": 60000
+   },
+   {
+    "elapsed_s": 486.205,
+    "reused": false,
+    "set": "heldout",
+    "step": 60000
+   }
+  ],
+  "n_final": 2000,
+  "n_lsd": 500,
+  "n_per_seed": 5,
+  "n_seeds": 40,
+  "rng_seed_final": 0,
+  "rng_seed_intermediate": 2026
+ },
+ "seed_lists": {
+  "final_path": "/mnt/home/users/tic_163_uma/mpascual/fscratch/datasets/spectral_allocation_heat_diffusion_project/lsun_church_n32k/eval_seeds_final_2000.npy",
+  "final_rule": "2000 indices of splits['train'] drawn with replacement with numpy.random.default_rng(0)",
+  "final_sha256": "f90462cef4628c88cda68ae9a1fb9c3ac59a2bf19029ff50b77b74e6291a0e0f",
+  "intermediate_path": "/mnt/home/users/tic_163_uma/mpascual/fscratch/datasets/spectral_allocation_heat_diffusion_project/lsun_church_n32k/eval_seeds_500.npy",
+  "intermediate_rule": "500 indices of splits['train'] drawn without replacement with numpy.random.default_rng(2026)",
+  "intermediate_sha256": "0dd6c7c7e8e969932afb65cafb3c0244353f5cddcdd7209b5d160c990b00adf9"
+ },
+ "steps": [
+  45000,
+  50000,
+  55000,
+  60000
+ ]
+}
