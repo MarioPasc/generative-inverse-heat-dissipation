@@ -513,3 +513,51 @@ including the D23 inherited-band correction. Items 1, 2, 3 and 4 of §13.2 are d
    D23 the inherited-band correction, and the exploratory items in their own section.
 5. **[ask Mario]**, still open: the proposal's Fig. 1 caption numbers, and pinning torch in
    `environment.yml`.
+
+---
+
+# Session 3 — [Orchestrator-GenAI], 2026-10-01 → 2026-10-02
+
+Model: Claude Opus 5.5 (1M), effort xhigh. Skills: `parallel-agents`; agents used
+`picasso-sbatch`. The full record of this session's wave is `M7-diagnostics/WAVE-W14.md`, with
+the prompts verbatim, every intervention and every verdict.
+
+## 14. What this session did
+
+1. **The results write-up.** `docs/RESULTS/results_discussion.md` gives the metrics, a verdict
+   per hypothesis, the transfer reading, the under-dispersion reading, the threats to validity,
+   and "what the report can state".
+   - An independent fact-check agent found real errors in the first draft. Main re-verified
+     every one and corrected it (`9d02e0c`).
+   - Lesson: **have the write-up fact-checked before it is shared.** Six claims were wrong,
+     including the H1d verdict, which a bound from $D_{lp}$ overturned.
+2. **The exploratory module.** `ihdm.analysis.exploratory` (outputs in `docs/RESULTS/exploratory/`)
+   gives the LSD split into level and shape, the octave bands, the late-window LSD,
+   precision/density, and ρ.
+   - Main wrote it before Mario's rule "the orchestrator does not code" (2026-10-01). From then
+     on, every code change went to agents.
+   - T7.4 hardened it.
+3. **Wave W14 (M7, post hoc, approved by Mario).**
+   - T7.1: the one-factor Churches datasets (r128, n32k) and their two training runs.
+   - T7.2: `--delta`, 128²-capable evaluation, and the δ sweep. Result: δ ≥ 2σ produces noise.
+   - T7.3: `--inception-steps` and the late-window evaluation of the photograph diagnostic.
+   - T7.4: hardening of the exploratory module.
+   - Every agent stopped at a GO gate before Picasso compute, and main reviewed each gate.
+4. **Copies.** The Picasso results were verified against the SanDisk by name and size plus
+   sha256 spot checks. Mario received the cleanup commands.
+
+## 15. Lessons added to §8
+
+- **Do not ask an agent to reproduce its own prompt verbatim.** T7.2's first agent was stopped
+  twice by an API-side safeguard flag while it pasted its prompt into its log. Instead, main
+  extracts each prompt from the agent's transcript into
+  `projects/GenAI/code/wave-W14-prompts/`, outside the fork, and pastes it at merge time.
+- **`rtk` also rewrites `wc` and `git diff --name-only`** inside pipes. Call `/usr/bin/git`
+  directly and count with python.
+- **`sbatch --test-only` start estimates are very pessimistic.** The estimate said 2026-10-24;
+  the jobs started within about 1 h.
+- **Background watchers in this harness stop at 2 h.** Prefer one-shot `until` loops on a single
+  job. Session-scoped cron reminders die with the session.
+- **A spec that counts images must say whether `seed` ⊂ `ref`.** T7.1 caught 32,840 → 32,800.
+- **Scraped photo datasets leak near-duplicates across shards** (re-encodings). Exact SHA-1
+  dedup misses them; a 32×32-thumbnail correlation rule caught 14 rows.
