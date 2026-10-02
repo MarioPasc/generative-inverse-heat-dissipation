@@ -11,9 +11,11 @@ Each reading answers a question the pre-registered tables raised:
   \\log_{10}\\bar P_R(b)` of the final 2k set split exactly into a level and a shape,
   :math:`\\mathrm{RMS}(e)^2 = \\bar e^2 + \\mathrm{sd}(e)^2`. The level is a broadband variance
   deficit (samples too alike at every scale); the shape is a mis-allocation of variance across
-  scales. The octave RMS is also split at 4 cycles per image: below it a
-  :math:`\\sigma_{B,\\max} = 24` prior can hand the seed's variance over (:math:`d_K^2 \\approx 0.08`
-  at 2 c/img), above it no arm's prior carries anything (:math:`d_K^2 < 10^{-4}`).
+  scales. The octave RMS is also split at 2 and 4 cycles per image into three bands: below
+  2 c/img a :math:`\\sigma_{B,\\max} = 24` prior carries most of the seed's variance
+  (:math:`d_K^2` falls from 0.86 at 0.5 c/img to 0.085 at 2); the 2-4 c/img band is the hand-off,
+  where :math:`d_K^2` drops further, to 0.008 at 2.8 c/img and :math:`5\\times10^{-5}` at 4;
+  above 4 c/img no arm's prior carries anything (:math:`d_K^2 < 10^{-4}`).
 * **Late-window LSD.** The mean of the 500-seed LSD curve over its last four checkpoints
   (45k-60k), beside the single-checkpoint final LSD, whose photograph curves oscillate.
 * **Inception precision and density**, stored by every run but not tabulated by T6.1.
@@ -84,8 +86,13 @@ logger = logging.getLogger(__name__)
 
 #: The eight octave bins of ``05-metrics.md`` §1, in cycles per image.
 OCTAVES: tuple[str, ...] = ("0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "32-64", "64-96")
-#: Octaves below 4 c/img, the only ones a sigma_B,max = 24 prior can hand over.
-LOW_OCTAVES: tuple[str, ...] = OCTAVES[:3]
+#: 0.5-2 c/img: a sigma_B,max = 24 prior carries most of the seed's variance here
+#: (d_K^2 falls from 0.86 at 0.5 c/img to 0.085 at 2).
+PRIOR_OCTAVES: tuple[str, ...] = OCTAVES[:2]
+#: 2-4 c/img: the hand-off band, where d_K^2 drops from 0.085 at 2 c/img to 5e-5 at 4
+#: (0.008 at 2.8).
+MID_OCTAVES: tuple[str, ...] = OCTAVES[2:3]
+#: Above 4 c/img, where no sigma_B,max = 24 prior carries anything (d_K^2 < 1e-4).
 HIGH_OCTAVES: tuple[str, ...] = OCTAVES[3:]
 #: Checkpoints averaged by the late-window LSD.
 LATE_STEPS: tuple[int, ...] = (45000, 50000, 55000, 60000)
@@ -120,7 +127,11 @@ ENDPOINTS: tuple[ExploratoryEndpoint, ...] = (
                         "0 = right total variance; negative = samples too alike"),
     ExploratoryEndpoint("oct_shape", "octave shape sd(e) (final)",
                         "0 = right allocation across scales"),
-    ExploratoryEndpoint("oct_rms_low", "octave RMS, 0.5-4 c/img", "the bands a W/8 prior carries"),
+    ExploratoryEndpoint("oct_rms_prior", "octave RMS, 0.5-2 c/img",
+                        "the band a σ_B,max = 24 prior mostly carries (d_K² 0.86 at 0.5 c/img, "
+                        "0.085 at 2)"),
+    ExploratoryEndpoint("oct_rms_mid", "octave RMS, 2-4 c/img",
+                        "the hand-off band (d_K² 0.085 at 2 c/img, 0.008 at 2.8, 5e-5 at 4)"),
     ExploratoryEndpoint("oct_rms_high", "octave RMS, 4-96 c/img", "bands no prior carries"),
     ExploratoryEndpoint("log_vr", "log10 variance ratio (final)", "0 = right total variance"),
     ExploratoryEndpoint("precision", "precision (Inception, k = 5)", "higher is better"),
@@ -149,7 +160,7 @@ def octave_errors(record: dict[str, Any]) -> np.ndarray:
 
 
 def octave_summary(errors: Sequence[float]) -> dict[str, float]:
-    """Split the octave errors into RMS, level and shape, and the RMS below/above 4 c/img.
+    """Split the octave errors into RMS, level and shape, and the RMS of the three bands.
 
     Parameters
     ----------
@@ -160,7 +171,9 @@ def octave_summary(errors: Sequence[float]) -> dict[str, float]:
     -------
     dict[str, float]
         ``oct_rms``, ``oct_level`` (mean), ``oct_shape`` (population sd; ``oct_rms**2 ==
-        oct_level**2 + oct_shape**2``), ``oct_rms_low`` and ``oct_rms_high``.
+        oct_level**2 + oct_shape**2``), ``oct_rms_prior`` (:data:`PRIOR_OCTAVES`, 0.5-2 c/img),
+        ``oct_rms_mid`` (:data:`MID_OCTAVES`, the 2-4 c/img hand-off) and ``oct_rms_high``
+        (:data:`HIGH_OCTAVES`, 4-96 c/img).
 
     Raises
     ------
@@ -170,13 +183,14 @@ def octave_summary(errors: Sequence[float]) -> dict[str, float]:
     e = np.asarray(errors, dtype=float)
     if e.shape != (len(OCTAVES),) or not np.all(np.isfinite(e)):
         raise ValueError(f"expected {len(OCTAVES)} finite octave errors, got {e!r}")
-    n_low = len(LOW_OCTAVES)
+    n_prior, n_mid = len(PRIOR_OCTAVES), len(MID_OCTAVES)
     return {
         "oct_rms": float(np.sqrt(np.mean(e ** 2))),
         "oct_level": float(np.mean(e)),
         "oct_shape": float(np.std(e)),
-        "oct_rms_low": float(np.sqrt(np.mean(e[:n_low] ** 2))),
-        "oct_rms_high": float(np.sqrt(np.mean(e[n_low:] ** 2))),
+        "oct_rms_prior": float(np.sqrt(np.mean(e[:n_prior] ** 2))),
+        "oct_rms_mid": float(np.sqrt(np.mean(e[n_prior:n_prior + n_mid] ** 2))),
+        "oct_rms_high": float(np.sqrt(np.mean(e[n_prior + n_mid:] ** 2))),
     }
 
 
@@ -194,6 +208,24 @@ def _read(path: Path) -> dict[str, Any]:
         return json.loads(path.read_text())
     except (OSError, ValueError) as error:
         raise AnalysisError(f"{path}: {error}") from error
+
+
+def _octave_summary_or_raise(rid: str, errors: Sequence[float]) -> dict[str, float]:
+    """:func:`octave_summary`, naming the run id instead of letting a bare ValueError escape."""
+    try:
+        return octave_summary(errors)
+    except ValueError as error:
+        raise AnalysisError(f"{rid}: {error}") from error
+
+
+def _log_vr_or_raise(rid: str, variance_ratio: float) -> float:
+    """``log10(variance_ratio)``, naming the run id when the ratio is not strictly positive."""
+    try:
+        return math.log10(variance_ratio)
+    except ValueError as error:
+        raise AnalysisError(
+            f"{rid}: variance_ratio must be positive to take log10, got {variance_ratio}"
+        ) from error
 
 
 def add_endpoints(results: Results) -> None:
@@ -215,17 +247,18 @@ def add_endpoints(results: Results) -> None:
         raise AnalysisError(f"the late window needs checkpoints {LATE_STEPS}, "
                             f"the collection has {results.steps}")
     columns: dict[str, list[float]] = {k: [] for k in
-                                       ("oct_rms", "oct_level", "oct_shape", "oct_rms_low",
-                                        "oct_rms_high", "log_vr", "lsd_late", "regen_ratio")}
+                                       ("oct_rms", "oct_level", "oct_shape", "oct_rms_prior",
+                                        "oct_rms_mid", "oct_rms_high", "log_vr", "lsd_late",
+                                        "regen_ratio")}
     for rid in frame.index:
         if not frame.at[rid, "present"]:
             for values in columns.values():
                 values.append(math.nan)
             continue
         final = _read(results.root / "runs" / rid / "final.json")
-        for key, value in octave_summary(octave_errors(final)).items():
+        for key, value in _octave_summary_or_raise(rid, octave_errors(final)).items():
             columns[key].append(value)
-        columns["log_vr"].append(math.log10(float(final["variance_ratio"])))
+        columns["log_vr"].append(_log_vr_or_raise(rid, float(final["variance_ratio"])))
         columns["lsd_late"].append(float(np.mean([float(frame.at[rid, c]) for c in late])))
         columns["regen_ratio"].append(regeneration_ratio(
             float(frame.at[rid, "inherited_within"]), float(frame.at[rid, "inherited_predicted"])))
@@ -243,7 +276,7 @@ def checkpoint_frame(results: Results) -> pd.DataFrame:
             rows.append({"run_id": rid, **identity, "step": int(step),
                          "lsd": float(record["lsd"]),
                          "variance_ratio": float(record["variance_ratio"]),
-                         **octave_summary(octave_errors(record))})
+                         **_octave_summary_or_raise(rid, octave_errors(record))})
     return pd.DataFrame(rows)
 
 
@@ -407,11 +440,12 @@ def build_markdown(results: Results, ckpt: pd.DataFrame) -> tuple[str, dict[str,
         "",
         "Definitions. e_b = log10 P̄_S(b) − log10 P̄_R(b) on the eight octaves of the final 2k "
         "set (`final.json` `lsd_octaves`); octave RMS = sqrt(mean e_b²) (tracks LSD, which "
-        "uses 43 finer bins); level ē = mean e_b; shape = sd(e_b), so RMS² = ē² + sd². 'Low' "
-        "= 0.5-4 c/img (a σ_B,max = 24 prior keeps d_K² ≈ 0.54 at 1 c/img, 0.08 at 2 and "
-        "5e-5 at 4), 'high' = 4-96 c/img. Variance ratio = ΣP_S/ΣP_R (non-DC). ρ = (1 − I_w)/"
-        "(1 − I) from table 1c. Precision and density: Naeem et al. (2020), k = 5, Inception "
-        "pool features, as stored by every run.",
+        "uses 43 finer bins); level ē = mean e_b; shape = sd(e_b), so RMS² = ē² + sd². 'Prior' "
+        "= 0.5-2 c/img (a σ_B,max = 24 prior keeps d_K² ≈ 0.86 at 0.5 c/img, falling to 0.085 "
+        "at 2), 'mid' = 2-4 c/img (the hand-off band: d_K² ≈ 0.008 at 2.8 c/img, 5e-5 at 4), "
+        "'high' = 4-96 c/img (no prior carries anything there). Variance ratio = ΣP_S/ΣP_R "
+        "(non-DC). ρ = (1 − I_w)/(1 − I) from table 1c. Precision and density: Naeem et al. "
+        "(2020), k = 5, Inception pool features, as stored by every run.",
         "",
         "## X1. Seed means per cell",
         "",

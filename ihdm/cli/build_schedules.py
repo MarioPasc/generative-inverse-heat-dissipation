@@ -6,7 +6,9 @@ matched schedules are fitted on the **training** split of their dataset, each wi
 terminal blur (decision D12: the march is re-run for ``W/2`` and for ``W/8``; a schedule is
 never truncated or rescaled from another one).
 
-Run as ``python -m ihdm.cli.build_schedules``.
+Run as ``python -m ihdm.cli.build_schedules``. A schedule added after the freeze (the M7
+diagnostic's ``log_W2_128``, T7.1) is built alone with ``--add <name>``, which appends its entry
+to ``schedules.json`` and leaves the seven frozen entries byte-identical.
 """
 
 from __future__ import annotations
@@ -52,6 +54,13 @@ SCHEDULES: tuple[tuple[str, ScheduleSpec], ...] = (
         ScheduleSpec(kind="matched", sigma_max=96.0, fitted_on="lsun_bedroom/train"),
     ),
 )
+
+# Added after the freeze, one name at a time (--add), never by the full rebuild: the A0 log
+# schedule of the 128² diagnostic dataset lsun_church_r128 (M7, T7.1), terminal blur W/2 = 64.
+# Log schedules only, so no fitting split is needed.
+ADDED_SCHEDULES: dict[str, ScheduleSpec] = {
+    "log_W2_128": ScheduleSpec(kind="log", sigma_max=64.0),
+}
 
 
 def _fitting_splits() -> list[str]:
@@ -128,6 +137,71 @@ def build(root: Path, out_dir: Path) -> dict[str, dict[str, Any]]:
     return table
 
 
+def add(name: str, out_dir: Path, force: bool = False) -> dict[str, Any]:
+    """Build one schedule of :data:`ADDED_SCHEDULES` and append it to ``schedules.json``.
+
+    The array is produced by the same ``_entry`` path as the frozen log schedules
+    (``build_schedule`` -> ``log_schedule`` -> ``save_schedule``). The index is re-serialised with
+    the format :func:`build` uses, so every other entry keeps its bytes.
+
+    Parameters
+    ----------
+    name : str
+        A key of :data:`ADDED_SCHEDULES`.
+    out_dir : Path
+        The directory holding ``schedules.json`` and the frozen arrays.
+    force : bool
+        Rebuild the entry if it already exists.
+
+    Returns
+    -------
+    dict[str, Any]
+        The ``schedules.json`` entry of ``name``.
+
+    Raises
+    ------
+    ScheduleError
+        If ``name`` is unknown, ``schedules.json`` is missing, or the entry already exists and
+        ``force`` is false.
+    """
+    if name not in ADDED_SCHEDULES:
+        raise ScheduleError(f"unknown added schedule {name!r}; expected one of "
+                            f"{sorted(ADDED_SCHEDULES)}")
+    spec = ADDED_SCHEDULES[name]
+    if spec.fitted_on is not None:
+        raise ScheduleError(f"{name}: --add builds log schedules only")
+    index = out_dir / "schedules.json"
+    if not index.is_file():
+        raise ScheduleError(f"{index} is missing; build the frozen schedules first")
+    table: dict[str, dict[str, Any]] = json.loads(index.read_text())
+    if name in table and not force:
+        raise ScheduleError(f"{name} is already in {index}; --force to rebuild it")
+    table[name] = _entry(name, spec, {}, out_dir, git_sha(repo_root()))
+    index.write_text(json.dumps(table, indent=2, sort_keys=True) + "\n")
+    return table[name]
+
+
+def _main_add(name: str, out_dir: Path, force: bool) -> int:
+    """``--add``: build one added schedule unless it is already present and valid."""
+    index = out_dir / "schedules.json"
+    present = index.is_file() and name in json.loads(index.read_text())
+    if present and not force and not validate_schedule(out_dir / f"{name}.npy"):
+        print(f"{name} already added and valid in {out_dir}; --force to rebuild")
+        return 0
+    try:
+        entry = add(name, out_dir, force=force or present)
+    except ScheduleError as exc:
+        print(f"FAILED: {exc}", file=sys.stderr)
+        return 1
+    problems = validate_schedule(out_dir / f"{name}.npy")
+    for problem in problems:
+        print(f"  {problem}", file=sys.stderr)
+    status = "FAILED" if problems else "OK"
+    print(f"{status} {name}: sigma_max={entry['sigma_max']} K={entry['K']} "
+          f"sha256={entry['sha256'][:12]} in {out_dir}")
+    return 1 if problems else 0
+
+
 def _validate_all(out_dir: Path) -> list[str]:
     """Run ``validate_schedule`` on every produced file and return every problem found."""
     problems: list[str] = []
@@ -155,11 +229,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data-root", type=Path, default=data_root())
     parser.add_argument("--out", type=Path, default=schedules_dir())
     parser.add_argument("--force", action="store_true", help="rebuild even if the files validate")
+    parser.add_argument(
+        "--add", choices=sorted(ADDED_SCHEDULES), default=None,
+        help="build only this post-freeze schedule and append it to schedules.json",
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
     logging.basicConfig(level=args.log_level, format="%(levelname)s %(name)s: %(message)s")
 
     out_dir: Path = args.out
+    if args.add is not None:
+        return _main_add(args.add, out_dir, args.force)
     out_dir.mkdir(parents=True, exist_ok=True)
     if not args.force and (out_dir / "schedules.json").is_file():
         if not _validate_all(out_dir):

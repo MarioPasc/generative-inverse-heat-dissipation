@@ -21,11 +21,20 @@ from torch.utils.data import DataLoader, Dataset
 
 from ihdm.data.errors import DataFormatError
 
-# The four real dataset ids plus "synthetic" (the fixture used by the test suite
-# and the Picasso import-check job). A frozenset so `config.data.dataset in
-# NPY_DATASETS` is a hash lookup; imported by scripts.datasets.get_dataset.
+# The four real dataset ids, the two M7 diagnostic datasets (T7.1), plus "synthetic" (the
+# fixture used by the test suite and the Picasso import-check job). A frozenset so
+# `config.data.dataset in NPY_DATASETS` is a hash lookup; imported by
+# scripts.datasets.get_dataset.
 NPY_DATASETS: frozenset[str] = frozenset(
-    {"ixi", "oasis1", "lsun_church", "lsun_bedroom", "synthetic"}
+    {
+        "ixi",
+        "oasis1",
+        "lsun_church",
+        "lsun_bedroom",
+        "lsun_church_r128",
+        "lsun_church_n32k",
+        "synthetic",
+    }
 )
 
 _VALID_SPLITS: tuple[str, ...] = ("train", "ref", "seed")

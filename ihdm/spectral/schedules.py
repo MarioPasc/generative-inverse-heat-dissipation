@@ -3,8 +3,8 @@
 Frozen contract: ``docs/SPECIFICATIONS/04-run-artifacts.md`` §1. A schedule is a ``float64``
 array of shape ``(K + 1,)`` holding ``sigma_{B,k}`` in pixels, with ``s[0] = 0`` (the unblurred
 level), ``s[1] = sigma_min = 0.5`` and ``s[K] = sigma_max in {96.0, 24.0}``, strictly
-increasing. The heat time of level ``k`` is ``t_k = s[k]^2 / 2``
-(``model_code/utils.py: DCTBlur.forward``).
+increasing; the M7 diagnostic (T7.1) adds ``64.0``, the ``W/2`` terminal blur of a 128² image.
+The heat time of level ``k`` is ``t_k = s[k]^2 / 2`` (``model_code/utils.py: DCTBlur.forward``).
 
 The matched schedule places the ``K`` levels so that each step removes the same between-image
 variance of the fitting split: with ``d_{k,i} = exp(-lambda_i t_k)`` the data-dependent part of
@@ -63,7 +63,10 @@ SIGMA_B_OCTAVE_LABELS: tuple[str, ...] = tuple(
     f"{lo:g}-{hi:g}"
     for lo, hi in zip(SIGMA_B_OCTAVE_EDGES[:-1], SIGMA_B_OCTAVE_EDGES[1:], strict=True)
 )
-TERMINAL_BLURS: tuple[float, ...] = (96.0, 24.0)
+# W/2 and W/8 of the 192² experiment, then W/2 of the 128² diagnostic dataset lsun_church_r128
+# (T7.1, schedule log_W2_128). 64 lies inside the octave bins above, so levels_per_octave still
+# sums to K for it.
+TERMINAL_BLURS: tuple[float, ...] = (96.0, 24.0, 64.0)
 
 _OUTER_ITERATIONS = 80  # geometric bisections on the per-level target
 _INNER_ITERATIONS = 60  # bisections per level, on the heat time

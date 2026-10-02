@@ -20,6 +20,25 @@ run of that dataset; the sampling RNG seed and the sampling batch are fixed too,
 the sample set means the same seed and the same noise stream at 35k as at 40k and in A0 as in A3.
 Every sampling call passes its indices explicitly through the sampler's ``file`` source, which
 refuses an index outside the split it declares.
+
+Two diagnostics of M7 (T7.2) extend the request without changing the default path:
+
+* ``delta`` overrides the sampling noise sd (default ``delta_factor * sigma``). An explicit value,
+  even one equal to the default, writes to its own trees ``samples[_amp-<mode>]_delta-<repr>/`` and
+  ``metrics[_amp-<mode>]_delta-<repr>/`` and adds a ``delta`` key to every JSON, so draws under two
+  noise levels never share a cache or a result file. The noise *stream* does not depend on
+  ``delta`` (it only scales it), so sets drawn at two values with the same seeds are paired.
+* ``final_from_lsd`` reuses the final checkpoint's LSD set (the frozen 500, training-seeded) as the
+  final set of KID/FID/precision/recall and ``M`` instead of drawing the 2 000-seed final set.
+
+A third (T7.3) adds ``inception_steps``: at every listed checkpoint the Inception metrics (KID with
+its interval, FID, precision, recall, density, coverage) and ``M`` / ``M_lp`` / seed-NN fraction
+are computed on that step's LSD set and stored in its ``ckpt_<step>.json`` (``inception`` and
+``memorisation`` blocks) and in ``summary.json`` (``inception_by_step``,
+``memorisation_by_step``). Without it nothing changes: no key, no file, no number.
+
+The binnings and length-scales follow the image side by the W rule of ``ihdm.metrics.spectral``
+(``spectral_grid``); at ``W = 192`` they are the frozen constants.
 """
 
 from __future__ import annotations
@@ -45,9 +64,9 @@ from ihdm.metrics.errors import MetricError
 from ihdm.metrics.io import read_json, write_json
 from ihdm.metrics.memorisation import memorisation_ratio
 from ihdm.metrics.spectral import (
-    LOW_BAND_SIGMA_PX,
     inherited_band,
     lsd,
+    spectral_grid,
     t_tau,
 )
 from ihdm.paths import repo_root
@@ -180,6 +199,17 @@ class EvalRequest:
         Sampling precision, one of :data:`AMP_MODES`. Every mode other than ``"off"`` writes to
         its own ``samples_amp-<mode>/`` and ``metrics_amp-<mode>/`` trees, so samples drawn
         under two precisions can never be mixed in one cache or one result file.
+    delta : float or None
+        Sampling noise sd. ``None`` is the run's ``delta_factor * sigma`` and the historical
+        trees; any explicit value, even the default one, writes to the ``_delta-<repr>`` trees
+        (:func:`samples_dirname`) and is recorded as ``delta`` in every JSON.
+    final_from_lsd : bool
+        Reuse the final checkpoint's LSD set as the final set of the Inception metrics and ``M``
+        instead of drawing the ``n_final`` set (``final.json`` then records ``final_set: "lsd"``).
+    inception_steps : tuple[int, ...] or None
+        Checkpoints at which the Inception metrics and ``M`` are also computed on the step's LSD
+        set (T7.3); every one must be among the steps ``ckpts`` selects. ``None`` (the default)
+        computes them at the final step only, as before.
     """
 
     run: Path
@@ -199,6 +229,9 @@ class EvalRequest:
     n_boot_gate: int = 1000
     k: int = 5
     amp: str = "off"
+    delta: float | None = None
+    final_from_lsd: bool = False
+    inception_steps: tuple[int, ...] | None = None
 
 
 # --------------------------------------------------------------------------------------------
@@ -485,6 +518,8 @@ class DatasetViews:
         ``ref`` minus the seed subjects' rows: the denominator of ``M``.
     train_subjects : list[str]
         Subject of every row of ``train_idx``.
+    image_size : int or None
+        Side of the dataset's images (``meta.image_size``); ``None`` when unknown.
     """
 
     root: Path
@@ -493,6 +528,7 @@ class DatasetViews:
     train_idx: np.ndarray
     heldout_idx: np.ndarray
     train_subjects: list[str]
+    image_size: int | None = None
     _images: Any = field(repr=False, default=None)
     _cache: dict[str, np.ndarray] = field(repr=False, default_factory=dict)
 
@@ -587,6 +623,7 @@ def load_views(dataset_root: Path) -> DatasetViews:
             f"{root}: the ref split is entirely made of seed subjects, so M has no denominator"
         )
     subjects = index.iloc[train]["subject"].astype(str).tolist()
+    image_size = getattr(meta, "image_size", None)
     return DatasetViews(
         root=root,
         dataset_sha256=str(getattr(meta, "sha256_images", "") or ""),
@@ -594,6 +631,7 @@ def load_views(dataset_root: Path) -> DatasetViews:
         train_idx=train,
         heldout_idx=heldout,
         train_subjects=subjects,
+        image_size=int(image_size) if image_size else int(images.shape[-1]),
         _images=images,
     )
 
@@ -610,16 +648,36 @@ def _check_amp(amp: str) -> str:
     return amp
 
 
-def samples_dirname(amp: str = "off") -> str:
-    """Return the name of the sample-cache tree of a sampling precision.
+def _check_delta(delta: float | None) -> float | None:
+    """Return ``delta`` as a float (or ``None``), raising if it is negative or not finite."""
+    if delta is None:
+        return None
+    value = float(delta)
+    if not (np.isfinite(value) and value >= 0.0):
+        raise MetricError(f"delta must be finite and non-negative, got {delta!r}")
+    return value
+
+
+def _delta_suffix(delta: float | None) -> str:
+    """Return ``""`` for the default noise level, ``"_delta-<repr(float(delta))>"`` otherwise."""
+    value = _check_delta(delta)
+    return "" if value is None else f"_delta-{value!r}"
+
+
+def samples_dirname(amp: str = "off", delta: float | None = None) -> str:
+    """Return the name of the sample-cache tree of a sampling precision and noise level.
 
     ``"off"`` keeps the historical ``samples`` so that the fp32 caches written before ``--amp``
-    existed stay valid; every other mode gets ``samples_amp-<mode>``.
+    existed stay valid; every other mode gets ``samples_amp-<mode>``. An explicit ``delta``
+    appends ``_delta-<repr(float(delta))>`` (e.g. ``samples_amp-fp16_delta-0.02``), also when it
+    equals the run's default, so that only the default request uses the historical trees.
 
     Parameters
     ----------
     amp : str
         One of :data:`AMP_MODES`.
+    delta : float or None
+        The sampling noise sd; ``None`` is the run's default.
 
     Returns
     -------
@@ -629,30 +687,37 @@ def samples_dirname(amp: str = "off") -> str:
     Raises
     ------
     MetricError
-        If ``amp`` is not a known mode.
+        If ``amp`` is not a known mode or ``delta`` is negative or not finite.
     """
-    return "samples" if _check_amp(amp) == "off" else f"samples_amp-{amp}"
+    base = "samples" if _check_amp(amp) == "off" else f"samples_amp-{amp}"
+    return base + _delta_suffix(delta)
 
 
-def metrics_dirname(amp: str = "off") -> str:
-    """Return the name of the result-file tree of a precision (see :func:`samples_dirname`).
+def metrics_dirname(amp: str = "off", delta: float | None = None) -> str:
+    """Return the name of the result-file tree of a precision and noise level.
+
+    See :func:`samples_dirname`.
 
     Parameters
     ----------
     amp : str
         One of :data:`AMP_MODES`.
+    delta : float or None
+        The sampling noise sd; ``None`` is the run's default.
 
     Returns
     -------
     str
-        ``"metrics"`` for ``"off"``, ``"metrics_amp-<mode>"`` otherwise.
+        ``"metrics"`` for ``"off"``, ``"metrics_amp-<mode>"`` otherwise, followed by
+        ``"_delta-<repr>"`` when ``delta`` is given.
 
     Raises
     ------
     MetricError
-        If ``amp`` is not a known mode.
+        If ``amp`` is not a known mode or ``delta`` is negative or not finite.
     """
-    return "metrics" if _check_amp(amp) == "off" else f"metrics_amp-{amp}"
+    base = "metrics" if _check_amp(amp) == "off" else f"metrics_amp-{amp}"
+    return base + _delta_suffix(delta)
 
 
 def _amp_signature(amp: str) -> bool | str:
@@ -745,6 +810,7 @@ def draw_set(
     split: str = "train",
     force: bool = False,
     amp: str = "off",
+    delta: float | None = None,
 ) -> SampleSet:
     """Draw one sample set, or reuse the cached one, and write the ``sample_ckpt`` layout.
 
@@ -783,6 +849,9 @@ def draw_set(
     amp : str
         Sampling precision, one of :data:`AMP_MODES`; it selects the cache tree
         (:func:`samples_dirname`) and enters the signature.
+    delta : float or None
+        Sampling noise sd; ``None`` is the run's default. An explicit value selects the
+        ``_delta-<repr>`` cache tree and is recorded as ``delta`` in ``request.json``.
 
     Returns
     -------
@@ -793,11 +862,12 @@ def draw_set(
     ------
     MetricError
         If the seeds cannot be loaded, the sampler refuses the request, or the cache directory
-        holds a set drawn under a different precision (it is never overwritten, even with
-        ``force``).
+        holds a set drawn under a different precision or, in a ``_delta`` tree, a different noise
+        level (it is never overwritten, even with ``force``).
     """
     amp_signature = _amp_signature(amp)
-    directory = Path(workdir) / samples_dirname(amp) / f"{step:06d}" / name
+    delta = _check_delta(delta)
+    directory = Path(workdir) / samples_dirname(amp, delta) / f"{step:06d}" / name
     try:
         seeds_u8, seed_idx = load_seed_images(
             Path(dataset_root), seed_source, n_seeds, rng_seed, idx_file=idx_file, split=split
@@ -811,6 +881,7 @@ def draw_set(
         rng_seed=int(rng_seed),
         amp=amp != "off",
         amp_dtype=_AMP_DTYPE[amp],
+        delta=delta,
     )
     try:
         resolved = resolve_request(request, config)
@@ -828,6 +899,14 @@ def draw_set(
                 f"{directory} holds a {name} set drawn with amp={stored_amp!r}, but this request "
                 f"samples with amp={amp_signature!r}; refusing to mix or overwrite precisions"
             )
+        if delta is not None:
+            stored_delta = json.loads(record_path.read_text()).get("signature", {}).get("delta")
+            if stored_delta != float(resolved[0]):
+                raise MetricError(
+                    f"{directory} holds a {name} set drawn with delta={stored_delta!r}, but this "
+                    f"request samples with delta={float(resolved[0])!r}; refusing to mix or "
+                    "overwrite noise levels"
+                )
     if samples_path.exists() and record_path.exists() and not force:
         stored = json.loads(record_path.read_text())
         if stored.get("signature") == signature:
@@ -869,28 +948,24 @@ def draw_set(
     np.save(directory / "seed_idx.npy", np.asarray(seed_idx, dtype=np.int64))
     np.save(directory / "seeds.npy", seeds_u8)
     n_chains = int(samples.shape[0] * samples.shape[1])
-    record_path.write_text(
-        json.dumps(
-            {
-                "signature": signature,
-                "set": name,
-                "step": int(step),
-                "checkpoint": str(ckpt_path),
-                "dataset_root": str(dataset_root),
-                "seed_source": seed_source,
-                "seed_list": None if idx_file is None else str(idx_file),
-                "shape": list(samples.shape),
-                "device": str(device),
-                "amp": amp,
-                "elapsed_s": elapsed,
-                "s_per_chain": elapsed / n_chains if n_chains else None,
-                "created": datetime.now(UTC).isoformat(),
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n"
-    )
+    record: dict[str, Any] = {
+        "signature": signature,
+        "set": name,
+        "step": int(step),
+        "checkpoint": str(ckpt_path),
+        "dataset_root": str(dataset_root),
+        "seed_source": seed_source,
+        "seed_list": None if idx_file is None else str(idx_file),
+        "shape": list(samples.shape),
+        "device": str(device),
+        "amp": amp,
+        "elapsed_s": elapsed,
+        "s_per_chain": elapsed / n_chains if n_chains else None,
+        "created": datetime.now(UTC).isoformat(),
+    }
+    if delta is not None:
+        record["delta"] = delta
+    record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
     logger.info(
         "%s set: %d chains at step %d in %.1f s (%.3f s/chain) -> %s",
         name, n_chains, step, elapsed, elapsed / n_chains if n_chains else float("nan"), directory,
@@ -944,10 +1019,15 @@ def _finite_curve(centres: np.ndarray, *curves: np.ndarray) -> dict[str, list[fl
 def _inherited_record(
     samples: np.ndarray, seeds: np.ndarray, reference_power: np.ndarray, sigma_max: float
 ) -> dict[str, Any]:
-    """Return the inherited-band block, with the empty radial bins dropped."""
+    """Return the inherited-band block, with the empty radial bins dropped.
+
+    The low band is the grid's (``8 W / 192`` px for ``W >= 128``, 8 px below; the W rule of
+    ``ihdm.metrics.spectral``).
+    """
+    low_band_sigma_px = spectral_grid(np.asarray(reference_power).shape[0]).low_band_sigma_px
     full = inherited_band(samples, seeds, reference_power, sigma_max)
     low = inherited_band(
-        samples, seeds, reference_power, sigma_max, low_band_sigma_px=LOW_BAND_SIGMA_PX
+        samples, seeds, reference_power, sigma_max, low_band_sigma_px=low_band_sigma_px
     )
     curve = _finite_curve(full.centres, full.radial_measured, full.radial_predicted)
     return {
@@ -955,7 +1035,7 @@ def _inherited_record(
         "inherited_predicted": full.share_predicted,
         "inherited_measured_low_band": low.share_measured,
         "inherited_predicted_low_band": low.share_predicted,
-        "low_band_sigma_px": LOW_BAND_SIGMA_PX,
+        "low_band_sigma_px": low_band_sigma_px,
         "sigma_max": full.sigma_max,
         "radial": {
             "centres": curve["centres"],
@@ -973,8 +1053,18 @@ def _memorisation_record(
     seed_idx: np.ndarray,
     device: str,
     out_dir: Path,
+    sigma_lp: float = SIGMA_LP,
+    prefix: str = "final",
 ) -> dict[str, Any]:
-    """Return the memorisation block; the per-sample arrays go to ``.npy`` beside the JSON."""
+    """Return the memorisation block; the per-sample arrays go to ``.npy`` beside the JSON.
+
+    ``prefix`` names the two arrays (``<prefix>_memorisation_per_sample_{d,nn}.npy``):
+    ``"final"`` for the final record, ``"ckpt_<step:06d>"`` for a per-step record (T7.3).
+    """
+    names = [
+        f"{prefix}_memorisation_per_sample_d.npy",
+        f"{prefix}_memorisation_per_sample_nn.npy",
+    ]
     rows = views.train_rows(seed_idx)
     result = memorisation_ratio(
         samples,
@@ -982,11 +1072,11 @@ def _memorisation_record(
         views.heldout,
         views.train_subjects,
         rows,
-        sigma_lp=SIGMA_LP,
+        sigma_lp=sigma_lp,
         device=device,
     )
-    np.save(out_dir / "final_memorisation_per_sample_d.npy", result.per_sample_d)
-    np.save(out_dir / "final_memorisation_per_sample_nn.npy", result.per_sample_nn)
+    np.save(out_dir / names[0], result.per_sample_d)
+    np.save(out_dir / names[1], result.per_sample_nn)
     return {
         "M": result.M,
         "M_lp": result.M_lp,
@@ -996,10 +1086,7 @@ def _memorisation_record(
         "n_samples": result.n_samples,
         "n_train": result.n_train,
         "n_heldout": result.n_heldout,
-        "per_sample_files": [
-            "final_memorisation_per_sample_d.npy",
-            "final_memorisation_per_sample_nn.npy",
-        ],
+        "per_sample_files": names,
         "note": (
             "M is two-sided: M << 1 is copying, M >> 1 is a model whose samples are off the "
             "data manifold. It is only readable as 'copying or not' once LSD and KID say the "
@@ -1099,6 +1186,7 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
     import torch
 
     amp = _check_amp(request.amp)
+    delta = _check_delta(request.delta)
     workdir = Path(request.run).resolve()
     try:
         config = load_run_config(workdir)
@@ -1107,18 +1195,27 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
 
     dataset_root = Path(config.data.root) / str(config.data.dataset)
     views = load_views(dataset_root)
+    image_size = int(config.data.image_size)
+    if views.image_size is not None and views.image_size != image_size:
+        raise MetricError(
+            f"the run's data.image_size is {image_size} but {dataset_root} holds "
+            f"{views.image_size}² images"
+        )
     lists = ensure_seed_lists(dataset_root)
     table = checkpoint_table(workdir)
     steps, selection = select_checkpoints(table, request.ckpts)
+    inception_steps = _check_inception_steps(request, steps)
     final_step = max(table)
     device = _resolve_device(request.device, config)
-    metrics_dir = workdir / metrics_dirname(amp)
+    metrics_dir = workdir / metrics_dirname(amp, delta)
     metrics_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(
         "evaluating %s: steps %s (%s), final %d, device %s, amp %s",
         config.run_id, steps, selection, final_step, device, amp,
     )
+    if delta is not None:
+        logger.info("sampling noise sd overridden: delta = %r -> %s", delta, metrics_dir)
     reference = views.reference
     reference_power = mode_power(reference.astype(np.float32) / 255.0)
 
@@ -1144,7 +1241,7 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
         lsd_set = draw_set(
             "lsd", workdir, step, ckpt_path, config, dataset_root, "file",
             request.n_lsd, 1, SAMPLING_RNG_INTERMEDIATE, request.sample_batch, device, loader,
-            idx_file=lists.intermediate.path, force=request.force, amp=amp,
+            idx_file=lists.intermediate.path, force=request.force, amp=amp, delta=delta,
         )
         sampling_log.append(
             {"step": step, "set": "lsd", "reused": lsd_set.reused, "elapsed_s": lsd_set.elapsed_s}
@@ -1169,15 +1266,22 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
                     "samples_dir": str(lsd_set.directory),
                 }
             )
+            if delta is not None:
+                record["delta"] = delta
             write_json(record_path, record)
             per_step[step] = record
         logger.info("step %d: LSD %.4f", step, per_step[step]["lsd"])
+
+        if step in inception_steps:
+            per_step[step] = _step_inception(
+                request, step, views, lsd_set, device, metrics_dir, record_path, per_step[step]
+            )
 
         if step == final_step:
             final_record = _evaluate_final(
                 request, workdir, step, ckpt_path, config, dataset_root, views, lists,
                 reference, reference_power, device, loader, metrics_dir, sampling_log,
-                per_step[step],
+                per_step[step], lsd_set=lsd_set,
             )
 
         model_holder.clear()
@@ -1188,6 +1292,8 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
         request, config, payload_identity, views, lists, per_step, final_record, steps,
         selection, final_step, device, sampling_log,
     )
+    if inception_steps:
+        _add_inception_by_step(summary, per_step, inception_steps)
     write_json(metrics_dir / "summary.json", summary)
 
     if request.gate is not None:
@@ -1207,6 +1313,147 @@ def evaluate_run(request: EvalRequest) -> dict[str, Any]:
     return summary
 
 
+#: Keys of the Inception block copied into ``summary["inception_by_step"]`` (T7.3).
+_INCEPTION_SUMMARY_KEYS: tuple[str, ...] = (
+    "kid", "kid_ci_low", "kid_ci_high", "fid", "fid_ci_low", "fid_ci_high", "precision",
+    "recall", "density", "coverage", "k", "n_samples", "n_reference", "n_boot",
+)
+
+#: Keys of the memorisation block copied into ``summary["memorisation_by_step"]`` (T7.3).
+_MEMORISATION_SUMMARY_KEYS: tuple[str, ...] = (
+    "M", "M_lp", "seed_nn_fraction", "d_samples_median", "d_heldout_median", "n_samples",
+)
+
+
+def _check_inception_steps(request: EvalRequest, steps: list[int]) -> tuple[int, ...]:
+    """Return the validated ``inception_steps`` of a request, sorted; empty when not requested.
+
+    Parameters
+    ----------
+    request : EvalRequest
+        The evaluation request.
+    steps : list[int]
+        The checkpoints ``request.ckpts`` selected.
+
+    Returns
+    -------
+    tuple[int, ...]
+        The steps at which the Inception metrics and ``M`` are computed on the LSD set.
+
+    Raises
+    ------
+    MetricError
+        If the option names no step, is combined with ``skip_inception``, or names a step that is
+        not evaluated (it has no LSD set to score).
+    """
+    if request.inception_steps is None:
+        return ()
+    wanted = tuple(sorted({int(step) for step in request.inception_steps}))
+    if not wanted:
+        raise MetricError("inception_steps names no step")
+    if request.skip_inception:
+        raise MetricError(
+            "inception_steps asks for the Inception metrics that skip_inception turns off"
+        )
+    absent = [step for step in wanted if step not in steps]
+    if absent:
+        raise MetricError(
+            f"inception_steps {absent} are not among the evaluated checkpoints {steps}; "
+            "add them to --ckpts"
+        )
+    return wanted
+
+
+def _step_inception(
+    request: EvalRequest,
+    step: int,
+    views: DatasetViews,
+    lsd_set: SampleSet,
+    device: str,
+    metrics_dir: Path,
+    record_path: Path,
+    record: dict[str, Any],
+) -> dict[str, Any]:
+    """Add the Inception and memorisation blocks of one checkpoint to its record (T7.3).
+
+    Both blocks are computed on the step's LSD set (the frozen training-seeded list) against the
+    ``ref`` split, exactly as ``final.json`` computes them on its final set; the per-sample arrays
+    of ``M`` go to ``ckpt_<step>_memorisation_per_sample_{d,nn}.npy``. A record that already holds
+    both blocks is kept when its LSD set was reused, the request is not forced and the stored
+    block used the same ``k`` and number of resamples.
+
+    Parameters
+    ----------
+    request : EvalRequest
+        The evaluation request.
+    step : int
+        The checkpoint.
+    views : DatasetViews
+        The dataset views.
+    lsd_set : SampleSet
+        The step's LSD set.
+    device : str
+        Torch device string.
+    metrics_dir : Path
+        The result-file tree.
+    record_path : Path
+        The step's ``ckpt_<step>.json``.
+    record : dict[str, Any]
+        The step's LSD record.
+
+    Returns
+    -------
+    dict[str, Any]
+        The record with its ``inception`` and ``memorisation`` blocks, also written to
+        ``record_path``.
+    """
+    stored = record.get("inception")
+    if (
+        isinstance(stored, dict)
+        and isinstance(record.get("memorisation"), dict)
+        and lsd_set.reused
+        and not request.force
+        and stored.get("k") == request.k
+        and stored.get("n_boot") == request.n_boot_inception
+    ):
+        logger.info("step %d: reusing the Inception and memorisation blocks of %s", step,
+                    record_path)
+        return record
+    grid = spectral_grid(int(lsd_set.samples.shape[-1]))
+    updated = dict(record)
+    updated["inception"] = _inception_record(request, views, lsd_set, device)
+    updated["memorisation"] = _memorisation_record(
+        lsd_set.flat, views, lsd_set.seed_idx, device, metrics_dir,
+        sigma_lp=grid.sigma_lp_px, prefix=f"ckpt_{step:06d}",
+    )
+    write_json(record_path, updated)
+    logger.info(
+        "step %d: KID %.4f, precision %.4f, recall %.4f, M %.4f",
+        step, updated["inception"]["kid"], updated["inception"]["precision"],
+        updated["inception"]["recall"], updated["memorisation"]["M"],
+    )
+    return updated
+
+
+def _add_inception_by_step(
+    summary: dict[str, Any],
+    per_step: dict[int, dict[str, Any]],
+    inception_steps: tuple[int, ...],
+) -> None:
+    """Add ``inception_by_step``, ``memorisation_by_step`` and the step list to a summary."""
+    summary["inception_by_step"] = {
+        int(step): {key: per_step[step]["inception"].get(key) for key in _INCEPTION_SUMMARY_KEYS}
+        for step in inception_steps
+    }
+    summary["memorisation_by_step"] = {
+        int(step): {
+            key: per_step[step]["memorisation"].get(key) for key in _MEMORISATION_SUMMARY_KEYS
+        }
+        for step in inception_steps
+    }
+    summary["sampling"]["inception_steps"] = [int(step) for step in inception_steps]
+
+
 def _evaluate_final(
     request: EvalRequest,
     workdir: Path,
@@ -1223,23 +1470,37 @@ def _evaluate_final(
     metrics_dir: Path,
     sampling_log: list[dict[str, Any]],
     ckpt_record: dict[str, Any],
+    lsd_set: SampleSet | None = None,
 ) -> dict[str, Any]:
-    """Draw the two final sets and write ``metrics/final.json``."""
-    final_path = metrics_dir / "final.json"
+    """Draw the two final sets and write ``metrics/final.json``.
 
-    final_set = draw_set(
-        "final", workdir, step, ckpt_path, config, dataset_root, "file",
-        request.n_final, 1, SAMPLING_RNG_FINAL, request.sample_batch, device, loader,
-        idx_file=lists.final.path, force=request.force, amp=request.amp,
-    )
-    sampling_log.append(
-        {"step": step, "set": "final", "reused": final_set.reused,
-         "elapsed_s": final_set.elapsed_s}
-    )
+    With ``request.final_from_lsd`` the final step's LSD set (``lsd_set``) stands in for the
+    final set: nothing is drawn from the 2 000-seed list and ``final.json`` records
+    ``final_set: "lsd"`` with the intermediate list's digest.
+    """
+    final_path = metrics_dir / "final.json"
+    delta = _check_delta(request.delta)
+    final_set_name = "lsd" if request.final_from_lsd else "final"
+    final_list = lists.intermediate if request.final_from_lsd else lists.final
+
+    if request.final_from_lsd:
+        if lsd_set is None:
+            raise MetricError("final_from_lsd needs the final step's LSD set")
+        final_set = lsd_set
+    else:
+        final_set = draw_set(
+            "final", workdir, step, ckpt_path, config, dataset_root, "file",
+            request.n_final, 1, SAMPLING_RNG_FINAL, request.sample_batch, device, loader,
+            idx_file=lists.final.path, force=request.force, amp=request.amp, delta=delta,
+        )
+        sampling_log.append(
+            {"step": step, "set": "final", "reused": final_set.reused,
+             "elapsed_s": final_set.elapsed_s}
+        )
     heldout_set = draw_set(
         "heldout", workdir, step, ckpt_path, config, dataset_root, "seed",
         request.n_seeds, request.n_per_seed, SAMPLING_RNG_INTERMEDIATE, request.sample_batch,
-        device, loader, force=request.force, amp=request.amp,
+        device, loader, force=request.force, amp=request.amp, delta=delta,
     )
     sampling_log.append(
         {"step": step, "set": "heldout", "reused": heldout_set.reused,
@@ -1252,22 +1513,31 @@ def _evaluate_final(
         and final_set.reused
         and heldout_set.reused
     ):
-        logger.info("reusing %s", final_path)
-        return read_json(final_path)
+        stored = read_json(final_path)
+        # A final.json written from the other final set is never reused (the key is absent from
+        # every record written without final_from_lsd).
+        if stored.get("final_set", "final") == final_set_name:
+            logger.info("reusing %s", final_path)
+            return stored
 
+    grid = spectral_grid(int(reference.shape[-1]))
     record: dict[str, Any] = {
         "step": int(step),
         "checkpoint": str(ckpt_path),
         "checkpoint_sha256": checkpoint_sha256(ckpt_path),
         "intermediate_lsd": ckpt_record["lsd"],
-        "seed_list_sha256": lists.final.sha256,
-        "seed_list": str(lists.final.path),
+        "seed_list_sha256": final_list.sha256,
+        "seed_list": str(final_list.path),
         "sample_batch": int(request.sample_batch),
         "amp": request.amp,
     }
+    if delta is not None:
+        record["delta"] = delta
+    if request.final_from_lsd:
+        record["final_set"] = final_set_name
     record.update(_lsd_record(final_set.flat, reference))
 
-    diversity = within_seed_diversity(heldout_set.samples, sigma_lp=SIGMA_LP)
+    diversity = within_seed_diversity(heldout_set.samples, sigma_lp=grid.sigma_lp_px)
     record.update(
         {
             "diversity_pix": diversity.D_pix_mean,
@@ -1287,7 +1557,10 @@ def _evaluate_final(
         )
     )
     record.update(
-        _memorisation_record(final_set.flat, views, final_set.seed_idx, device, metrics_dir)
+        _memorisation_record(
+            final_set.flat, views, final_set.seed_idx, device, metrics_dir,
+            sigma_lp=grid.sigma_lp_px,
+        )
     )
     record["pca"] = _pca_record(
         views.train, heldout_set.seeds, heldout_set.samples, device, metrics_dir
@@ -1405,6 +1678,7 @@ def run_gate(
             "lsd", workdir, step, table[step], config, dataset_root, "file",
             request.n_lsd, 1, SAMPLING_RNG_INTERMEDIATE, request.sample_batch, device, loader,
             idx_file=lists.intermediate.path, force=False, amp=request.amp,
+            delta=request.delta,
         )
         holder.clear()
 
@@ -1510,6 +1784,10 @@ def _summary(
             "n_heldout": int(views.heldout_idx.size),
         },
     }
+    if request.delta is not None:
+        summary["sampling"]["delta"] = float(request.delta)
+    if request.final_from_lsd:
+        summary["sampling"]["final_from_lsd"] = True
     if final_record is not None:
         summary["final"] = {
             key: value

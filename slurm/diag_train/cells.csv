@@ -1,0 +1,3 @@
+index,run_id,dataset_id,arm,seed,tier
+0,lsun_church_r128_A0_s1,lsun_church_r128,A0,1,M7
+1,lsun_church_n32k_A0_s1,lsun_church_n32k,A0,1,M7

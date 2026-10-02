@@ -159,3 +159,26 @@ asserts its indices lie in the declared split.
 `seed_nn_fraction`, `inherited_measured`, `inherited_predicted`, `fid`, `kid`, `recall`,
 `coverage`, each with its CI where defined; plus `metrics/summary.json` merging all checkpoints.
 All JSON is written with `ihdm.metrics.io.write_json` (sorted keys, floats rounded to 6 digits).
+
+## Amendment M7 (2026-10-01, T7.2; post hoc)
+
+**Image side.** The constants of §1 and §3–§5 are defined at W = 192 and are unchanged there, bit
+for bit. For a dataset of side W ≥ 128, every grid scales with W
+(`ihdm.metrics.spectral.spectral_grid`):
+
+- the fine profile has 48 log-spaced bins between 0.5 and W/2 cycles per image; the LSD is the
+  RMS over the populated ones (43 at W = 192, 42 at W = 128);
+- the octave edges are the powers of two from 0.5 that lie below W/2, then W/2: eight bins ending
+  `64-96` at 192, and seven ending `32-64` at 128;
+- the low band of the inherited share is σ_n ≥ 8·W/192 px, and the low-pass length-scale of
+  D_lp and M_lp is 16·W/192 px. Both are therefore fixed in cycles per image: the low band is
+  n ≤ 10.80, i.e. 5.40 c/img, at every W.
+
+Below 128 px the W = 192 constants are kept; this case occurs only in the synthetic test fixture.
+`ihdm.stats.bootstrap.paired_lsd_gate` still uses the 0.5–96 grid and is valid only at W = 192.
+
+**Sampling noise.** `evaluate_run --delta <δ>` overrides the sampling noise sd (prior and every
+reverse step). Results go to their own `samples[_amp-<mode>]_delta-<δ>/` and
+`metrics[_amp-<mode>]_delta-<δ>/` trees. `--final-from-lsd` computes the Inception metrics and M
+on the final checkpoint's 500-seed LSD set, so those values are not comparable with the 2,000-seed
+final set.

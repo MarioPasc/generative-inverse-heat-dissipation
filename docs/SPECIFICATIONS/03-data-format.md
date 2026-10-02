@@ -104,3 +104,22 @@ with `config.data.root = str(IHDM_DATA_ROOT)` and `config.data.split_train = "tr
 `config.data.split_eval = "ref"`. The train loader shuffles; the eval loader does not. `num_workers`
 from `config.data.num_workers` (default 4). No horizontal flip for MRI (anatomical left/right is
 meaningful); flips for photographs off by default too (one recipe everywhere).
+
+## Amendment M7 (2026-10-01, T7.1; post hoc, not part of the pre-registered experiment)
+
+- **Image side.** `images.npy` is `(N, S, S)` with `S = meta.json.image_size`. That is 192 for
+  every dataset of the experiment, and 128 for `lsun_church_r128`. The readers and the validator
+  take `S` from the file.
+- **Diagnostic datasets.** Neither is in `EXPERIMENT_CELLS`.
+  - `lsun_church_r128`: N = 4,000, `image_size` 128. These are the same 4,000 photos as
+    `lsun_church`, with the same `index.csv` and `splits.json`. Each is converted with
+    `convert("L")`, LANCZOS-resized to a 128-px short side (long side `int(128·long/short)`) and
+    centre-cropped at offset `int(round((side − 128)/2))`. This is the paper's `Resize(128)` +
+    `CenterCrop(128)` geometry: the whole scene instead of the native 192² centre crop.
+  - `lsun_church_n32k`: N = 32,800, `image_size` 192. Indices 0–3999 are `lsun_church` byte for
+    byte, with the same `ref` (800) and `seed` (40). Indices 4000–32799 are 28,800 extra train
+    rows from the `train` shard of `tglcourse/lsun_church_train`.
+    - Dedup: SHA-1 against everything already in the dataset, plus a near-duplicate rule that
+      rejects a new row whose 32×32 thumbnail correlates above 0.95 with any `ref` image.
+    - 14 rows were rejected by that rule; they are re-encodings of 5 `ref` photos (QC sheet
+      `qc/near_duplicates_rejected.png`).

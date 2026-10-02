@@ -52,24 +52,31 @@ IMAGE_SIZE = 96
 FIXTURE_STEPS = (250, 750)
 
 
-def _build_dataset(parent: Path, dataset_id: str = "synthetic96") -> Path:
-    """Write a 112-image, 96x96 standard-format dataset with a structured spectrum."""
+def _build_dataset(
+    parent: Path, dataset_id: str = "synthetic96", image_size: int | None = None
+) -> Path:
+    """Write a 112-image, 96x96 standard-format dataset with a structured spectrum.
+
+    ``image_size`` (T7.2) writes the same design at another side; ``None`` reads the module's
+    ``IMAGE_SIZE`` at call time, which ``tests.metrics.golden_capture`` relies on.
+    """
+    size = IMAGE_SIZE if image_size is None else int(image_size)
     root = Path(parent) / dataset_id
     n_images = N_SUBJECTS * N_SLICES
     rng = np.random.default_rng(11)
 
     # A smooth, subject-dependent field: the metrics need a resolvable spectrum in every octave,
     # which white noise gives but a constant image does not.
-    grid = np.linspace(-1.0, 1.0, IMAGE_SIZE)
+    grid = np.linspace(-1.0, 1.0, size)
     yy, xx = np.meshgrid(grid, grid, indexing="ij")
-    images = np.empty((n_images, IMAGE_SIZE, IMAGE_SIZE), dtype=np.uint8)
+    images = np.empty((n_images, size, size), dtype=np.uint8)
     for row in range(n_images):
         subject = row // N_SLICES
         field = (
             0.5
             + 0.25 * np.sin(2.0 * np.pi * (1.0 + 0.1 * subject) * xx)
             + 0.15 * np.cos(2.0 * np.pi * (2.0 + 0.05 * row) * yy)
-            + 0.05 * rng.normal(size=(IMAGE_SIZE, IMAGE_SIZE))
+            + 0.05 * rng.normal(size=(size, size))
         )
         images[row] = np.clip(field * 255.0, 0, 255).astype(np.uint8)
 
@@ -93,7 +100,7 @@ def _build_dataset(parent: Path, dataset_id: str = "synthetic96") -> Path:
     meta = DatasetMeta(
         dataset_id=dataset_id,
         n_images=n_images,
-        image_size=IMAGE_SIZE,
+        image_size=size,
         dtype="uint8",
         pipeline="tests.metrics.test_run_eval",
         pipeline_version="1.0",
@@ -111,15 +118,15 @@ def _build_dataset(parent: Path, dataset_id: str = "synthetic96") -> Path:
     return root
 
 
-def _config(dataset_root: Path):
-    """Return the smoke config at 96², pointed at the fixture dataset, on the CPU."""
+def _config(dataset_root: Path, image_size: int | None = None):
+    """Return the smoke config at 96² (or ``image_size``), pointed at the fixture, on the CPU."""
     from configs.spectral import smoke
 
     config = smoke.get_config()
     config.data.root = str(dataset_root.parent)
     config.data.dataset = dataset_root.name
     config.dataset_id = dataset_root.name
-    config.data.image_size = IMAGE_SIZE
+    config.data.image_size = IMAGE_SIZE if image_size is None else int(image_size)
     config.device = torch.device("cpu")
     return config
 

@@ -48,6 +48,10 @@ is the variance of the samples.
 - **The photograph models fail outright at this budget.** Their samples land almost nowhere on the
   real-image manifold (§3), so every MRI-against-photograph interaction compares a working model
   with a failed one.
+- **Two post-hoc diagnostics (M7), one seed each.**
+  - Neither the paper's 128² whole-scene framing nor 10× more training images alone lifts the
+    photograph failure under the pre-registered rule; the framing helps most (§3).
+  - A larger sampling noise δ does not cure the under-dispersion: it only adds noise (§8).
 
 ---
 
@@ -119,6 +123,46 @@ The learning notes had proposed LSUN Churches at 128² because "the baseline nat
 a replication anchor" (`learning/02-spectral-bias-and-experiments.md`, the table of natural-image
 candidates). The final design dropped it to keep 192² everywhere. That anchor is the missing
 control.
+
+**What the one-factor diagnostic found** (M7: T7.1 + T7.3, post hoc, one seed;
+`docs/RESULTS/photo_diagnostic/`).
+
+- **Design.** Churches A0, seed 1, was trained again with the 60k recipe unchanged, changing one
+  factor per run.
+- **Evaluation.** Each run was read at 45k–60k with 500 training seeds per checkpoint, against its
+  own 800-image `ref`. The table gives late-window means:
+
+| run | change | precision | KID | variance ratio | LSD |
+|---|---|---:|---:|---:|---:|
+| baseline (`lsun_church_A0_s1`) | none | 0.009 | 0.233 | 0.285 | 1.400 |
+| r128 | the same 4,000 photos, whole scene at 128² (the paper's framing) | 0.196 | 0.134 | 0.388 | 0.769* |
+| n32k | 192² crops, 32,000 training images, same `ref` | 0.019 | 0.273 | 0.313 | 0.926 |
+
+\*on the 128² grid (`05-metrics.md`, M7 amendment); not comparable with the 192² values.
+
+**The pre-registered rule is met by neither factor.** The rule: precision ≥ 0.10 and ≥ 10× the
+baseline's, and KID ≤ 0.5× the baseline's.
+
+- **r128** passes both precision conditions (0.196, 22× the baseline) but misses the KID
+  condition (0.134 against 0.117). Under the pre-registered rule, it does not lift the failure.
+- **n32k** fails all three conditions.
+- **The pre-registered reading** is therefore "the budget or recipe (lr, length, model width),
+  which the diagnostic does not test".
+
+Descriptively:
+
+- **Ten times more data does nothing at this budget.**
+- **Resolution and framing is the stronger lever.** r128's KID falls 42%, and its samples show
+  towers and façades (`photo_diagnostic/grids.png`). Even at the paper's framing, though, the
+  model stays far from its data.
+- **n32k's LSD falls 34%** (1.40 → 0.93) with no gain in precision or KID. This is another case of
+  LSD rewarding variance, here noisy texture, rather than structure (§8).
+
+Caveats:
+
+- The Inception metrics come from the 500-seed sets, so they are not comparable with table 1a.
+- r128 is scored against its own 128² `ref`, so the comparison across resolutions is approximate.
+- One seed per factor.
 
 ---
 
@@ -456,16 +500,29 @@ Seed means at three checkpoints:
   across octaves, not more total variance. Most of $T_\tau$'s degeneracy is the cross-arm effect
   of §6, not this curve shape.
 
-**Why the samples are too alike: a hypothesis, not a result.**
+**Why the samples are too alike, and what the δ sweep ruled out.**
 
-- The IHDM sampler adds noise of standard deviation δ = 1.25σ = 0.0125 per step. For the lowest
-  modes, the chain cannot change the prior's pattern "beyond what the small δ noise permits"
-  (`learning/01-ihdm-method.md` §7.5, item 3, DERIVED). The note says this for the lowest modes
-  only.
-- A denoiser trained with MSE predicts the conditional mean. With little injected noise its
-  samples drift toward the average, i.e. they lose variance.
-- δ is a sampling-only hyperparameter (`learning/01` §6.4, VERIFIED). Retuning it costs no
-  training (§11).
+- **The setting.** The IHDM sampler adds noise of standard deviation δ = 1.25σ = 0.0125 per step.
+  For the lowest modes, the chain cannot change the prior's pattern "beyond what the small δ noise
+  permits" (`learning/01-ihdm-method.md` §7.5, item 3, DERIVED; the note says this for the lowest
+  modes only). A denoiser trained with MSE predicts the conditional mean, so with little injected
+  noise its samples drift toward the average.
+- **The test.** δ is a sampling-only hyperparameter (`learning/01` §6.4, VERIFIED), so we tested
+  it with no training. This is the δ sweep of M7: T7.2, `docs/RESULTS/delta_sweep/`, written
+  after the pre-registered reading. Four 60k checkpoints (IXI and Churches, A0 and A3, seed 1)
+  were sampled at δ/σ ∈ {1.25, 2, 3}, paired over the 500 frozen seeds. At 1.25σ the four runs
+  reproduce their stored LSD to 6 digits.
+- **The result.** Already at 2σ every run is over-dispersed:
+  - the variance ratio is 1.3–4.6, against 0.29–0.88 at 1.25σ;
+  - the within-seed variance relative to what the blur removed, ρ, is 1.2–6.4, against
+    0.06–0.35;
+  - KID rises with disjoint intervals (IXI A0 0.042 → 0.275), and precision falls to 0 in every
+    run;
+  - the added variance lands in the finest octave (64–96 c/img goes from −0.11…−2.37 to
+    +0.67…+2.08), while the coarse octaves of Churches stay below zero.
+- **Reading.** By the pre-registered rule, a larger δ adds noise, not the missing structure. The
+  under-dispersion is not a sampler setting within the tested grid. Nothing between 1.25σ and 2σ
+  was tested, and one seed per run makes this descriptive.
 
 ---
 
@@ -473,7 +530,8 @@ Seed means at three checkpoints:
 
 1. **The photograph models failed at this budget** (§3). This bounds every MRI-against-photograph
    interaction: the photograph side generates almost no within-seed diversity (ρ ≈ 0.06–0.09), its
-   checkpoints oscillate, and its $M$ values are driven by blur. The diagnostic M7 tests why.
+   checkpoints oscillate, and its $M$ values are driven by blur. The M7 diagnostic (§3) finds that
+   neither the paper's 128² framing nor 10× more data alone lifts the failure.
 2. **Fidelity is measured on training-seeded samples** (§4). At W/8 the inherited part of the
    fidelity gain and the copying cannot be separated.
 3. **LSD is mostly a variance measure** (§8). It rewards noise (A2′), and its non-monotone curve
@@ -523,31 +581,37 @@ Seed means at three checkpoints:
 5. *(Exploratory.)* "Every model under-disperses. LSD in our experiments mostly measures this
    broadband variance deficit. Its pre-registered convergence endpoint $T_\tau$ is degenerate,
    mainly because the W/8 arms start below the paper arm's final LSD."
+6. *(Post-hoc diagnostic, one seed.)* "Raising the sampling noise does not cure the deficit: at
+   twice the default noise every model's samples become over-dispersed noise, with KID rising and
+   Inception precision falling to zero."
+7. *(Post-hoc diagnostic, one seed.)* "Neither the paper's 128² framing nor ten times more
+   training images alone brings the photograph model to working quality within our 60k-iteration
+   recipe. The framing raises Inception precision from 0.9% to 20% and lowers KID by 42%, but
+   misses the pre-registered KID threshold. More data changes nothing."
 
 ---
 
 ## 11. Follow-ups
 
-**Running (wave W14, approved 2026-10-01; `docs/SPECIFICATIONS/M7-diagnostics/`).** The readings
-of both were written before any run existed.
+**Wave W14, approved 2026-10-01 (`docs/SPECIFICATIONS/M7-diagnostics/`).** The readings of both
+were written before any run existed.
 
-1. **The photograph-failure diagnostic (T7.1 → T7.3).** Churches A0, seed 1, with the 60k recipe
-   unchanged, changing one factor per run:
-   - a 128² whole-scene resize of the same 4,000 photos;
-   - 192² crops with 32,000 training images and the same reference set.
-
-   It tells whether resolution and framing, or data size, lifts the failure.
-2. **The δ sweep (T7.2).** The 60k checkpoints of IXI and Churches, A0 and A3, seed 1, sampled at
-   δ ∈ {1.25, 2, 3}·σ. Zero training, ≤ 10 A100-h. It tests whether the under-dispersion of §8 is a
-   sampler setting.
+1. **The photograph-failure diagnostic (T7.1 → T7.3), done.** Neither factor lifts the failure
+   under the pre-registered rule; the 128² framing helps most (§3).
+   - Training: jobs 2550808 and 2550811, ≈ 15 A100-h.
+   - Evaluation: ≈ 4.3 A100-h.
+   - Results: `docs/RESULTS/photo_diagnostic/`.
+2. **The δ sweep (T7.2), done.** The answer is no (§8): at δ ≥ 2σ the samples become noise.
+   6.3 A100-h; `docs/RESULTS/delta_sweep/`.
 
 **Not scheduled.**
 
 1. **Fidelity from unseen seeds.** KID on the existing 40 × 50 held-out-seeded samples (in the
    evaluation tars, CPU). It separates A3's fidelity gain from inheritance, with the caveat that
    the seed subjects belong to the `ref` split.
-2. **A photograph model that works.** Churches A0 at lr 2e-5 on more images or more iterations,
-   before any dataset × arm interaction is read again. M7 tells which lever to pull first.
+2. **A photograph model that works.** M7 points to the 128² whole-scene framing first, combined
+   with the recipe: the released lr 2e-5, more iterations, and the larger LSUN U-Net. This must
+   come before any dataset × arm interaction is read again.
 3. **The per-mode re-centred inherited-band estimator** (handoff §13.3; tars, CPU). It is
    superseded for the report by $I_w$.
 
