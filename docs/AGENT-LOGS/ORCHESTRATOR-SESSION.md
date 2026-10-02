@@ -561,3 +561,39 @@ the prompts verbatim, every intervention and every verdict.
 - **A spec that counts images must say whether `seed` ⊂ `ref`.** T7.1 caught 32,840 → 32,800.
 - **Scraped photo datasets leak near-duplicates across shards** (re-encodings). Exact SHA-1
   dedup misses them; a 32×32-thumbnail correlation rule caught 14 rows.
+
+## 16. Handoff at the close of session 3 (2026-10-02) — start here
+
+**Done.** The pre-registered experiment and both post-hoc diagnostics are complete, merged into
+`main` and pushed.
+
+- **`docs/RESULTS/results_discussion.md` is the document for the report.** It covers the metrics,
+  the verdicts, the δ-sweep result (§8) and the photograph diagnostic (§3).
+  - **Headline results:**
+    - W/8 helps MRI fidelity a lot, but through seed-conditioning; it does not confirm H1.
+    - The spacing gives a small gain.
+    - The photo models fail.
+    - Under-dispersion everywhere.
+  - **Neither post-hoc factor fixes the photo models:**
+    - δ ≥ 2σ is only noise;
+    - the 128² framing helps most but misses the pre-registered KID bar;
+    - 10× more data does nothing.
+
+**Left.**
+
+1. **Report writing** (Mario and the team). Use `results_discussion.md` §10 "what the report can
+   state". Label items 5–7 as exploratory or post hoc.
+2. **Cleanup on Picasso** (Mario's `!` commands; everything is archived on the SanDisk):
+   ```
+   ssh picasso 'rm -rf ~/execs/ihdm/diag_eval/smoke_loginexa ~/execs/ihdm/diag_eval/photo_smoke ~/fscratch/runs/ihdm_diag_smoke'
+   ```
+   - The bigger run cleanup is in the session-3 chat. Keep `results/`, `wt/T3.4` (loginexa
+     harness) and any run you may still want to sample.
+   - The diagnostic runs `fscratch/runs/ihdm_diag/` and the datasets `lsun_church_r128` and
+     `lsun_church_n32k` on FSCRATCH can go too: they are archived on the SanDisk and on MeningD2.
+3. **Local cleanup.** The worktrees `projects/GenAI/code/wt/{T7.1,T7.2,T7.3,T7.4,integration-W14}`
+   and their merged branches can be removed: `git worktree remove …` then `git branch -d …`.
+4. **Still `[ask Mario]`:**
+   - the proposal's Fig. 1 numbers (`results_discussion.md` §9.9);
+   - pinning torch in `environment.yml`;
+   - `paired_lsd_gate` at W ≠ 192 (only matters if anyone gates a 128² run).

@@ -199,3 +199,47 @@ Main pastes them into each log's §1 at merge time.
       thresholds are therefore precision ≥ 0.10 and KID ≤ 0.1166.
     - The r128 evaluation (2559459) was submitted at 17:23, as soon as its DONE appeared.
     - n32k is due ≈ 23:00. Main scheduled a one-shot reminder at 22:47 to resume the agent.
+17. **The session restarted overnight.** The 22:47 reminder did not survive, and the n32k
+    training (DONE at 22:47) was found unsubmitted on 2026-10-02. Main resumed T7.3, which
+    submitted 2570346 (COMPLETED in 1:51:47).
+18. **T7.3 complete** (head `7950b84`). Verdict: **ACCEPT**.
+    - The baseline LSD anchors are exact.
+    - Late window:
+
+      | run | precision | KID | variance ratio | LSD |
+      |---|---:|---:|---:|---:|
+      | baseline | 0.0090 | 0.2331 | 0.285 | 1.400 |
+      | r128 | 0.196 | 0.134 | 0.388 | 0.769 (128² grid) |
+      | n32k | 0.019 | 0.273 | 0.313 | 0.926 |
+
+    - Main recomputed the rule from the merged JSON: neither factor lifts. r128 misses only the
+      KID condition (0.134 > 0.117).
+    - The reading: "budget or recipe".
+    - The grids were eyeballed: r128 shows structures, n32k shows texture.
+    - Merged as `d85130f`; prompt pasted as `3c96cbb`.
+    - Main updated `results_discussion.md` §1, §3, §9, §10 and §11, and the docs tree (`06004d0`).
+19. **Copies.** On the SanDisk, `diagnostics_W14/` holds the training runs (112 files,
+    15.7 GB), the δ sweep, the photo diagnostic, the dataset evaluation files and the logs. All
+    were verified against Picasso by name and size, with sha256 checks of the checkpoints and the
+    photo files. The README was updated. The new datasets' seed lists and caches were also copied
+    into the local `$IHDM_DATA_ROOT`.
+
+## Totals and what the decomposition got wrong
+
+- **Compute (A100-h):** training ≈ 15.1, δ sweep 6.3, photo evaluation ≈ 4.3, smokes and prepare
+  < 0.5. Total ≈ 26.
+- **Agents:** 5 runs.
+  - T7.1: opus55-xhigh.
+  - T7.2: opus55-high, run twice; the first run was killed by the safeguard false positive.
+  - T7.3: opus55-high.
+  - T7.4: sonnet5-xhigh.
+  - One opus55-xhigh fact-checker.
+
+  At most 2 ran at once. Verdicts: four ACCEPT, one RETURN (T7.2's mislabelled column),
+  zero REDO.
+- **Missed in planning:**
+  - `evaluate_run` computed Inception metrics only at the final step, so the pre-registered late
+    window needed T7.3's code. The ticket should have checked this before the rule was written.
+  - The ticket's 32,840 double-counted the seed split.
+  - The near-duplicate leakage was not anticipated.
+  - The overnight session restart needs a durable reminder mechanism; session cron is not one.
