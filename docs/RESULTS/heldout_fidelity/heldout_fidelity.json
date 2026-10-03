@@ -1,0 +1,6712 @@
+{
+  "amendment": "2026-10-03, by main, before any contrast was computed: when rule 1 fires on precision the whole rule, rule 1 included, is applied to KID (gain A0 - A3); if the KID comparator also fails the outcome is 'not evaluable on precision or KID'. R5 sensitivity is H only (sign agreement of \u0394_H); F against R5 is descriptive because training seeds include R5 images.",
+  "anchors": {
+    "a": {
+      "cache": "/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/ixi/_features_inception_ref.npy",
+      "max_abs_diff": 0.00812483,
+      "min_cosine": 0.999998,
+      "n_rows": 800
+    },
+    "b": {
+      "ixi_A0_s1": {
+        "metrics": {
+          "coverage": {
+            "abs_diff": 0.00125,
+            "local": 0.4275,
+            "ok": true,
+            "stored": 0.42625
+          },
+          "density": {
+            "abs_diff": 0.0015,
+            "local": 0.3107,
+            "ok": true,
+            "stored": 0.3122
+          },
+          "kid": {
+            "abs_diff": 3.57416e-05,
+            "local": 0.0463394,
+            "ok": true,
+            "stored": 0.0463751,
+            "stored_ci": [
+              0.0439689,
+              0.0487839
+            ]
+          },
+          "precision": {
+            "abs_diff": 0.001,
+            "local": 0.573,
+            "ok": true,
+            "stored": 0.574
+          },
+          "recall": {
+            "abs_diff": 0.0025,
+            "local": 0.26,
+            "ok": true,
+            "stored": 0.2575
+          }
+        },
+        "passed": true,
+        "worst_deviation": 0.0025
+      },
+      "lsun_church_A3_s1": {
+        "metrics": {
+          "coverage": {
+            "abs_diff": 0.0,
+            "local": 0.05,
+            "ok": true,
+            "stored": 0.05
+          },
+          "density": {
+            "abs_diff": 0.0001,
+            "local": 0.0157,
+            "ok": true,
+            "stored": 0.0158
+          },
+          "kid": {
+            "abs_diff": 5.31065e-05,
+            "local": 0.220218,
+            "ok": true,
+            "stored": 0.220271,
+            "stored_ci": [
+              0.215733,
+              0.226011
+            ]
+          },
+          "precision": {
+            "abs_diff": 0.0005,
+            "local": 0.0585,
+            "ok": true,
+            "stored": 0.059
+          },
+          "recall": {
+            "abs_diff": 0.00125,
+            "local": 0.03,
+            "ok": true,
+            "stored": 0.02875
+          }
+        },
+        "passed": true,
+        "worst_deviation": 0.00125
+      }
+    },
+    "passed": true,
+    "worst_deviation": 0.0025
+  },
+  "bootstrap_within_run": {
+    "F_unit": "sample",
+    "H_unit": "seed (40 clusters of 50)",
+    "alpha": 0.05,
+    "n_boot": 1000,
+    "rng_seed": 0
+  },
+  "contrast_statistics": "ihdm.stats.paired_delta (10,000 seed resamples, rng 0) and ihdm.stats.permutation_test (exact) with their defaults",
+  "contrasts": {
+    "ixi": {
+      "A1": {
+        "F": {
+          "coverage": {
+            "a0_mean": 0.605,
+            "arm_mean": 0.85875,
+            "ci_high": 0.255,
+            "ci_low": 0.2525,
+            "deltas": [
+              0.255,
+              0.2525
+            ],
+            "mean": 0.25375,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.34295,
+            "arm_mean": 0.4293,
+            "ci_high": 0.1007,
+            "ci_low": 0.072,
+            "deltas": [
+              0.072,
+              0.1007
+            ],
+            "mean": 0.08635,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0495838,
+            "arm_mean": 0.016951,
+            "ci_high": -0.03062,
+            "ci_low": -0.0346457,
+            "deltas": [
+              -0.03062,
+              -0.0346457
+            ],
+            "mean": -0.0326328,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.6425,
+            "arm_mean": 0.69975,
+            "ci_high": 0.0665,
+            "ci_low": 0.048,
+            "deltas": [
+              0.048,
+              0.0665
+            ],
+            "mean": 0.05725,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.3425,
+            "arm_mean": 0.4375,
+            "ci_high": 0.2,
+            "ci_low": -0.01,
+            "deltas": [
+              0.2,
+              -0.01
+            ],
+            "mean": 0.095,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "F_r5_descriptive": {
+          "coverage": {
+            "a0_mean": 0.657813,
+            "arm_mean": 0.765625,
+            "ci_high": 0.128125,
+            "ci_low": 0.0875,
+            "deltas": [
+              0.128125,
+              0.0875
+            ],
+            "mean": 0.107812,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.19565,
+            "arm_mean": 0.1964,
+            "ci_high": 0.0054,
+            "ci_low": -0.0039,
+            "deltas": [
+              -0.0039,
+              0.0054
+            ],
+            "mean": 0.00075,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 1.0,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0235221,
+            "arm_mean": 0.0216441,
+            "ci_high": -0.00173922,
+            "ci_low": -0.0020167,
+            "deltas": [
+              -0.00173922,
+              -0.0020167
+            ],
+            "mean": -0.00187796,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.47,
+            "arm_mean": 0.42825,
+            "ci_high": -0.037,
+            "ci_low": -0.0465,
+            "deltas": [
+              -0.0465,
+              -0.037
+            ],
+            "mean": -0.04175,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.289062,
+            "arm_mean": 0.403125,
+            "ci_high": 0.184375,
+            "ci_low": 0.04375,
+            "deltas": [
+              0.184375,
+              0.04375
+            ],
+            "mean": 0.114062,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "H": {
+          "coverage": {
+            "a0_mean": 0.43875,
+            "arm_mean": 0.5175,
+            "ci_high": 0.1075,
+            "ci_low": 0.05,
+            "deltas": [
+              0.1075,
+              0.05
+            ],
+            "mean": 0.07875,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.3368,
+            "arm_mean": 0.38775,
+            "ci_high": 0.0765,
+            "ci_low": 0.0254,
+            "deltas": [
+              0.0765,
+              0.0254
+            ],
+            "mean": 0.05095,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0599294,
+            "arm_mean": 0.0528717,
+            "ci_high": -0.00697751,
+            "ci_low": -0.00713787,
+            "deltas": [
+              -0.00697751,
+              -0.00713787
+            ],
+            "mean": -0.00705769,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.65,
+            "arm_mean": 0.71525,
+            "ci_high": 0.0865,
+            "ci_low": 0.044,
+            "deltas": [
+              0.0865,
+              0.044
+            ],
+            "mean": 0.06525,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.2275,
+            "arm_mean": 0.09375,
+            "ci_high": -0.0675,
+            "ci_low": -0.2,
+            "deltas": [
+              -0.0675,
+              -0.2
+            ],
+            "mean": -0.13375,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "H_r5": {
+          "coverage": {
+            "a0_mean": 0.65,
+            "arm_mean": 0.779688,
+            "ci_high": 0.178125,
+            "ci_low": 0.08125,
+            "deltas": [
+              0.178125,
+              0.08125
+            ],
+            "mean": 0.129688,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.2061,
+            "arm_mean": 0.3109,
+            "ci_high": 0.1068,
+            "ci_low": 0.1028,
+            "deltas": [
+              0.1028,
+              0.1068
+            ],
+            "mean": 0.1048,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0274757,
+            "arm_mean": 0.0207562,
+            "ci_high": -0.00504912,
+            "ci_low": -0.00838981,
+            "deltas": [
+              -0.00838981,
+              -0.00504912
+            ],
+            "mean": -0.00671946,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.491,
+            "arm_mean": 0.61225,
+            "ci_high": 0.13,
+            "ci_low": 0.1125,
+            "deltas": [
+              0.13,
+              0.1125
+            ],
+            "mean": 0.12125,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.246875,
+            "arm_mean": 0.210938,
+            "ci_high": -0.01875,
+            "ci_low": -0.053125,
+            "deltas": [
+              -0.01875,
+              -0.053125
+            ],
+            "mean": -0.0359375,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "seeds": [
+          1,
+          2
+        ]
+      },
+      "A3": {
+        "F": {
+          "coverage": {
+            "a0_mean": 0.629167,
+            "arm_mean": 0.881667,
+            "ci_high": 0.3,
+            "ci_low": 0.18,
+            "deltas": [
+              0.3,
+              0.2775,
+              0.18
+            ],
+            "mean": 0.2525,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "density": {
+            "a0_mean": 0.358167,
+            "arm_mean": 0.488867,
+            "ci_high": 0.1764,
+            "ci_low": 0.0814,
+            "deltas": [
+              0.1764,
+              0.1343,
+              0.0814
+            ],
+            "mean": 0.1307,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0471727,
+            "arm_mean": 0.0173365,
+            "ci_high": -0.0248543,
+            "ci_low": -0.0356073,
+            "deltas": [
+              -0.0290471,
+              -0.0356073,
+              -0.0248543
+            ],
+            "mean": -0.0298362,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.655,
+            "arm_mean": 0.756833,
+            "ci_high": 0.1535,
+            "ci_low": 0.0605,
+            "deltas": [
+              0.1535,
+              0.0915,
+              0.0605
+            ],
+            "mean": 0.101833,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.343333,
+            "arm_mean": 0.4625,
+            "ci_high": 0.2075,
+            "ci_low": 0.02,
+            "deltas": [
+              0.2075,
+              0.02,
+              0.13
+            ],
+            "mean": 0.119167,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "F_r5_descriptive": {
+          "coverage": {
+            "a0_mean": 0.671875,
+            "arm_mean": 0.783333,
+            "ci_high": 0.14375,
+            "ci_low": 0.065625,
+            "deltas": [
+              0.14375,
+              0.125,
+              0.065625
+            ],
+            "mean": 0.111458,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "density": {
+            "a0_mean": 0.202533,
+            "arm_mean": 0.2067,
+            "ci_high": 0.0309,
+            "ci_low": -0.0338,
+            "deltas": [
+              0.0309,
+              0.0154,
+              -0.0338
+            ],
+            "mean": 0.00416667,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.7,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0226212,
+            "arm_mean": 0.0226189,
+            "ci_high": 0.00378988,
+            "ci_low": -0.00202535,
+            "deltas": [
+              -0.00202535,
+              -0.00177129,
+              0.00378988
+            ],
+            "mean": -2.25257e-06,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.9,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.471667,
+            "arm_mean": 0.451333,
+            "ci_high": 0.0185,
+            "ci_low": -0.047,
+            "deltas": [
+              0.0185,
+              -0.0325,
+              -0.047
+            ],
+            "mean": -0.0203333,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.4,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.298958,
+            "arm_mean": 0.419792,
+            "ci_high": 0.165625,
+            "ci_low": 0.0875,
+            "deltas": [
+              0.165625,
+              0.0875,
+              0.109375
+            ],
+            "mean": 0.120833,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "H": {
+          "coverage": {
+            "a0_mean": 0.463333,
+            "arm_mean": 0.525833,
+            "ci_high": 0.1175,
+            "ci_low": 0.0,
+            "deltas": [
+              0.1175,
+              0.07,
+              0.0
+            ],
+            "mean": 0.0625,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.3,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "density": {
+            "a0_mean": 0.3474,
+            "arm_mean": 0.433267,
+            "ci_high": 0.1372,
+            "ci_low": 0.0506,
+            "deltas": [
+              0.1372,
+              0.0698,
+              0.0506
+            ],
+            "mean": 0.0858667,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0579457,
+            "arm_mean": 0.0538206,
+            "ci_high": -0.000178072,
+            "ci_low": -0.0089254,
+            "deltas": [
+              -0.00327204,
+              -0.0089254,
+              -0.000178072
+            ],
+            "mean": -0.00412517,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.2,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.661,
+            "arm_mean": 0.7585,
+            "ci_high": 0.1605,
+            "ci_low": 0.065,
+            "deltas": [
+              0.1605,
+              0.065,
+              0.067
+            ],
+            "mean": 0.0975,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.2375,
+            "arm_mean": 0.0825,
+            "ci_high": -0.0825,
+            "ci_low": -0.205,
+            "deltas": [
+              -0.0825,
+              -0.205,
+              -0.1775
+            ],
+            "mean": -0.155,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "H_r5": {
+          "coverage": {
+            "a0_mean": 0.666667,
+            "arm_mean": 0.796875,
+            "ci_high": 0.159375,
+            "ci_low": 0.090625,
+            "deltas": [
+              0.159375,
+              0.140625,
+              0.090625
+            ],
+            "mean": 0.130208,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "density": {
+            "a0_mean": 0.212667,
+            "arm_mean": 0.351633,
+            "ci_high": 0.1721,
+            "ci_low": 0.1068,
+            "deltas": [
+              0.1721,
+              0.138,
+              0.1068
+            ],
+            "mean": 0.138967,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0268112,
+            "arm_mean": 0.021315,
+            "ci_high": -0.00334249,
+            "ci_low": -0.00750596,
+            "deltas": [
+              -0.00564038,
+              -0.00750596,
+              -0.00334249
+            ],
+            "mean": -0.00549628,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.500667,
+            "arm_mean": 0.660333,
+            "ci_high": 0.204,
+            "ci_low": 0.127,
+            "deltas": [
+              0.204,
+              0.148,
+              0.127
+            ],
+            "mean": 0.159667,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.277083,
+            "arm_mean": 0.170833,
+            "ci_high": -0.0625,
+            "ci_low": -0.184375,
+            "deltas": [
+              -0.071875,
+              -0.0625,
+              -0.184375
+            ],
+            "mean": -0.10625,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "r5_sensitivity_H": {
+          "kid": {
+            "all_negative": true,
+            "all_positive": false,
+            "deltas": [
+              -0.00564038,
+              -0.00750596,
+              -0.00334249
+            ],
+            "mean": -0.00549628,
+            "signs_agree": true
+          },
+          "precision": {
+            "all_negative": false,
+            "all_positive": true,
+            "deltas": [
+              0.204,
+              0.148,
+              0.127
+            ],
+            "mean": 0.159667,
+            "signs_agree": true
+          }
+        },
+        "reading": {
+          "kid_comparator_gain_positive": true,
+          "label": "primary (precision)",
+          "outcome": "generalises",
+          "precision": {
+            "G_F": 0.101833,
+            "G_H": 0.0975,
+            "all_gains_h_positive": true,
+            "comparator_gain_positive": true,
+            "gains_f": [
+              0.1535,
+              0.0915,
+              0.0605
+            ],
+            "gains_h": [
+              0.1605,
+              0.065,
+              0.067
+            ],
+            "metric": "precision",
+            "outcome": "generalises",
+            "text": "the fidelity gain generalises to unseen seeds",
+            "threshold": 0.0509167
+          },
+          "text": "the fidelity gain generalises to unseen seeds"
+        },
+        "seeds": [
+          1,
+          2,
+          3
+        ]
+      },
+      "role": "primary endpoint"
+    },
+    "lsun_bedroom": {
+      "A3": {
+        "F": {
+          "coverage": {
+            "a0_mean": 0.00921053,
+            "arm_mean": 0.0940789,
+            "ci_high": 0.0881579,
+            "ci_low": 0.0815789,
+            "deltas": [
+              0.0815789,
+              0.0881579
+            ],
+            "mean": 0.0848684,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.00245,
+            "arm_mean": 0.03985,
+            "ci_high": 0.0417,
+            "ci_low": 0.0331,
+            "deltas": [
+              0.0417,
+              0.0331
+            ],
+            "mean": 0.0374,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.237649,
+            "arm_mean": 0.135522,
+            "ci_high": -0.0740224,
+            "ci_low": -0.130231,
+            "deltas": [
+              -0.0740224,
+              -0.130231
+            ],
+            "mean": -0.102127,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.01175,
+            "arm_mean": 0.12325,
+            "ci_high": 0.121,
+            "ci_low": 0.102,
+            "deltas": [
+              0.121,
+              0.102
+            ],
+            "mean": 0.1115,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.0157895,
+            "arm_mean": 0.0611842,
+            "ci_high": 0.0552632,
+            "ci_low": 0.0355263,
+            "deltas": [
+              0.0355263,
+              0.0552632
+            ],
+            "mean": 0.0453947,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "H": {
+          "coverage": {
+            "a0_mean": 0.00986842,
+            "arm_mean": 0.0769737,
+            "ci_high": 0.0710526,
+            "ci_low": 0.0631579,
+            "deltas": [
+              0.0710526,
+              0.0631579
+            ],
+            "mean": 0.0671053,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.0027,
+            "arm_mean": 0.0362,
+            "ci_high": 0.038,
+            "ci_low": 0.029,
+            "deltas": [
+              0.038,
+              0.029
+            ],
+            "mean": 0.0335,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.241334,
+            "arm_mean": 0.140283,
+            "ci_high": -0.0725297,
+            "ci_low": -0.129573,
+            "deltas": [
+              -0.0725297,
+              -0.129573
+            ],
+            "mean": -0.101051,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.0125,
+            "arm_mean": 0.12425,
+            "ci_high": 0.1265,
+            "ci_low": 0.097,
+            "deltas": [
+              0.1265,
+              0.097
+            ],
+            "mean": 0.11175,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.000657895,
+            "arm_mean": 0.0309211,
+            "ci_high": 0.0368421,
+            "ci_low": 0.0236842,
+            "deltas": [
+              0.0236842,
+              0.0368421
+            ],
+            "mean": 0.0302632,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "reading": {
+          "kid_comparator_gain_positive": true,
+          "label": "primary (precision)",
+          "outcome": "generalises",
+          "precision": {
+            "G_F": 0.1115,
+            "G_H": 0.11175,
+            "all_gains_h_positive": true,
+            "comparator_gain_positive": true,
+            "gains_f": [
+              0.121,
+              0.102
+            ],
+            "gains_h": [
+              0.1265,
+              0.097
+            ],
+            "metric": "precision",
+            "outcome": "generalises",
+            "text": "the fidelity gain generalises to unseen seeds",
+            "threshold": 0.05575
+          },
+          "text": "the fidelity gain generalises to unseen seeds"
+        },
+        "seeds": [
+          1,
+          2
+        ]
+      },
+      "role": "descriptive only (the photograph models fail); rule applied mechanically"
+    },
+    "lsun_church": {
+      "A1": {
+        "F": {
+          "coverage": {
+            "a0_mean": 0.00526316,
+            "arm_mean": 0.0914474,
+            "ci_high": 0.119737,
+            "ci_low": 0.0526316,
+            "deltas": [
+              0.119737,
+              0.0526316
+            ],
+            "mean": 0.0861842,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.00075,
+            "arm_mean": 0.03055,
+            "ci_high": 0.0422,
+            "ci_low": 0.0174,
+            "deltas": [
+              0.0422,
+              0.0174
+            ],
+            "mean": 0.0298,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.30997,
+            "arm_mean": 0.1792,
+            "ci_high": -0.0710546,
+            "ci_low": -0.190484,
+            "deltas": [
+              -0.0710546,
+              -0.190484
+            ],
+            "mean": -0.13077,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.0035,
+            "arm_mean": 0.08575,
+            "ci_high": 0.109,
+            "ci_low": 0.0555,
+            "deltas": [
+              0.109,
+              0.0555
+            ],
+            "mean": 0.08225,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.00460526,
+            "arm_mean": 0.0519737,
+            "ci_high": 0.0763158,
+            "ci_low": 0.0184211,
+            "deltas": [
+              0.0763158,
+              0.0184211
+            ],
+            "mean": 0.0473684,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "H": {
+          "coverage": {
+            "a0_mean": 0.00657895,
+            "arm_mean": 0.0769737,
+            "ci_high": 0.0973684,
+            "ci_low": 0.0434211,
+            "deltas": [
+              0.0973684,
+              0.0434211
+            ],
+            "mean": 0.0703947,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.00085,
+            "arm_mean": 0.0299,
+            "ci_high": 0.0427,
+            "ci_low": 0.0154,
+            "deltas": [
+              0.0427,
+              0.0154
+            ],
+            "mean": 0.02905,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.310235,
+            "arm_mean": 0.178075,
+            "ci_high": -0.0680111,
+            "ci_low": -0.196308,
+            "deltas": [
+              -0.0680111,
+              -0.196308
+            ],
+            "mean": -0.13216,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.00375,
+            "arm_mean": 0.0835,
+            "ci_high": 0.1075,
+            "ci_low": 0.052,
+            "deltas": [
+              0.1075,
+              0.052
+            ],
+            "mean": 0.07975,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.00460526,
+            "arm_mean": 0.0677632,
+            "ci_high": 0.075,
+            "ci_low": 0.0513158,
+            "deltas": [
+              0.075,
+              0.0513158
+            ],
+            "mean": 0.0631579,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "seeds": [
+          1,
+          2
+        ]
+      },
+      "A3": {
+        "F": {
+          "coverage": {
+            "a0_mean": 0.00745614,
+            "arm_mean": 0.116228,
+            "ci_high": 0.151316,
+            "ci_low": 0.0447368,
+            "deltas": [
+              0.0447368,
+              0.130263,
+              0.151316
+            ],
+            "mean": 0.108772,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "density": {
+            "a0_mean": 0.0008,
+            "arm_mean": 0.0341,
+            "ci_high": 0.0515,
+            "ci_low": 0.0151,
+            "deltas": [
+              0.0151,
+              0.0333,
+              0.0515
+            ],
+            "mean": 0.0333,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.311121,
+            "arm_mean": 0.162216,
+            "ci_high": -0.0257482,
+            "ci_low": -0.240115,
+            "deltas": [
+              -0.0257482,
+              -0.240115,
+              -0.180849
+            ],
+            "mean": -0.148904,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.00366667,
+            "arm_mean": 0.0905,
+            "ci_high": 0.126,
+            "ci_low": 0.0535,
+            "deltas": [
+              0.0535,
+              0.081,
+              0.126
+            ],
+            "mean": 0.0868333,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.00307018,
+            "arm_mean": 0.0934211,
+            "ci_high": 0.130263,
+            "ci_low": 0.0197368,
+            "deltas": [
+              0.0197368,
+              0.121053,
+              0.130263
+            ],
+            "mean": 0.0903509,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "H": {
+          "coverage": {
+            "a0_mean": 0.00789474,
+            "arm_mean": 0.104386,
+            "ci_high": 0.127632,
+            "ci_low": 0.05,
+            "deltas": [
+              0.05,
+              0.111842,
+              0.127632
+            ],
+            "mean": 0.0964912,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "density": {
+            "a0_mean": 0.000866667,
+            "arm_mean": 0.0309333,
+            "ci_high": 0.0479,
+            "ci_low": 0.0135,
+            "deltas": [
+              0.0135,
+              0.0288,
+              0.0479
+            ],
+            "mean": 0.0300667,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.310165,
+            "arm_mean": 0.165158,
+            "ci_high": -0.0158273,
+            "ci_low": -0.245007,
+            "deltas": [
+              -0.0158273,
+              -0.245007,
+              -0.174186
+            ],
+            "mean": -0.145007,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.00366667,
+            "arm_mean": 0.0811667,
+            "ci_high": 0.1195,
+            "ci_low": 0.0305,
+            "deltas": [
+              0.0305,
+              0.0825,
+              0.1195
+            ],
+            "mean": 0.0775,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.00614035,
+            "arm_mean": 0.0890351,
+            "ci_high": 0.110526,
+            "ci_low": 0.0302632,
+            "deltas": [
+              0.0302632,
+              0.110526,
+              0.107895
+            ],
+            "mean": 0.0828947,
+            "n_assignments": 20,
+            "p_min": 0.1,
+            "p_value": 0.1,
+            "seeds": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "reading": {
+          "kid_comparator_gain_positive": true,
+          "label": "primary (precision)",
+          "outcome": "generalises",
+          "precision": {
+            "G_F": 0.0868333,
+            "G_H": 0.0775,
+            "all_gains_h_positive": true,
+            "comparator_gain_positive": true,
+            "gains_f": [
+              0.0535,
+              0.081,
+              0.126
+            ],
+            "gains_h": [
+              0.0305,
+              0.0825,
+              0.1195
+            ],
+            "metric": "precision",
+            "outcome": "generalises",
+            "text": "the fidelity gain generalises to unseen seeds",
+            "threshold": 0.0434167
+          },
+          "text": "the fidelity gain generalises to unseen seeds"
+        },
+        "seeds": [
+          1,
+          2,
+          3
+        ]
+      },
+      "role": "descriptive only (the photograph models fail); rule applied mechanically"
+    },
+    "oasis1": {
+      "A3": {
+        "F": {
+          "coverage": {
+            "a0_mean": 0.83,
+            "arm_mean": 0.9725,
+            "ci_high": 0.1625,
+            "ci_low": 0.1225,
+            "deltas": [
+              0.1625,
+              0.1225
+            ],
+            "mean": 0.1425,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.5142,
+            "arm_mean": 0.7559,
+            "ci_high": 0.3224,
+            "ci_low": 0.161,
+            "deltas": [
+              0.3224,
+              0.161
+            ],
+            "mean": 0.2417,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.022851,
+            "arm_mean": 0.0117707,
+            "ci_high": -0.00846247,
+            "ci_low": -0.0136982,
+            "deltas": [
+              -0.0136982,
+              -0.00846247
+            ],
+            "mean": -0.0110803,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.705,
+            "arm_mean": 0.83425,
+            "ci_high": 0.1795,
+            "ci_low": 0.079,
+            "deltas": [
+              0.1795,
+              0.079
+            ],
+            "mean": 0.12925,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.45625,
+            "arm_mean": 0.525,
+            "ci_high": 0.115,
+            "ci_low": 0.0225,
+            "deltas": [
+              0.0225,
+              0.115
+            ],
+            "mean": 0.06875,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "F_r5_descriptive": {
+          "coverage": {
+            "a0_mean": 0.615625,
+            "arm_mean": 0.903125,
+            "ci_high": 0.328125,
+            "ci_low": 0.246875,
+            "deltas": [
+              0.328125,
+              0.246875
+            ],
+            "mean": 0.2875,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.2828,
+            "arm_mean": 0.3862,
+            "ci_high": 0.1463,
+            "ci_low": 0.0605,
+            "deltas": [
+              0.1463,
+              0.0605
+            ],
+            "mean": 0.1034,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0333654,
+            "arm_mean": 0.0204201,
+            "ci_high": -0.0127477,
+            "ci_low": -0.0131429,
+            "deltas": [
+              -0.0131429,
+              -0.0127477
+            ],
+            "mean": -0.0129453,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.54325,
+            "arm_mean": 0.5975,
+            "ci_high": 0.095,
+            "ci_low": 0.0135,
+            "deltas": [
+              0.095,
+              0.0135
+            ],
+            "mean": 0.05425,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.429688,
+            "arm_mean": 0.473438,
+            "ci_high": 0.121875,
+            "ci_low": -0.034375,
+            "deltas": [
+              -0.034375,
+              0.121875
+            ],
+            "mean": 0.04375,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 1.0,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "H": {
+          "coverage": {
+            "a0_mean": 0.70125,
+            "arm_mean": 0.66625,
+            "ci_high": 0.0275,
+            "ci_low": -0.0975,
+            "deltas": [
+              0.0275,
+              -0.0975
+            ],
+            "mean": -0.035,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.666667,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.5491,
+            "arm_mean": 0.69755,
+            "ci_high": 0.2196,
+            "ci_low": 0.0773,
+            "deltas": [
+              0.2196,
+              0.0773
+            ],
+            "mean": 0.14845,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.02779,
+            "arm_mean": 0.0393977,
+            "ci_high": 0.0143176,
+            "ci_low": 0.00889786,
+            "deltas": [
+              0.00889786,
+              0.0143176
+            ],
+            "mean": 0.0116077,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.70775,
+            "arm_mean": 0.84175,
+            "ci_high": 0.1675,
+            "ci_low": 0.1005,
+            "deltas": [
+              0.1675,
+              0.1005
+            ],
+            "mean": 0.134,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.36125,
+            "arm_mean": 0.14125,
+            "ci_high": -0.2075,
+            "ci_low": -0.2325,
+            "deltas": [
+              -0.2075,
+              -0.2325
+            ],
+            "mean": -0.22,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "H_r5": {
+          "coverage": {
+            "a0_mean": 0.646875,
+            "arm_mean": 0.95625,
+            "ci_high": 0.3875,
+            "ci_low": 0.23125,
+            "deltas": [
+              0.3875,
+              0.23125
+            ],
+            "mean": 0.309375,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "density": {
+            "a0_mean": 0.33455,
+            "arm_mean": 0.6418,
+            "ci_high": 0.3319,
+            "ci_low": 0.2826,
+            "deltas": [
+              0.3319,
+              0.2826
+            ],
+            "mean": 0.30725,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "kid": {
+            "a0_mean": 0.0343118,
+            "arm_mean": 0.0105971,
+            "ci_high": -0.021653,
+            "ci_low": -0.0257764,
+            "deltas": [
+              -0.0257764,
+              -0.021653
+            ],
+            "mean": -0.0237147,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "precision": {
+            "a0_mean": 0.578,
+            "arm_mean": 0.81225,
+            "ci_high": 0.2605,
+            "ci_low": 0.208,
+            "deltas": [
+              0.2605,
+              0.208
+            ],
+            "mean": 0.23425,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 0.333333,
+            "seeds": [
+              1,
+              2
+            ]
+          },
+          "recall": {
+            "a0_mean": 0.342187,
+            "arm_mean": 0.290625,
+            "ci_high": 0.015625,
+            "ci_low": -0.11875,
+            "deltas": [
+              0.015625,
+              -0.11875
+            ],
+            "mean": -0.0515625,
+            "n_assignments": 6,
+            "p_min": 0.333333,
+            "p_value": 1.0,
+            "seeds": [
+              1,
+              2
+            ]
+          }
+        },
+        "r5_sensitivity_H": {
+          "kid": {
+            "all_negative": true,
+            "all_positive": false,
+            "deltas": [
+              -0.0257764,
+              -0.021653
+            ],
+            "mean": -0.0237147,
+            "signs_agree": true
+          },
+          "precision": {
+            "all_negative": false,
+            "all_positive": true,
+            "deltas": [
+              0.2605,
+              0.208
+            ],
+            "mean": 0.23425,
+            "signs_agree": true
+          }
+        },
+        "reading": {
+          "kid_comparator_gain_positive": true,
+          "label": "primary (precision)",
+          "outcome": "generalises",
+          "precision": {
+            "G_F": 0.12925,
+            "G_H": 0.134,
+            "all_gains_h_positive": true,
+            "comparator_gain_positive": true,
+            "gains_f": [
+              0.1795,
+              0.079
+            ],
+            "gains_h": [
+              0.1675,
+              0.1005
+            ],
+            "metric": "precision",
+            "outcome": "generalises",
+            "text": "the fidelity gain generalises to unseen seeds",
+            "threshold": 0.064625
+          },
+          "text": "the fidelity gain generalises to unseen seeds"
+        },
+        "seeds": [
+          1,
+          2
+        ]
+      },
+      "role": "descriptive (transfer, 2 run seeds)"
+    }
+  },
+  "created": "2026-10-03T11:50:09.797476+00:00",
+  "extractor": {
+    "device": "cpu",
+    "k": 5,
+    "mode": "clean",
+    "weights": "/tmp/inception-2015-12-05.pt"
+  },
+  "git_dirty": false,
+  "git_sha": "f5ef21c2406eee40e72f1d29de2fed448e15e40d",
+  "references": {
+    "ixi": {
+      "heldout_seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+      "n_r5": 320,
+      "n_r_minus": 400,
+      "n_ref": 800,
+      "n_seed_subjects": 40,
+      "r5_idx_sha256": "de9b802431066b8fbcb5f0641519cdc81724c5f40cae18ab7f1c98077a97dbd8",
+      "r_minus_idx_sha256": "5e016e53c5cde646acdb287e38355f6fd36e20ac8edbca0188357041c2840341",
+      "ref_idx_sha256": "3fa90c2d8193a9f5884e8c628dbd2919530e6ce6126639ac10e5f5f3b6e10a48",
+      "seconds_r5_features": 19.9314,
+      "seconds_ref_features": 50.4526
+    },
+    "lsun_bedroom": {
+      "heldout_seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+      "n_r5": null,
+      "n_r_minus": 760,
+      "n_ref": 800,
+      "n_seed_subjects": 40,
+      "r5_idx_sha256": null,
+      "r_minus_idx_sha256": "37e6f46dec6ed503b4be81ab3abfd51b262d395c38eeacc9a913c3c8f3804379",
+      "ref_idx_sha256": "ecb621e7f8c28507f9e42043208b74ccb80bcbebc52b913b14b211bc294b3c83",
+      "seconds_r5_features": null,
+      "seconds_ref_features": 49.8586
+    },
+    "lsun_church": {
+      "heldout_seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+      "n_r5": null,
+      "n_r_minus": 760,
+      "n_ref": 800,
+      "n_seed_subjects": 40,
+      "r5_idx_sha256": null,
+      "r_minus_idx_sha256": "37e6f46dec6ed503b4be81ab3abfd51b262d395c38eeacc9a913c3c8f3804379",
+      "ref_idx_sha256": "ecb621e7f8c28507f9e42043208b74ccb80bcbebc52b913b14b211bc294b3c83",
+      "seconds_r5_features": null,
+      "seconds_ref_features": 49.9437
+    },
+    "oasis1": {
+      "heldout_seed_idx_sha256": "a69463f103aeb328d3132456f59f1fe66ad4901b0678e0ede4a5c0c964c50d81",
+      "n_r5": 320,
+      "n_r_minus": 400,
+      "n_ref": 800,
+      "n_seed_subjects": 40,
+      "r5_idx_sha256": "b14856bd54b56292c381479427ac2bfc7aba3b90dc44949de4fe797d5fdae453",
+      "r_minus_idx_sha256": "76ebcd5a9851cced3fc3fbec282f1760811107ec6c067f7ebd23e5dc8f5690ad",
+      "ref_idx_sha256": "73fb6f2027584a71f596479cff65ed714c9710bd94b04e6de3248ce8402ef846",
+      "seconds_r5_features": 19.7136,
+      "seconds_ref_features": 49.3613
+    }
+  },
+  "runs": {
+    "ixi_A0_s1": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.4275,
+          "density": 0.3107,
+          "density_ci": [
+            0.2921,
+            0.329603
+          ],
+          "kid": 0.0463394,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.573,
+          "precision_ci": [
+            0.552988,
+            0.5955
+          ],
+          "recall": 0.26
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.640625,
+          "density": 0.182,
+          "density_ci": [
+            0.169398,
+            0.1952
+          ],
+          "kid": 0.0226395,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.4415,
+          "precision_ci": [
+            0.4205,
+            0.462
+          ],
+          "recall": 0.2875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.585,
+          "density": 0.3019,
+          "density_ci": [
+            0.284198,
+            0.317208
+          ],
+          "kid": 0.0473932,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6015,
+          "precision_ci": [
+            0.58,
+            0.622012
+          ],
+          "recall": 0.3025
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.6125,
+          "density": 0.1746,
+          "density_ci": [
+            0.154498,
+            0.194712
+          ],
+          "kid": 0.0276075,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.45,
+          "precision_ci": [
+            0.413975,
+            0.4855
+          ],
+          "recall": 0.240625
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.395,
+          "density": 0.2773,
+          "density_ci": [
+            0.2485,
+            0.306502
+          ],
+          "kid": 0.0583394,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.5895,
+          "precision_ci": [
+            0.5455,
+            0.631537
+          ],
+          "recall": 0.17
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.19,
+          "density": 0.0246,
+          "kid": -0.0109462,
+          "precision": 0.012,
+          "recall": 0.1325
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "3c6ad2dc8f1192cbbe06b78085b3d5795cafe57b8e01f4817595d28cbc69153c",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "f2fad1738546580357538e966ce0de2912abbffdbcdcb13e8713e1a782a24a0c",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A0_s1",
+        "seconds": {
+          "extract": 1.20194,
+          "features_f": 123.738,
+          "features_h": 123.936
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.42625,
+          "density": 0.3122,
+          "feature_dim": 2048,
+          "fid": 57.2033,
+          "fid_ci_high": 60.243,
+          "fid_ci_low": 56.5801,
+          "k": 5,
+          "kid": 0.0463751,
+          "kid_ci_high": 0.0487839,
+          "kid_ci_low": 0.0439689,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.574,
+          "recall": 0.2575,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A0_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A0_s2": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.46625,
+          "density": 0.4116,
+          "density_ci": [
+            0.39088,
+            0.43392
+          ],
+          "kid": 0.050975,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.687,
+          "precision_ci": [
+            0.667488,
+            0.7075
+          ],
+          "recall": 0.33875
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.675,
+          "density": 0.2093,
+          "density_ci": [
+            0.194998,
+            0.2245
+          ],
+          "kid": 0.0244047,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.4985,
+          "precision_ci": [
+            0.476,
+            0.52
+          ],
+          "recall": 0.290625
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.625,
+          "density": 0.384,
+          "density_ci": [
+            0.363498,
+            0.40431
+          ],
+          "kid": 0.0517745,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6835,
+          "precision_ci": [
+            0.665,
+            0.7035
+          ],
+          "recall": 0.3825
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.6875,
+          "density": 0.2376,
+          "density_ci": [
+            0.213495,
+            0.260502
+          ],
+          "kid": 0.0273439,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.532,
+          "precision_ci": [
+            0.4965,
+            0.565512
+          ],
+          "recall": 0.253125
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.4825,
+          "density": 0.3963,
+          "density_ci": [
+            0.3609,
+            0.433015
+          ],
+          "kid": 0.0615194,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7105,
+          "precision_ci": [
+            0.667988,
+            0.75
+          ],
+          "recall": 0.285
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.1425,
+          "density": -0.0123,
+          "kid": -0.00974495,
+          "precision": -0.027,
+          "recall": 0.0975
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "0963e27afb89521a3881527c37f9fe11184767f1bf0549ddf56d19bd5fd4d71c",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "b8b72763b250e20843132c0978458120470c0c5ad0536e204e01d767546fb077",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "32ea330419eac1685e3910397237089669a22b481a17d9b62fea3dfff7905bb9",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "b8b72763b250e20843132c0978458120470c0c5ad0536e204e01d767546fb077",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A0_s2",
+        "seconds": {
+          "extract": 1.21148,
+          "features_f": 123.752,
+          "features_h": 123.952
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.46375,
+          "density": 0.4122,
+          "feature_dim": 2048,
+          "fid": 60.4756,
+          "fid_ci_high": 63.3964,
+          "fid_ci_low": 59.8072,
+          "k": 5,
+          "kid": 0.0510165,
+          "kid_ci_high": 0.0532719,
+          "kid_ci_low": 0.0485917,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.6875,
+          "recall": 0.3375,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A0_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A0_s3": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.51,
+          "density": 0.3951,
+          "density_ci": [
+            0.372798,
+            0.418005
+          ],
+          "kid": 0.0411008,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.6415,
+          "precision_ci": [
+            0.6205,
+            0.662512
+          ],
+          "recall": 0.325
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.7,
+          "density": 0.2163,
+          "density_ci": [
+            0.2017,
+            0.2325
+          ],
+          "kid": 0.0208194,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.475,
+          "precision_ci": [
+            0.453,
+            0.496012
+          ],
+          "recall": 0.31875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.6775,
+          "density": 0.3886,
+          "density_ci": [
+            0.367098,
+            0.40941
+          ],
+          "kid": 0.0423506,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.68,
+          "precision_ci": [
+            0.6595,
+            0.7005
+          ],
+          "recall": 0.345
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.7,
+          "density": 0.2258,
+          "density_ci": [
+            0.202788,
+            0.251305
+          ],
+          "kid": 0.0254823,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.52,
+          "precision_ci": [
+            0.490487,
+            0.5485
+          ],
+          "recall": 0.3375
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5125,
+          "density": 0.3686,
+          "density_ci": [
+            0.3348,
+            0.4024
+          ],
+          "kid": 0.0539784,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.683,
+          "precision_ci": [
+            0.648487,
+            0.7145
+          ],
+          "recall": 0.2575
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.165,
+          "density": 0.02,
+          "kid": -0.0116278,
+          "precision": -0.003,
+          "recall": 0.0875
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "7eae06df95085e06b46239660692e75f637e9fcb7d3d20d104d08355e7ccccfe",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "26d2f1505028d181569527b0144c4b49f98b767230ec39b08c5be0aa086034e3",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "5ac08257a42d7b0baed44e57a1a36a970982add5cf1668ef35bd890432d6fe4e",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "26d2f1505028d181569527b0144c4b49f98b767230ec39b08c5be0aa086034e3",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A0_s3",
+        "seconds": {
+          "extract": 1.21056,
+          "features_f": 123.889,
+          "features_h": 123.99
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.5125,
+          "density": 0.3961,
+          "feature_dim": 2048,
+          "fid": 51.8919,
+          "fid_ci_high": 54.7558,
+          "fid_ci_low": 51.3456,
+          "k": 5,
+          "kid": 0.0411251,
+          "kid_ci_high": 0.0433472,
+          "kid_ci_low": 0.0390508,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.641,
+          "recall": 0.32625,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A0_s3_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A1_s1": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.69875,
+          "density": 0.3683,
+          "density_ci": [
+            0.347598,
+            0.3916
+          ],
+          "kid": 0.0165576,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.624,
+          "precision_ci": [
+            0.602,
+            0.645
+          ],
+          "recall": 0.4775
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.76875,
+          "density": 0.1781,
+          "density_ci": [
+            0.1647,
+            0.193608
+          ],
+          "kid": 0.0209002,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.395,
+          "precision_ci": [
+            0.375,
+            0.418
+          ],
+          "recall": 0.471875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.84,
+          "density": 0.3739,
+          "density_ci": [
+            0.354997,
+            0.396508
+          ],
+          "kid": 0.0167732,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6495,
+          "precision_ci": [
+            0.6295,
+            0.671
+          ],
+          "recall": 0.5025
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.790625,
+          "density": 0.2774,
+          "density_ci": [
+            0.238585,
+            0.316402
+          ],
+          "kid": 0.0192177,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.58,
+          "precision_ci": [
+            0.530488,
+            0.626
+          ],
+          "recall": 0.221875
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5025,
+          "density": 0.3538,
+          "density_ci": [
+            0.302292,
+            0.4078
+          ],
+          "kid": 0.0513619,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.676,
+          "precision_ci": [
+            0.607988,
+            0.735012
+          ],
+          "recall": 0.1025
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.3375,
+          "density": 0.0201,
+          "kid": -0.0345886,
+          "precision": -0.0265,
+          "recall": 0.4
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "0436ef3ac9fb4d4d2677fc39ce4c1651d02bbe771c12d9a64a267cb606988c70",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "785ac3cf795dc8b3753d29f9903381b6db187174c763a40ba7364378796c9230",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "f1ee5404911e7ce459bc2762ccfb308bd116bb184a4eb5c515626de5ba21f5de",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "785ac3cf795dc8b3753d29f9903381b6db187174c763a40ba7364378796c9230",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A1_s1",
+        "seconds": {
+          "extract": 1.21173,
+          "features_f": 129.717,
+          "features_h": 128.136
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.7,
+          "density": 0.3688,
+          "feature_dim": 2048,
+          "fid": 29.7221,
+          "fid_ci_high": 32.1235,
+          "fid_ci_low": 30.3573,
+          "k": 5,
+          "kid": 0.0165716,
+          "kid_ci_high": 0.0177923,
+          "kid_ci_low": 0.0153425,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.6235,
+          "recall": 0.47625,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A1_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A1_s2": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.76625,
+          "density": 0.4648,
+          "density_ci": [
+            0.440897,
+            0.489705
+          ],
+          "kid": 0.0167286,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.7015,
+          "precision_ci": [
+            0.6795,
+            0.7215
+          ],
+          "recall": 0.385
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.7625,
+          "density": 0.2147,
+          "density_ci": [
+            0.198098,
+            0.231802
+          ],
+          "kid": 0.022388,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.4615,
+          "precision_ci": [
+            0.437987,
+            0.485
+          ],
+          "recall": 0.334375
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.8775,
+          "density": 0.4847,
+          "density_ci": [
+            0.462195,
+            0.5078
+          ],
+          "kid": 0.0171288,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.75,
+          "precision_ci": [
+            0.73,
+            0.77
+          ],
+          "recall": 0.3725
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.76875,
+          "density": 0.3444,
+          "density_ci": [
+            0.297297,
+            0.395202
+          ],
+          "kid": 0.0222948,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.6445,
+          "precision_ci": [
+            0.582488,
+            0.699012
+          ],
+          "recall": 0.2
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5325,
+          "density": 0.4217,
+          "density_ci": [
+            0.367895,
+            0.480915
+          ],
+          "kid": 0.0543815,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7545,
+          "precision_ci": [
+            0.705,
+            0.794
+          ],
+          "recall": 0.085
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.345,
+          "density": 0.063,
+          "kid": -0.0372527,
+          "precision": -0.0045,
+          "recall": 0.2875
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "6c543ca17483bd31b8244192ca110f9994d79469ecb0380a39eed353b6232cf2",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "5997abe9fa82bec6e2d9018e74250b3d1fbaf756122c5fad8d15a90e9122d4cb",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "96f8b7ba4de5dad1e2a9fe447919d052946591b06da3b00c845d88ea3fa80aa5",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "5997abe9fa82bec6e2d9018e74250b3d1fbaf756122c5fad8d15a90e9122d4cb",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A1_s2",
+        "seconds": {
+          "extract": 1.21116,
+          "features_f": 126.097,
+          "features_h": 127.131
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.765,
+          "density": 0.464,
+          "feature_dim": 2048,
+          "fid": 27.8489,
+          "fid_ci_high": 30.1858,
+          "fid_ci_low": 28.4719,
+          "k": 5,
+          "kid": 0.0167496,
+          "kid_ci_high": 0.0178763,
+          "kid_ci_low": 0.0157127,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.701,
+          "recall": 0.38,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A1_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A3_s1": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.77125,
+          "density": 0.4624,
+          "density_ci": [
+            0.438487,
+            0.487803
+          ],
+          "kid": 0.0179879,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.7105,
+          "precision_ci": [
+            0.6915,
+            0.729012
+          ],
+          "recall": 0.47
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.784375,
+          "density": 0.2129,
+          "density_ci": [
+            0.1958,
+            0.229305
+          ],
+          "kid": 0.0206141,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.46,
+          "precision_ci": [
+            0.437987,
+            0.481512
+          ],
+          "recall": 0.453125
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.885,
+          "density": 0.4783,
+          "density_ci": [
+            0.454997,
+            0.501
+          ],
+          "kid": 0.0183462,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.755,
+          "precision_ci": [
+            0.7355,
+            0.7735
+          ],
+          "recall": 0.51
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.771875,
+          "density": 0.3467,
+          "density_ci": [
+            0.301395,
+            0.395607
+          ],
+          "kid": 0.0219671,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.654,
+          "precision_ci": [
+            0.601475,
+            0.704012
+          ],
+          "recall": 0.16875
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5125,
+          "density": 0.4145,
+          "density_ci": [
+            0.365895,
+            0.46763
+          ],
+          "kid": 0.0550674,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.75,
+          "precision_ci": [
+            0.702987,
+            0.7925
+          ],
+          "recall": 0.0875
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.3725,
+          "density": 0.0638,
+          "kid": -0.0367212,
+          "precision": 0.005,
+          "recall": 0.4225
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "d39962cc2d5386b4faff4b20f56dae97efa8aee243d07cffa3516afd4b722975",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "283dba566ebe759f8c1e101853aa18c833d6753c7de9083c02b962dae3f0f68d",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "e799790196c2060ec389f4e7ac8447edb03a4d71f8060115227dd9779be2ccd3",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A3_s1",
+        "seconds": {
+          "extract": 1.19053,
+          "features_f": 123.631,
+          "features_h": 123.985
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.77,
+          "density": 0.4627,
+          "feature_dim": 2048,
+          "fid": 28.784,
+          "fid_ci_high": 31.3033,
+          "fid_ci_low": 29.2083,
+          "k": 5,
+          "kid": 0.0180186,
+          "kid_ci_high": 0.0192672,
+          "kid_ci_low": 0.0165517,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.711,
+          "recall": 0.47,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A3_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A3_s2": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.80125,
+          "density": 0.5093,
+          "density_ci": [
+            0.483598,
+            0.535905
+          ],
+          "kid": 0.015699,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.7415,
+          "precision_ci": [
+            0.721988,
+            0.7605
+          ],
+          "recall": 0.39625
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.8,
+          "density": 0.2247,
+          "density_ci": [
+            0.208295,
+            0.242712
+          ],
+          "kid": 0.0226334,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.466,
+          "precision_ci": [
+            0.443987,
+            0.4895
+          ],
+          "recall": 0.378125
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.9025,
+          "density": 0.5183,
+          "density_ci": [
+            0.494098,
+            0.539902
+          ],
+          "kid": 0.0161672,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.775,
+          "precision_ci": [
+            0.755487,
+            0.7945
+          ],
+          "recall": 0.4025
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.828125,
+          "density": 0.3756,
+          "density_ci": [
+            0.3294,
+            0.4234
+          ],
+          "kid": 0.019838,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.68,
+          "precision_ci": [
+            0.631,
+            0.726012
+          ],
+          "recall": 0.190625
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5525,
+          "density": 0.4661,
+          "density_ci": [
+            0.409182,
+            0.524507
+          ],
+          "kid": 0.052594,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7755,
+          "precision_ci": [
+            0.724,
+            0.822512
+          ],
+          "recall": 0.08
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.35,
+          "density": 0.0522,
+          "kid": -0.0364268,
+          "precision": -0.0005,
+          "recall": 0.3225
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "944268e9be5b8356ecf98b9d87d563ffcf079243ddd54837146d8dbf85710959",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "eac0b396d473f32a0ba55d5798e8dfd2977e1896b8f37838e43d456b455087a0",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "0f231e66ccc2fcdef1ebf798b696de83388fc5d3a3bc07208afea6c713cc0eba",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "eac0b396d473f32a0ba55d5798e8dfd2977e1896b8f37838e43d456b455087a0",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A3_s2",
+        "seconds": {
+          "extract": 1.23655,
+          "features_f": 123.857,
+          "features_h": 124.152
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.8025,
+          "density": 0.5101,
+          "feature_dim": 2048,
+          "fid": 26.9147,
+          "fid_ci_high": 29.1541,
+          "fid_ci_low": 27.6017,
+          "k": 5,
+          "kid": 0.0157226,
+          "kid_ci_high": 0.0168269,
+          "kid_ci_low": 0.0146274,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.7425,
+          "recall": 0.4,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A3_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A3_s3": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.75375,
+          "density": 0.466,
+          "density_ci": [
+            0.442275,
+            0.489703
+          ],
+          "kid": 0.0169986,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.712,
+          "precision_ci": [
+            0.689987,
+            0.731
+          ],
+          "recall": 0.42875
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.765625,
+          "density": 0.1825,
+          "density_ci": [
+            0.1686,
+            0.196903
+          ],
+          "kid": 0.0246093,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.428,
+          "precision_ci": [
+            0.405,
+            0.449
+          ],
+          "recall": 0.428125
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.8575,
+          "density": 0.47,
+          "density_ci": [
+            0.4469,
+            0.492202
+          ],
+          "kid": 0.0174963,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7405,
+          "precision_ci": [
+            0.7215,
+            0.759
+          ],
+          "recall": 0.475
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.790625,
+          "density": 0.3326,
+          "density_ci": [
+            0.28728,
+            0.378402
+          ],
+          "kid": 0.0221398,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.647,
+          "precision_ci": [
+            0.5945,
+            0.696512
+          ],
+          "recall": 0.153125
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5125,
+          "density": 0.4192,
+          "density_ci": [
+            0.371097,
+            0.4722
+          ],
+          "kid": 0.0538003,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.75,
+          "precision_ci": [
+            0.699987,
+            0.7965
+          ],
+          "recall": 0.08
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.345,
+          "density": 0.0508,
+          "kid": -0.036304,
+          "precision": -0.0095,
+          "recall": 0.395
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "03b2168666e0fa582c243f1ecee9ff480a210d07c007aecf256ba5dc12d022bc",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "60748d9f9fbbc98e1af448e638d996f6761ed6953b219933b56863b819862aa0",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "2d97fce3ea625a6273c9ca08b37d7e598da809dad0affbab3f1e12bac01562a7",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "60748d9f9fbbc98e1af448e638d996f6761ed6953b219933b56863b819862aa0",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A3_s3",
+        "seconds": {
+          "extract": 1.21126,
+          "features_f": 126.064,
+          "features_h": 124.602
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.75375,
+          "density": 0.4658,
+          "feature_dim": 2048,
+          "fid": 27.8373,
+          "fid_ci_high": 30.0824,
+          "fid_ci_low": 28.5106,
+          "k": 5,
+          "kid": 0.0170272,
+          "kid_ci_high": 0.0181099,
+          "kid_ci_low": 0.0159853,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.7125,
+          "recall": 0.42625,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A3_s3_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_bedroom_A0_s1": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0125,
+          "density": 0.0028,
+          "density_ci": [
+            0.0018975,
+            0.0039
+          ],
+          "kid": 0.204563,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.0135,
+          "precision_ci": [
+            0.009,
+            0.0185
+          ],
+          "recall": 0.03
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0131579,
+          "density": 0.0028,
+          "density_ci": [
+            0.0018975,
+            0.0039
+          ],
+          "kid": 0.20465,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0135,
+          "precision_ci": [
+            0.009,
+            0.0185
+          ],
+          "recall": 0.0315789
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0118421,
+          "density": 0.0027,
+          "density_ci": [
+            0.0017,
+            0.004
+          ],
+          "kid": 0.206588,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.013,
+          "precision_ci": [
+            0.0085,
+            0.0185
+          ],
+          "recall": 0.0
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.00131579,
+          "density": 0.0001,
+          "kid": -0.00193792,
+          "precision": 0.0005,
+          "recall": 0.0315789
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "b39763d3545dc00fca87a32add098829b0842b50012c8e336e5a05adc8f20aab",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "c97ef58ade3323c13f695ca79e172a8689b228ac977f371eb4c2cae7aea00d3d",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "13d2dec6c6ade2237d681f56fb7422a7b280695f3421a8a26570bb33038436f0",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "c97ef58ade3323c13f695ca79e172a8689b228ac977f371eb4c2cae7aea00d3d",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_bedroom_A0_s1",
+        "seconds": {
+          "extract": 0.352819,
+          "features_f": 128.803,
+          "features_h": 132.033
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.0125,
+          "density": 0.0028,
+          "feature_dim": 2048,
+          "fid": 225.421,
+          "fid_ci_high": 230.284,
+          "fid_ci_low": 226.585,
+          "k": 5,
+          "kid": 0.204712,
+          "kid_ci_high": 0.206957,
+          "kid_ci_low": 0.202161,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.0135,
+          "recall": 0.03,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_bedroom_A0_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_bedroom_A0_s2": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.005,
+          "density": 0.0021,
+          "density_ci": [
+            0.0012,
+            0.0031
+          ],
+          "kid": 0.270427,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.01,
+          "precision_ci": [
+            0.0059875,
+            0.0145125
+          ],
+          "recall": 0.0
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.00526316,
+          "density": 0.0021,
+          "density_ci": [
+            0.0012,
+            0.0031
+          ],
+          "kid": 0.270648,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.01,
+          "precision_ci": [
+            0.0059875,
+            0.0145125
+          ],
+          "recall": 0.0
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.00789474,
+          "density": 0.0027,
+          "density_ci": [
+            0.0012975,
+            0.0044025
+          ],
+          "kid": 0.276081,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.012,
+          "precision_ci": [
+            0.0055,
+            0.02
+          ],
+          "recall": 0.00131579
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": -0.00263158,
+          "density": -0.0006,
+          "kid": -0.0054327,
+          "precision": -0.002,
+          "recall": -0.00131579
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "f342a6bbaf2374e9e4c35c12727fafa8e579653f557694c94d13177e669694ae",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "71cee5c25bdd45cc9af27c2a90b840b83661fcf6c063591f66fe82bb56f89fab",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "6261bc9657f929cfd337215e0ee65c6ca35a540938fd634b2d68697446b7bbc3",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "71cee5c25bdd45cc9af27c2a90b840b83661fcf6c063591f66fe82bb56f89fab",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_bedroom_A0_s2",
+        "seconds": {
+          "extract": 1.21136,
+          "features_f": 124.219,
+          "features_h": 124.294
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.005,
+          "density": 0.0021,
+          "feature_dim": 2048,
+          "fid": 254.57,
+          "fid_ci_high": 259.69,
+          "fid_ci_low": 255.094,
+          "k": 5,
+          "kid": 0.270577,
+          "kid_ci_high": 0.275004,
+          "kid_ci_low": 0.266182,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.01,
+          "recall": 0.0,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_bedroom_A0_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_bedroom_A3_s1": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.09125,
+          "density": 0.043,
+          "density_ci": [
+            0.0373,
+            0.0491
+          ],
+          "kid": 0.13043,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.13,
+          "precision_ci": [
+            0.114988,
+            0.145012
+          ],
+          "recall": 0.06375
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0947368,
+          "density": 0.0445,
+          "density_ci": [
+            0.0387975,
+            0.0507025
+          ],
+          "kid": 0.130627,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.1345,
+          "precision_ci": [
+            0.119987,
+            0.15
+          ],
+          "recall": 0.0671053
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0828947,
+          "density": 0.0407,
+          "density_ci": [
+            0.031095,
+            0.0517
+          ],
+          "kid": 0.134058,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.1395,
+          "precision_ci": [
+            0.11,
+            0.17
+          ],
+          "recall": 0.0236842
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.0118421,
+          "density": 0.0038,
+          "kid": -0.00343063,
+          "precision": -0.005,
+          "recall": 0.0434211
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "da62389a41d2e4f61c5e533a90fda76122e10dda5fd3295ce550a0e5cbc44c3b",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "9511eea7aae1428ee5b899da341a27e60e1b43148d943f25155af6ef6cb53198",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "1a06de396f5f3673cbce3bbbe9986808549ac3f007409cc8a476220d2c50deb8",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "9511eea7aae1428ee5b899da341a27e60e1b43148d943f25155af6ef6cb53198",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_bedroom_A3_s1",
+        "seconds": {
+          "extract": 1.21159,
+          "features_f": 124.565,
+          "features_h": 124.811
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.09375,
+          "density": 0.043,
+          "feature_dim": 2048,
+          "fid": 144.41,
+          "fid_ci_high": 149.401,
+          "fid_ci_low": 145.059,
+          "k": 5,
+          "kid": 0.13053,
+          "kid_ci_high": 0.133128,
+          "kid_ci_low": 0.127834,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.1305,
+          "recall": 0.06375,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_bedroom_A3_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_bedroom_A3_s2": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0925,
+          "density": 0.035,
+          "density_ci": [
+            0.0297,
+            0.0410025
+          ],
+          "kid": 0.13998,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.1105,
+          "precision_ci": [
+            0.0969875,
+            0.124
+          ],
+          "recall": 0.05375
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0934211,
+          "density": 0.0352,
+          "density_ci": [
+            0.0298,
+            0.0413025
+          ],
+          "kid": 0.140417,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.112,
+          "precision_ci": [
+            0.098,
+            0.1255
+          ],
+          "recall": 0.0552632
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0710526,
+          "density": 0.0317,
+          "density_ci": [
+            0.021795,
+            0.0439025
+          ],
+          "kid": 0.146508,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.109,
+          "precision_ci": [
+            0.0805,
+            0.139
+          ],
+          "recall": 0.0381579
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.0223684,
+          "density": 0.0035,
+          "kid": -0.00609134,
+          "precision": 0.003,
+          "recall": 0.0171053
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "0d56f921c4c068c9743cb12f1beba9689abb21cb4320fab97c5d01c32f8947dd",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "51efe87173c4db3208743eee066c5a3993274b52ecaef6a173bbe2f9fcfbdf81",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "cc20fbacf9056131ef3f77eaf0b926b46d5dc62e5b2637057883ed63b0d95a18",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "51efe87173c4db3208743eee066c5a3993274b52ecaef6a173bbe2f9fcfbdf81",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_bedroom_A3_s2",
+        "seconds": {
+          "extract": 1.21125,
+          "features_f": 123.918,
+          "features_h": 124.218
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.0925,
+          "density": 0.035,
+          "feature_dim": 2048,
+          "fid": 155.491,
+          "fid_ci_high": 160.924,
+          "fid_ci_low": 156.329,
+          "k": 5,
+          "kid": 0.140106,
+          "kid_ci_high": 0.143048,
+          "kid_ci_low": 0.137671,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.1105,
+          "recall": 0.05375,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_bedroom_A3_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A0_s1": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0075,
+          "density": 0.0012,
+          "density_ci": [
+            0.0005,
+            0.0019
+          ],
+          "kid": 0.246348,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.0055,
+          "precision_ci": [
+            0.0025,
+            0.0085
+          ],
+          "recall": 0.00875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.00789474,
+          "density": 0.0012,
+          "density_ci": [
+            0.0005,
+            0.0019
+          ],
+          "kid": 0.245833,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0055,
+          "precision_ci": [
+            0.0025,
+            0.0085
+          ],
+          "recall": 0.00921053
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0131579,
+          "density": 0.0017,
+          "density_ci": [
+            0.0009,
+            0.0026025
+          ],
+          "kid": 0.242957,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0075,
+          "precision_ci": [
+            0.004,
+            0.0115
+          ],
+          "recall": 0.00921053
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": -0.00526316,
+          "density": -0.0005,
+          "kid": 0.00287552,
+          "precision": -0.002,
+          "recall": 0.0
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "e567a3a5b8256a2f3cc9d1d742711c3f2e3292110520ed59931ed19f1d724260",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "4577d9bddd866599b85eea05dd41bb520697440f2254ba794e5788d9a3f18e15",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "a7375ecbeef76e398b216bf3b5ff6475c3768ca7d7af1d1fe16e5f9ce41cd54a",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A0_s1",
+        "seconds": {
+          "extract": 1.21789,
+          "features_f": 127.198,
+          "features_h": 127.935
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.0075,
+          "density": 0.0011,
+          "feature_dim": 2048,
+          "fid": 226.956,
+          "fid_ci_high": 231.181,
+          "fid_ci_low": 226.905,
+          "k": 5,
+          "kid": 0.246464,
+          "kid_ci_high": 0.250589,
+          "kid_ci_low": 0.243187,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.005,
+          "recall": 0.00875,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A0_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A0_s2": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.00125,
+          "density": 0.0002,
+          "density_ci": [
+            0.0,
+            0.0005
+          ],
+          "kid": 0.374212,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.001,
+          "precision_ci": [
+            0.0,
+            0.0025
+          ],
+          "recall": 0.0
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.00263158,
+          "density": 0.0003,
+          "density_ci": [
+            0.0,
+            0.0007
+          ],
+          "kid": 0.374107,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0015,
+          "precision_ci": [
+            0.0,
+            0.0035
+          ],
+          "recall": 0.0
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0,
+          "density": 0.0,
+          "density_ci": [
+            0.0,
+            0.0
+          ],
+          "kid": 0.377512,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0,
+          "precision_ci": [
+            0.0,
+            0.0
+          ],
+          "recall": 0.0
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.00263158,
+          "density": 0.0003,
+          "kid": -0.00340499,
+          "precision": 0.0015,
+          "recall": 0.0
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "30ccf9ed9a12576edfaf9337909d4a21bf4b0e6c0ccae2e30270e9abaf258875",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "f81fa6239d8736ed2e86932fd58c0ab63bc9231cab17fddf881573cbd21dca2a",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "92bce1bee5b6ed21a650599441a8782c965712bedf857360b4c2eb44655415a5",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "f81fa6239d8736ed2e86932fd58c0ab63bc9231cab17fddf881573cbd21dca2a",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A0_s2",
+        "seconds": {
+          "extract": 1.21268,
+          "features_f": 127.52,
+          "features_h": 126.903
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.00125,
+          "density": 0.0002,
+          "feature_dim": 2048,
+          "fid": 292.437,
+          "fid_ci_high": 296.422,
+          "fid_ci_low": 291.661,
+          "k": 5,
+          "kid": 0.374503,
+          "kid_ci_high": 0.380007,
+          "kid_ci_low": 0.370136,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.001,
+          "recall": 0.0,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A0_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A0_s3": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.01,
+          "density": 0.0008,
+          "density_ci": [
+            0.0003,
+            0.0015
+          ],
+          "kid": 0.313919,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.0035,
+          "precision_ci": [
+            0.001,
+            0.006
+          ],
+          "recall": 0.0
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0118421,
+          "density": 0.0009,
+          "density_ci": [
+            0.0003,
+            0.0016
+          ],
+          "kid": 0.313422,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.004,
+          "precision_ci": [
+            0.0015,
+            0.007
+          ],
+          "recall": 0.0
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0105263,
+          "density": 0.0009,
+          "density_ci": [
+            0.0002,
+            0.0019025
+          ],
+          "kid": 0.310027,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0035,
+          "precision_ci": [
+            0.0005,
+            0.0070125
+          ],
+          "recall": 0.00921053
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.00131579,
+          "density": 0.0,
+          "kid": 0.00339566,
+          "precision": 0.0005,
+          "recall": -0.00921053
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "a2579009e3ffb4440e2a295be36da6786534c093a69cf0c7c5702e8eb822f2b5",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "6bc2952eade7727628da8eb4a78998e0f0365727608fea19299ec7e452766737",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "83480cbe11db122ac512fe9b46f9c4c1b8a760d3581cf06dea0b9ab3a19b9dac",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "6bc2952eade7727628da8eb4a78998e0f0365727608fea19299ec7e452766737",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A0_s3",
+        "seconds": {
+          "extract": 1.21503,
+          "features_f": 127.272,
+          "features_h": 128.498
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.01,
+          "density": 0.0008,
+          "feature_dim": 2048,
+          "fid": 253.629,
+          "fid_ci_high": 258.277,
+          "fid_ci_low": 253.23,
+          "k": 5,
+          "kid": 0.314087,
+          "kid_ci_high": 0.319446,
+          "kid_ci_low": 0.309684,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.0035,
+          "recall": 0.0,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A0_s3_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A1_s1": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.125,
+          "density": 0.0422,
+          "density_ci": [
+            0.0353,
+            0.0497
+          ],
+          "kid": 0.175278,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.1125,
+          "precision_ci": [
+            0.098,
+            0.127
+          ],
+          "recall": 0.0825
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.127632,
+          "density": 0.0434,
+          "density_ci": [
+            0.0362975,
+            0.0510025
+          ],
+          "kid": 0.174778,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.1145,
+          "precision_ci": [
+            0.0994875,
+            0.129013
+          ],
+          "recall": 0.0855263
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.110526,
+          "density": 0.0444,
+          "density_ci": [
+            0.0303925,
+            0.0612
+          ],
+          "kid": 0.174946,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.115,
+          "precision_ci": [
+            0.0895,
+            0.142
+          ],
+          "recall": 0.0842105
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.0171053,
+          "density": -0.001,
+          "kid": -0.000168045,
+          "precision": -0.0005,
+          "recall": 0.00131579
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "f201b0e94e762e7e4ca88350f30acb579bf67b5fe48ec19f3745480b2da165ec",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "bd6d6ef35e66429a9b033956d81e5959cc9f7c5d86adfd8a5e28c6df8d99dc7f",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "5117975ed84243187d4d87af8432d3059673991b6dff13549f78667150a5eac6",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "bd6d6ef35e66429a9b033956d81e5959cc9f7c5d86adfd8a5e28c6df8d99dc7f",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A1_s1",
+        "seconds": {
+          "extract": 1.21142,
+          "features_f": 126.675,
+          "features_h": 128.766
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.12625,
+          "density": 0.0422,
+          "feature_dim": 2048,
+          "fid": 166.705,
+          "fid_ci_high": 172.292,
+          "fid_ci_low": 167.043,
+          "k": 5,
+          "kid": 0.175309,
+          "kid_ci_high": 0.180168,
+          "kid_ci_low": 0.171043,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.113,
+          "recall": 0.08125,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A1_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A1_s2": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.05375,
+          "density": 0.0169,
+          "density_ci": [
+            0.0131,
+            0.0207
+          ],
+          "kid": 0.184037,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.054,
+          "precision_ci": [
+            0.0445,
+            0.0640125
+          ],
+          "recall": 0.0175
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0552632,
+          "density": 0.0177,
+          "density_ci": [
+            0.0139,
+            0.0216025
+          ],
+          "kid": 0.183623,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.057,
+          "precision_ci": [
+            0.047,
+            0.0675
+          ],
+          "recall": 0.0184211
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0434211,
+          "density": 0.0154,
+          "density_ci": [
+            0.0105,
+            0.0210025
+          ],
+          "kid": 0.181204,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.052,
+          "precision_ci": [
+            0.038,
+            0.067
+          ],
+          "recall": 0.0513158
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.0118421,
+          "density": 0.0023,
+          "kid": 0.00241846,
+          "precision": 0.005,
+          "recall": -0.0328947
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "e90c9239fb7343bc09479b40bcda0a616629bd0e55c7ed9328237b10713c7538",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "8e3b3ca5ac06000b812361ba8cca3a82af53099f6d19e059f845d696a94ee064",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "b6b7bf9d3b60a04ccbcc66c82cd3558fcf9091ac31bf79bb35ee41abea693202",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "8e3b3ca5ac06000b812361ba8cca3a82af53099f6d19e059f845d696a94ee064",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A1_s2",
+        "seconds": {
+          "extract": 1.21216,
+          "features_f": 124.805,
+          "features_h": 124.901
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.05375,
+          "density": 0.0169,
+          "feature_dim": 2048,
+          "fid": 184.361,
+          "fid_ci_high": 189.746,
+          "fid_ci_low": 184.583,
+          "k": 5,
+          "kid": 0.184086,
+          "kid_ci_high": 0.187628,
+          "kid_ci_low": 0.180215,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.054,
+          "recall": 0.01625,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A1_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A3_s1": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.05,
+          "density": 0.0157,
+          "density_ci": [
+            0.0126,
+            0.019
+          ],
+          "kid": 0.220218,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.0585,
+          "precision_ci": [
+            0.049,
+            0.0695
+          ],
+          "recall": 0.03
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.0526316,
+          "density": 0.0163,
+          "density_ci": [
+            0.0131975,
+            0.0197025
+          ],
+          "kid": 0.220084,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.059,
+          "precision_ci": [
+            0.049,
+            0.0695
+          ],
+          "recall": 0.0289474
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.0631579,
+          "density": 0.0152,
+          "density_ci": [
+            0.0091975,
+            0.022
+          ],
+          "kid": 0.22713,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.038,
+          "precision_ci": [
+            0.0255,
+            0.051
+          ],
+          "recall": 0.0394737
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": -0.0105263,
+          "density": 0.0011,
+          "kid": -0.00704546,
+          "precision": 0.021,
+          "recall": -0.0105263
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "1f1df7482c1b69f9a001bc8c4c5c34244101dcec4be9de514e0ec7781c6aeb16",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "9495852304d9e76fac4a765d5befb1e60240b429b721d6c584a23b16578c8f93",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "2c9f82fde1e535abd356d8c10ed6fc6bbfa3e8d7512fb7f9d59544258620a996",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A3_s1",
+        "seconds": {
+          "extract": 1.21144,
+          "features_f": 123.47,
+          "features_h": 124.356
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.05,
+          "density": 0.0158,
+          "feature_dim": 2048,
+          "fid": 200.722,
+          "fid_ci_high": 206.44,
+          "fid_ci_low": 200.806,
+          "k": 5,
+          "kid": 0.220271,
+          "kid_ci_high": 0.226011,
+          "kid_ci_low": 0.215733,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.059,
+          "recall": 0.02875,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A3_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A3_s2": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.12375,
+          "density": 0.0322,
+          "density_ci": [
+            0.0259,
+            0.0387
+          ],
+          "kid": 0.133921,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.08,
+          "precision_ci": [
+            0.068,
+            0.092
+          ],
+          "recall": 0.11875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.132895,
+          "density": 0.0336,
+          "density_ci": [
+            0.027,
+            0.0405025
+          ],
+          "kid": 0.133992,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0825,
+          "precision_ci": [
+            0.07,
+            0.0945125
+          ],
+          "recall": 0.121053
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.111842,
+          "density": 0.0288,
+          "density_ci": [
+            0.0177975,
+            0.0399
+          ],
+          "kid": 0.132505,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.0825,
+          "precision_ci": [
+            0.059,
+            0.1065
+          ],
+          "recall": 0.110526
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.0210526,
+          "density": 0.0048,
+          "kid": 0.00148685,
+          "precision": 0.0,
+          "recall": 0.0105263
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "9b4492e9491923c9aec582ad9c4b78bdc7b586c021bb561b434d4f086ca12986",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "a9a34a62ae014d96043090cba6d8b1225703cc5b7ab59080b0ad6a854af04a45",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "73c1aedffc5ac2ea5d6fdb1dfc7727214f126af01ab156fc3258603198267b75",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "a9a34a62ae014d96043090cba6d8b1225703cc5b7ab59080b0ad6a854af04a45",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A3_s2",
+        "seconds": {
+          "extract": 1.21443,
+          "features_f": 127.024,
+          "features_h": 130.652
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.1225,
+          "density": 0.0321,
+          "feature_dim": 2048,
+          "fid": 157.12,
+          "fid_ci_high": 163.1,
+          "fid_ci_low": 157.299,
+          "k": 5,
+          "kid": 0.133958,
+          "kid_ci_high": 0.137947,
+          "kid_ci_low": 0.131237,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.0805,
+          "recall": 0.12,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A3_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "lsun_church_A3_s3": {
+      "heldout_seed_idx": [
+        17,
+        23,
+        107,
+        174,
+        236,
+        266,
+        339,
+        357,
+        408,
+        474,
+        512,
+        636,
+        998,
+        1024,
+        1059,
+        1068,
+        1247,
+        1248,
+        1472,
+        1596,
+        1781,
+        1903,
+        2049,
+        2054,
+        2140,
+        2578,
+        2616,
+        2629,
+        2738,
+        2777,
+        2781,
+        2866,
+        3198,
+        3257,
+        3277,
+        3288,
+        3359,
+        3594,
+        3831,
+        3935
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.1575,
+          "density": 0.0511,
+          "density_ci": [
+            0.0427,
+            0.060305
+          ],
+          "kid": 0.132885,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.126,
+          "precision_ci": [
+            0.111,
+            0.14
+          ],
+          "recall": 0.1325
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.163158,
+          "density": 0.0524,
+          "density_ci": [
+            0.0439975,
+            0.0618025
+          ],
+          "kid": 0.132573,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.13,
+          "precision_ci": [
+            0.1155,
+            0.1445
+          ],
+          "recall": 0.130263
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.138158,
+          "density": 0.0488,
+          "density_ci": [
+            0.0344925,
+            0.06401
+          ],
+          "kid": 0.13584,
+          "n_reference": 760,
+          "n_samples": 2000,
+          "precision": 0.123,
+          "precision_ci": [
+            0.0944875,
+            0.154
+          ],
+          "recall": 0.117105
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.025,
+          "density": 0.0036,
+          "kid": -0.00326733,
+          "precision": 0.007,
+          "recall": 0.0131579
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "7cc012a51fd74fbeae76b08a7caec7a1e51647b0eaf828f18d97dc19d2a5c04f",
+        "final_seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "d04d7aa98112904ac7ac8b4e282e15698f8ec2a74ec6b420c61c19a9f3709291",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "f9c946198c56d548fbd138d80babb5f342a7409eb43a7a369373e25c7cd1b923",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "177ad32f99a7120c2b7c36e00a58b2c3b360788075b258b6797013e3e74f9ba0",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "d04d7aa98112904ac7ac8b4e282e15698f8ec2a74ec6b420c61c19a9f3709291",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "lsun_church_A3_s3",
+        "seconds": {
+          "extract": 1.21188,
+          "features_f": 127.311,
+          "features_h": 127.713
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.1575,
+          "density": 0.0514,
+          "feature_dim": 2048,
+          "fid": 147.949,
+          "fid_ci_high": 153.565,
+          "fid_ci_low": 148.816,
+          "k": 5,
+          "kid": 0.132921,
+          "kid_ci_high": 0.136772,
+          "kid_ci_low": 0.129939,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.127,
+          "recall": 0.13375,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/lsun_church_A3_s3_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "oasis1_A0_s1": {
+      "heldout_seed_idx": [
+        45,
+        65,
+        435,
+        495,
+        635,
+        645,
+        655,
+        915,
+        1095,
+        1105,
+        1135,
+        1185,
+        1205,
+        1355,
+        1495,
+        1505,
+        1545,
+        1625,
+        1915,
+        1935,
+        1995,
+        2065,
+        2105,
+        2125,
+        2165,
+        2295,
+        2375,
+        2435,
+        2525,
+        2775,
+        2805,
+        2885,
+        3085,
+        3095,
+        3315,
+        3445,
+        3485,
+        3515,
+        3765,
+        3905
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.6875,
+          "density": 0.4558,
+          "density_ci": [
+            0.429297,
+            0.482305
+          ],
+          "kid": 0.0256842,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.645,
+          "precision_ci": [
+            0.6235,
+            0.666013
+          ],
+          "recall": 0.43
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.553125,
+          "density": 0.2483,
+          "density_ci": [
+            0.231798,
+            0.264503
+          ],
+          "kid": 0.0348728,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.5145,
+          "precision_ci": [
+            0.493,
+            0.537013
+          ],
+          "recall": 0.446875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.805,
+          "density": 0.4471,
+          "density_ci": [
+            0.423187,
+            0.473103
+          ],
+          "kid": 0.0250914,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6625,
+          "precision_ci": [
+            0.6425,
+            0.683
+          ],
+          "recall": 0.435
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.56875,
+          "density": 0.2887,
+          "density_ci": [
+            0.257195,
+            0.324805
+          ],
+          "kid": 0.037136,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.5475,
+          "precision_ci": [
+            0.508988,
+            0.587
+          ],
+          "recall": 0.26875
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.665,
+          "density": 0.4826,
+          "density_ci": [
+            0.431867,
+            0.532802
+          ],
+          "kid": 0.030466,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6605,
+          "precision_ci": [
+            0.626475,
+            0.6965
+          ],
+          "recall": 0.3475
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.14,
+          "density": -0.0355,
+          "kid": -0.00537461,
+          "precision": 0.002,
+          "recall": 0.0875
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "94b710b1b180565ff1a7b552dad7db120506c034b90b1337fe3d83cbc80f021d",
+        "final_seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "54c1fa271c37d4f2422273023cbbd7e1a106ec15f4b04420f3d1516aa1268a30",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "6ba4c3288229f5c943f2da977b90d547331dd4632f5241b86f65ac0522632c56",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "54c1fa271c37d4f2422273023cbbd7e1a106ec15f4b04420f3d1516aa1268a30",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "a69463f103aeb328d3132456f59f1fe66ad4901b0678e0ede4a5c0c964c50d81",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "oasis1_A0_s1",
+        "seconds": {
+          "extract": 1.21214,
+          "features_f": 128.893,
+          "features_h": 126.59
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.68875,
+          "density": 0.4544,
+          "feature_dim": 2048,
+          "fid": 38.101,
+          "fid_ci_high": 40.6313,
+          "fid_ci_low": 38.4056,
+          "k": 5,
+          "kid": 0.0256911,
+          "kid_ci_high": 0.0274392,
+          "kid_ci_low": 0.0245539,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.644,
+          "recall": 0.43,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/oasis1_A0_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "oasis1_A0_s2": {
+      "heldout_seed_idx": [
+        45,
+        65,
+        435,
+        495,
+        635,
+        645,
+        655,
+        915,
+        1095,
+        1105,
+        1135,
+        1185,
+        1205,
+        1355,
+        1495,
+        1505,
+        1545,
+        1625,
+        1915,
+        1935,
+        1995,
+        2065,
+        2105,
+        2125,
+        2165,
+        2295,
+        2375,
+        2435,
+        2525,
+        2775,
+        2805,
+        2885,
+        3085,
+        3095,
+        3315,
+        3445,
+        3485,
+        3515,
+        3765,
+        3905
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.76375,
+          "density": 0.5858,
+          "density_ci": [
+            0.555198,
+            0.619803
+          ],
+          "kid": 0.0214031,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.723,
+          "precision_ci": [
+            0.702,
+            0.742
+          ],
+          "recall": 0.44
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.678125,
+          "density": 0.3173,
+          "density_ci": [
+            0.297893,
+            0.3385
+          ],
+          "kid": 0.0318579,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.572,
+          "precision_ci": [
+            0.552488,
+            0.5935
+          ],
+          "recall": 0.4125
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.855,
+          "density": 0.5813,
+          "density_ci": [
+            0.554285,
+            0.611
+          ],
+          "kid": 0.0206106,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7475,
+          "precision_ci": [
+            0.727988,
+            0.767
+          ],
+          "recall": 0.4775
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.725,
+          "density": 0.3804,
+          "density_ci": [
+            0.347097,
+            0.414605
+          ],
+          "kid": 0.0314876,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.6085,
+          "precision_ci": [
+            0.5785,
+            0.638512
+          ],
+          "recall": 0.415625
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.7375,
+          "density": 0.6156,
+          "density_ci": [
+            0.558855,
+            0.671402
+          ],
+          "kid": 0.0251139,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.755,
+          "precision_ci": [
+            0.7215,
+            0.781
+          ],
+          "recall": 0.375
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.1175,
+          "density": -0.0343,
+          "kid": -0.00450335,
+          "precision": -0.0075,
+          "recall": 0.1025
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "976ad3aafe31b9b789c0ef913958c2660ba2c37808401def3eec1c447a197d63",
+        "final_seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "bc93eedc69fa5a55e8858e26eba21e0e1cfb88563f6cd983c4ae7a9bafd7e972",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "f6ffb3fdbdd635a8925e7f1932e86cd6b361d9201a66e0e506626405d7c48295",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "bc93eedc69fa5a55e8858e26eba21e0e1cfb88563f6cd983c4ae7a9bafd7e972",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "a69463f103aeb328d3132456f59f1fe66ad4901b0678e0ede4a5c0c964c50d81",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "oasis1_A0_s2",
+        "seconds": {
+          "extract": 1.21482,
+          "features_f": 129.069,
+          "features_h": 128.832
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.76125,
+          "density": 0.5847,
+          "feature_dim": 2048,
+          "fid": 34.1531,
+          "fid_ci_high": 36.5557,
+          "fid_ci_low": 34.4651,
+          "k": 5,
+          "kid": 0.0214091,
+          "kid_ci_high": 0.0227029,
+          "kid_ci_low": 0.0202539,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.7225,
+          "recall": 0.44,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/oasis1_A0_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "oasis1_A3_s1": {
+      "heldout_seed_idx": [
+        45,
+        65,
+        435,
+        495,
+        635,
+        645,
+        655,
+        915,
+        1095,
+        1105,
+        1135,
+        1185,
+        1205,
+        1355,
+        1495,
+        1505,
+        1545,
+        1625,
+        1915,
+        1935,
+        1995,
+        2065,
+        2105,
+        2125,
+        2165,
+        2295,
+        2375,
+        2435,
+        2525,
+        2775,
+        2805,
+        2885,
+        3085,
+        3095,
+        3315,
+        3445,
+        3485,
+        3515,
+        3765,
+        3905
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.9275,
+          "density": 0.8555,
+          "density_ci": [
+            0.819177,
+            0.895212
+          ],
+          "kid": 0.0117161,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.848,
+          "precision_ci": [
+            0.832,
+            0.864
+          ],
+          "recall": 0.44
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.88125,
+          "density": 0.3946,
+          "density_ci": [
+            0.370788,
+            0.419715
+          ],
+          "kid": 0.0217299,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.6095,
+          "precision_ci": [
+            0.588,
+            0.6305
+          ],
+          "recall": 0.4125
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.9675,
+          "density": 0.7695,
+          "density_ci": [
+            0.738797,
+            0.802505
+          ],
+          "kid": 0.0113932,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.842,
+          "precision_ci": [
+            0.826488,
+            0.857012
+          ],
+          "recall": 0.4575
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.95625,
+          "density": 0.6206,
+          "density_ci": [
+            0.540067,
+            0.698327
+          ],
+          "kid": 0.0113597,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.808,
+          "precision_ci": [
+            0.758988,
+            0.8555
+          ],
+          "recall": 0.284375
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.6925,
+          "density": 0.7022,
+          "density_ci": [
+            0.617597,
+            0.7865
+          ],
+          "kid": 0.0393638,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.828,
+          "precision_ci": [
+            0.7825,
+            0.870012
+          ],
+          "recall": 0.14
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.275,
+          "density": 0.0673,
+          "kid": -0.0279706,
+          "precision": 0.014,
+          "recall": 0.3175
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "e68dae6f7738d3b03624d060cc2a4d3a85b3b266ba2fafb4ab88a74b96bdc025",
+        "final_seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "fd1d52da9ff8fb1c31843506df59f453f742e2debc20b8f33ee63a1e167593d2",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "433f5a1712f095bdcf3b946ff5be98cfd51717a099e3a6ee36de6bec57d24ef3",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "fd1d52da9ff8fb1c31843506df59f453f742e2debc20b8f33ee63a1e167593d2",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "a69463f103aeb328d3132456f59f1fe66ad4901b0678e0ede4a5c0c964c50d81",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "oasis1_A3_s1",
+        "seconds": {
+          "extract": 1.21454,
+          "features_f": 129.616,
+          "features_h": 129.33
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.92875,
+          "density": 0.8545,
+          "feature_dim": 2048,
+          "fid": 22.2272,
+          "fid_ci_high": 24.373,
+          "fid_ci_low": 23.0725,
+          "k": 5,
+          "kid": 0.0117194,
+          "kid_ci_high": 0.0129125,
+          "kid_ci_low": 0.0109681,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.8475,
+          "recall": 0.43875,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/oasis1_A3_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "oasis1_A3_s2": {
+      "heldout_seed_idx": [
+        45,
+        65,
+        435,
+        495,
+        635,
+        645,
+        655,
+        915,
+        1095,
+        1105,
+        1135,
+        1185,
+        1205,
+        1355,
+        1495,
+        1505,
+        1545,
+        1625,
+        1915,
+        1935,
+        1995,
+        2065,
+        2105,
+        2125,
+        2165,
+        2295,
+        2375,
+        2435,
+        2525,
+        2775,
+        2805,
+        2885,
+        3085,
+        3095,
+        3315,
+        3445,
+        3485,
+        3515,
+        3765,
+        3905
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.93375,
+          "density": 0.809,
+          "density_ci": [
+            0.77227,
+            0.84491
+          ],
+          "kid": 0.0124088,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.8235,
+          "precision_ci": [
+            0.807,
+            0.8395
+          ],
+          "recall": 0.5675
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.925,
+          "density": 0.3778,
+          "density_ci": [
+            0.35409,
+            0.40332
+          ],
+          "kid": 0.0191102,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.5855,
+          "precision_ci": [
+            0.564,
+            0.6075
+          ],
+          "recall": 0.534375
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.9775,
+          "density": 0.7423,
+          "density_ci": [
+            0.709295,
+            0.7738
+          ],
+          "kid": 0.0121481,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.8265,
+          "precision_ci": [
+            0.809,
+            0.843012
+          ],
+          "recall": 0.5925
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.95625,
+          "density": 0.663,
+          "density_ci": [
+            0.581888,
+            0.748107
+          ],
+          "kid": 0.00983456,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.8165,
+          "precision_ci": [
+            0.775988,
+            0.8565
+          ],
+          "recall": 0.296875
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.64,
+          "density": 0.6929,
+          "density_ci": [
+            0.618188,
+            0.763903
+          ],
+          "kid": 0.0394316,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.8555,
+          "precision_ci": [
+            0.820987,
+            0.886
+          ],
+          "recall": 0.1425
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.3375,
+          "density": 0.0494,
+          "kid": -0.0272835,
+          "precision": -0.029,
+          "recall": 0.45
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "34c202191f858e643662154c93435e1e820f5e3df7a9820467f8c74269ef37b1",
+        "final_seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "80643a8efd00c9947edcab8a950db3b7a57a23e67a96e705923f84f8d3278514",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "e9e6b2cca37eb957147036a207b986793805f76e23f11b13a0de9d4236ca9939",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "669654b40b4728587c2f7444085a5c528b3dc98fffa9f12a5ce687006b7d651c",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "80643a8efd00c9947edcab8a950db3b7a57a23e67a96e705923f84f8d3278514",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "a69463f103aeb328d3132456f59f1fe66ad4901b0678e0ede4a5c0c964c50d81",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "oasis1_A3_s2",
+        "seconds": {
+          "extract": 1.21321,
+          "features_f": 130.854,
+          "features_h": 130.337
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.93375,
+          "density": 0.8105,
+          "feature_dim": 2048,
+          "fid": 22.5849,
+          "fid_ci_high": 24.8077,
+          "fid_ci_low": 23.332,
+          "k": 5,
+          "kid": 0.0124119,
+          "kid_ci_high": 0.0136694,
+          "kid_ci_low": 0.0114176,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.8235,
+          "recall": 0.57,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/oasis1_A3_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    }
+  },
+  "seconds_total_this_invocation": 5974.85,
+  "ticket": "T7.5"
+}
