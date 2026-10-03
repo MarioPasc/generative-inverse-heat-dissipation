@@ -291,10 +291,16 @@ expected, it is larger against R5.
   samples are therefore 40 tight clusters around 40 layouts. KID and recall compare whole
   distributions and penalise that collapse; precision and density ask only whether each sample
   lies on the real manifold. The F set has 2,000 distinct prior states, so it does not collapse.
-- **What this means for the KID result.** The −63% KID gain of table 2 is therefore in large part
-  a property of the 2,000-seed sampling design, which W/8 copies the coarse diversity of. It is
-  not shown to be a gain in per-sample fidelity. This is a description, not a re-reading: the
-  pre-registered endpoint is precision.
+- **What this means for the KID result.** The pattern is consistent with the −63% KID gain of
+  table 2 coming largely from the 2,000-seed sampling design: at W/8 each sample copies the coarse
+  layout of its seed image, so the sample set inherits the training set's coarse diversity.
+  - This is *not tested*. H and F differ in their number of prior states (40 against 2,000), and
+    no available set separates that from "unseen against training".
+  - The KID gain is therefore not shown to be a gain in per-sample fidelity, whereas the precision
+    gain is.
+  - This is a description, not a re-reading: the pre-registered endpoint is precision.
+  - *(Wording softened by main at merge, 2026-10-03; the agent's version said "is therefore in
+    large part a property of the … sampling design".)*
 - **R5.** Against R5, which removes A0's slice-level drift penalty, A3's H KID is lower than
   A0's on every seed of both MRI datasets (IXI −0.0055, OASIS-1 −0.0237).
 

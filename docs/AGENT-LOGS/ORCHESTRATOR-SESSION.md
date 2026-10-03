@@ -597,3 +597,52 @@ the prompts verbatim, every intervention and every verdict.
    - the proposal's Fig. 1 numbers (`results_discussion.md` §9.9);
    - pinning torch in `environment.yml`;
    - `paired_lsd_gate` at W ≠ 192 (only matters if anyone gates a 128² run).
+
+---
+
+# Session 4 — [Orchestrator-GenAI], 2026-10-03 (mentor role)
+
+Model: Claude Opus 5.5 (1M), effort xhigh. The previous orchestrator, `[Orchestrator-GenAI-older]`,
+was consulted by `SendMessage`. Skills used: `parallel-agents` and `session-log`.
+
+## 17. The user's prompts (verbatim)
+
+```
+CONTEXT: You are a member of our project for Generative AI, a mentor, and an AI Agent that will help us develop the project, since it is expected to use it. In order to help us, you must gather contet from the project, read projects/GenAI/code/docs/AGENT-LOGS/ORCHESTRATOR-SESSION.md in order to know the progression that took us here. The results are located in /media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project while the figures and some comments about the final results are in projects/GenAI/code/docs/RESULTS project proposal is in projects/GenAI/project/6aab9fca47dc3902a0dbfcef/propuesta/templateArxiv.tex ; I have spawned an agent with its window context at 86% that knows a lot about the project, whose name is "[Orchestrator-GenAI-older]". You can message it in order to ask things that you don't know for certain. TASK: We have a lot of results and have basically finished the execution of the project. Your task will be to find the answer to some questions and refine the file projects/GenAI/code/docs/RESULTS/results_discussion.md by injecting results images/tables there. The idea is that that md file is going to serve me to fully understand the results of the project. We have other courses and I can't remember all the details, so please, detail me a lot the metrics that we were computing, what they represent, higher better, lower better, why did we choose it, ... We must conclude: (a) Why does the generated churches samples from the diagnostics not look as good as in the paper, if we are supposedly using the same setting, or almost the same? Should we keep iterating for projects/GenAI/code/wave-W14-prompts? (b) If my memory sets me right, we tried two things, first, the terminal blur, which was like the prior of the images, we set it to start from a "broader blur", since MRIs share a common structure, and checked memorization, ... And then we also tried to change from a log-schedule, whose motivation was that natural images share the same variance between octaves, to an IXI-matched. Well, I'd liek you to finish the document stating if we nailed it, by how much, and if we failed, provide a possible explantion from the data. (c) Free space! If you think I should know anything, report it to me. ACCEPTANCE CRITERIA: You have reasoned through all the tasks and gathereed the needed context. Think step by step, reason.
+```
+
+```
+Proceed with (c.1) and clearly state that we were not trying to replicate the original article, state clearly in which things we fell short since we could not afford that much compute, but that we have included some experiments to check the main trade-off areas (dataset size and iamge resolution).
+```
+
+## 18. What this session did
+
+1. **`results_discussion.md` became an explainer.**
+   - §0 reading guide; it also corrects "W/8 is a broader blur": it is a narrower one.
+   - §2a: every metric with its formula, direction, calibration and reference.
+   - All figures and tables 3 and 4 inline; §11 with the answers (a), (b), (c).
+   - An independent fact-check agent found 6 wrong and 10 imprecise statements, all fixed.
+     Committed as `25e4d06`.
+   - The paper's App. B was read via ar5iv: 1M iterations, batch 32, lr 2e-5, 2 res-blocks
+     (160 M parameters against our 61 M), K = 400, FID on 50k samples against the training set.
+   - The released `default_lsun_configs.py` does not load (`eval.batch_size`).
+2. **The project does not replicate the paper.** This is now stated in §0, §3, §10 item 8 and
+   §11.1, together with:
+   - the compute shortfalls: a paper-scale recipe would cost about 3,300 A100-h of training for
+     the 30 runs;
+   - the two trade-off checks: data size (n32k) and resolution and framing (r128).
+3. **Wave W15, T7.5: fidelity from held-out seeds**, CPU only on the evaluation tars;
+   `M7-diagnostics/WAVE-W15.md`.
+   - Reading: **"the fidelity gain generalises to unseen seeds"** on precision.
+   - Only 14% of the KID gain carries over.
+   - Result in `results_discussion.md` §4.1.
+
+## 19. Handoff
+
+- `integration/W15` (worktree `wt/integration-W15`) holds T7.5 and the doc integration. It waits
+  for Mario's approval to merge into `main` and push. `main` is at `25e4d06`, not pushed.
+- Still `[ask Mario]`:
+  - the proposal's Fig. 1 numbers;
+  - pinning torch;
+  - the Picasso cleanup;
+  - the removal of the local worktrees (W14 and W15) after the merge.
