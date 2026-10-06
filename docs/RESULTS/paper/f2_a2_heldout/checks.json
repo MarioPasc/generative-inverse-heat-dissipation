@@ -1,0 +1,45 @@
+{
+  "cache": "/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/_heldout_fidelity",
+  "cache_sha256_after": {
+    "anchors.json": "22fdf748de36a900c738599946d2e0602ddb9f5f07a238b6cd3061d6a0f1be20",
+    "tables.md": "75d2917ac2453756ff3b0d68ef8f4c7fe793b4ac02d5232714c9b38bcfa50a7b"
+  },
+  "cache_sha256_before": {
+    "anchors.json": "22fdf748de36a900c738599946d2e0602ddb9f5f07a238b6cd3061d6a0f1be20",
+    "tables.md": "75d2917ac2453756ff3b0d68ef8f4c7fe793b4ac02d5232714c9b38bcfa50a7b"
+  },
+  "cache_unchanged": true,
+  "check": {
+    "A2_precision": {
+      "ixi_A2_s1": {
+        "F": 0.6145,
+        "H": 0.6335
+      },
+      "ixi_A2_s2": {
+        "F": 0.721,
+        "H": 0.7325
+      }
+    },
+    "identical_runs": [
+      "ixi_A0_s1",
+      "ixi_A0_s2",
+      "ixi_A0_s3"
+    ],
+    "ixi_references": {
+      "heldout_seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+      "n_r5": 320,
+      "n_r_minus": 400,
+      "n_ref": 800,
+      "r5_idx_sha256": "de9b802431066b8fbcb5f0641519cdc81724c5f40cae18ab7f1c98077a97dbd8",
+      "r_minus_idx_sha256": "5e016e53c5cde646acdb287e38355f6fd36e20ac8edbca0188357041c2840341",
+      "ref_idx_sha256": "3fa90c2d8193a9f5884e8c628dbd2919530e6ce6126639ac10e5f5f3b6e10a48"
+    },
+    "new_runs": [
+      "ixi_A2_s1",
+      "ixi_A2_s2"
+    ]
+  },
+  "heldout_grid.png": "removed: byte-identical to /home/mpascual/research/code/TFM/projects/GenAI/code/wt/T8.2/docs/RESULTS/heldout_fidelity/heldout_grid.png",
+  "runs": "ixi_A0_s1,ixi_A0_s2,ixi_A0_s3,ixi_A2_s1,ixi_A2_s2",
+  "t75_exit_code": 0
+}

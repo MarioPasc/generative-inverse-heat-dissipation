@@ -1,0 +1,1202 @@
+{
+  "amendment": "2026-10-03, by main, before any contrast was computed: when rule 1 fires on precision the whole rule, rule 1 included, is applied to KID (gain A0 - A3); if the KID comparator also fails the outcome is 'not evaluable on precision or KID'. R5 sensitivity is H only (sign agreement of \u0394_H); F against R5 is descriptive because training seeds include R5 images.",
+  "anchors": {
+    "a": {
+      "cache": "/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/ixi/_features_inception_ref.npy",
+      "max_abs_diff": 0.00812483,
+      "min_cosine": 0.999998,
+      "n_rows": 800
+    },
+    "b": {
+      "ixi_A0_s1": {
+        "metrics": {
+          "coverage": {
+            "abs_diff": 0.00125,
+            "local": 0.4275,
+            "ok": true,
+            "stored": 0.42625
+          },
+          "density": {
+            "abs_diff": 0.0015,
+            "local": 0.3107,
+            "ok": true,
+            "stored": 0.3122
+          },
+          "kid": {
+            "abs_diff": 3.57416e-05,
+            "local": 0.0463394,
+            "ok": true,
+            "stored": 0.0463751,
+            "stored_ci": [
+              0.0439689,
+              0.0487839
+            ]
+          },
+          "precision": {
+            "abs_diff": 0.001,
+            "local": 0.573,
+            "ok": true,
+            "stored": 0.574
+          },
+          "recall": {
+            "abs_diff": 0.0025,
+            "local": 0.26,
+            "ok": true,
+            "stored": 0.2575
+          }
+        },
+        "passed": true,
+        "worst_deviation": 0.0025
+      },
+      "lsun_church_A3_s1": {
+        "metrics": {
+          "coverage": {
+            "abs_diff": 0.0,
+            "local": 0.05,
+            "ok": true,
+            "stored": 0.05
+          },
+          "density": {
+            "abs_diff": 0.0001,
+            "local": 0.0157,
+            "ok": true,
+            "stored": 0.0158
+          },
+          "kid": {
+            "abs_diff": 5.31065e-05,
+            "local": 0.220218,
+            "ok": true,
+            "stored": 0.220271,
+            "stored_ci": [
+              0.215733,
+              0.226011
+            ]
+          },
+          "precision": {
+            "abs_diff": 0.0005,
+            "local": 0.0585,
+            "ok": true,
+            "stored": 0.059
+          },
+          "recall": {
+            "abs_diff": 0.00125,
+            "local": 0.03,
+            "ok": true,
+            "stored": 0.02875
+          }
+        },
+        "passed": true,
+        "worst_deviation": 0.00125
+      }
+    },
+    "passed": true,
+    "worst_deviation": 0.0025
+  },
+  "bootstrap_within_run": {
+    "F_unit": "sample",
+    "H_unit": "seed (40 clusters of 50)",
+    "alpha": 0.05,
+    "n_boot": 1000,
+    "rng_seed": 0
+  },
+  "contrast_statistics": "ihdm.stats.paired_delta (10,000 seed resamples, rng 0) and ihdm.stats.permutation_test (exact) with their defaults",
+  "contrasts": {
+    "ixi": {
+      "role": "primary endpoint"
+    }
+  },
+  "created": "2026-10-06T08:42:12.452739+00:00",
+  "extractor": {
+    "device": "cpu",
+    "k": 5,
+    "mode": "clean",
+    "weights": "/tmp/inception-2015-12-05.pt"
+  },
+  "git_dirty": true,
+  "git_sha": "9b0029765b7deeb73d2c25f6295ef0a54f3305b3",
+  "references": {
+    "ixi": {
+      "heldout_seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+      "n_r5": 320,
+      "n_r_minus": 400,
+      "n_ref": 800,
+      "n_seed_subjects": 40,
+      "r5_idx_sha256": "de9b802431066b8fbcb5f0641519cdc81724c5f40cae18ab7f1c98077a97dbd8",
+      "r_minus_idx_sha256": "5e016e53c5cde646acdb287e38355f6fd36e20ac8edbca0188357041c2840341",
+      "ref_idx_sha256": "3fa90c2d8193a9f5884e8c628dbd2919530e6ce6126639ac10e5f5f3b6e10a48",
+      "seconds_r5_features": 19.9314,
+      "seconds_ref_features": 50.4526
+    },
+    "lsun_church": {
+      "heldout_seed_idx_sha256": "4d1e4d761a9b76e2f45354fc3c3fbc34c4e62168ed0b5c4794d9a5068469929a",
+      "n_r5": null,
+      "n_r_minus": 760,
+      "n_ref": 800,
+      "n_seed_subjects": 40,
+      "r5_idx_sha256": null,
+      "r_minus_idx_sha256": "37e6f46dec6ed503b4be81ab3abfd51b262d395c38eeacc9a913c3c8f3804379",
+      "ref_idx_sha256": "ecb621e7f8c28507f9e42043208b74ccb80bcbebc52b913b14b211bc294b3c83",
+      "seconds_r5_features": null,
+      "seconds_ref_features": 49.9437
+    }
+  },
+  "runs": {
+    "ixi_A0_s1": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.4275,
+          "density": 0.3107,
+          "density_ci": [
+            0.2921,
+            0.329603
+          ],
+          "kid": 0.0463394,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.573,
+          "precision_ci": [
+            0.552988,
+            0.5955
+          ],
+          "recall": 0.26
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.640625,
+          "density": 0.182,
+          "density_ci": [
+            0.169398,
+            0.1952
+          ],
+          "kid": 0.0226395,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.4415,
+          "precision_ci": [
+            0.4205,
+            0.462
+          ],
+          "recall": 0.2875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.585,
+          "density": 0.3019,
+          "density_ci": [
+            0.284198,
+            0.317208
+          ],
+          "kid": 0.0473932,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6015,
+          "precision_ci": [
+            0.58,
+            0.622012
+          ],
+          "recall": 0.3025
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.6125,
+          "density": 0.1746,
+          "density_ci": [
+            0.154498,
+            0.194712
+          ],
+          "kid": 0.0276075,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.45,
+          "precision_ci": [
+            0.413975,
+            0.4855
+          ],
+          "recall": 0.240625
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.395,
+          "density": 0.2773,
+          "density_ci": [
+            0.2485,
+            0.306502
+          ],
+          "kid": 0.0583394,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.5895,
+          "precision_ci": [
+            0.5455,
+            0.631537
+          ],
+          "recall": 0.17
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.19,
+          "density": 0.0246,
+          "kid": -0.0109462,
+          "precision": 0.012,
+          "recall": 0.1325
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "3c6ad2dc8f1192cbbe06b78085b3d5795cafe57b8e01f4817595d28cbc69153c",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "f2fad1738546580357538e966ce0de2912abbffdbcdcb13e8713e1a782a24a0c",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "6485f402c42955e371e92a3b3a931ad3869cb22529029f4fe7a2448b7116c2b8",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A0_s1",
+        "seconds": {
+          "extract": 1.20194,
+          "features_f": 123.738,
+          "features_h": 123.936
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.42625,
+          "density": 0.3122,
+          "feature_dim": 2048,
+          "fid": 57.2033,
+          "fid_ci_high": 60.243,
+          "fid_ci_low": 56.5801,
+          "k": 5,
+          "kid": 0.0463751,
+          "kid_ci_high": 0.0487839,
+          "kid_ci_low": 0.0439689,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.574,
+          "recall": 0.2575,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A0_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A0_s2": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.46625,
+          "density": 0.4116,
+          "density_ci": [
+            0.39088,
+            0.43392
+          ],
+          "kid": 0.050975,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.687,
+          "precision_ci": [
+            0.667488,
+            0.7075
+          ],
+          "recall": 0.33875
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.675,
+          "density": 0.2093,
+          "density_ci": [
+            0.194998,
+            0.2245
+          ],
+          "kid": 0.0244047,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.4985,
+          "precision_ci": [
+            0.476,
+            0.52
+          ],
+          "recall": 0.290625
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.625,
+          "density": 0.384,
+          "density_ci": [
+            0.363498,
+            0.40431
+          ],
+          "kid": 0.0517745,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6835,
+          "precision_ci": [
+            0.665,
+            0.7035
+          ],
+          "recall": 0.3825
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.6875,
+          "density": 0.2376,
+          "density_ci": [
+            0.213495,
+            0.260502
+          ],
+          "kid": 0.0273439,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.532,
+          "precision_ci": [
+            0.4965,
+            0.565512
+          ],
+          "recall": 0.253125
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.4825,
+          "density": 0.3963,
+          "density_ci": [
+            0.3609,
+            0.433015
+          ],
+          "kid": 0.0615194,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7105,
+          "precision_ci": [
+            0.667988,
+            0.75
+          ],
+          "recall": 0.285
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.1425,
+          "density": -0.0123,
+          "kid": -0.00974495,
+          "precision": -0.027,
+          "recall": 0.0975
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "0963e27afb89521a3881527c37f9fe11184767f1bf0549ddf56d19bd5fd4d71c",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "b8b72763b250e20843132c0978458120470c0c5ad0536e204e01d767546fb077",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "32ea330419eac1685e3910397237089669a22b481a17d9b62fea3dfff7905bb9",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "b8b72763b250e20843132c0978458120470c0c5ad0536e204e01d767546fb077",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A0_s2",
+        "seconds": {
+          "extract": 1.21148,
+          "features_f": 123.752,
+          "features_h": 123.952
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.46375,
+          "density": 0.4122,
+          "feature_dim": 2048,
+          "fid": 60.4756,
+          "fid_ci_high": 63.3964,
+          "fid_ci_low": 59.8072,
+          "k": 5,
+          "kid": 0.0510165,
+          "kid_ci_high": 0.0532719,
+          "kid_ci_low": 0.0485917,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.6875,
+          "recall": 0.3375,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A0_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A0_s3": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.51,
+          "density": 0.3951,
+          "density_ci": [
+            0.372798,
+            0.418005
+          ],
+          "kid": 0.0411008,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.6415,
+          "precision_ci": [
+            0.6205,
+            0.662512
+          ],
+          "recall": 0.325
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.7,
+          "density": 0.2163,
+          "density_ci": [
+            0.2017,
+            0.2325
+          ],
+          "kid": 0.0208194,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.475,
+          "precision_ci": [
+            0.453,
+            0.496012
+          ],
+          "recall": 0.31875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.6775,
+          "density": 0.3886,
+          "density_ci": [
+            0.367098,
+            0.40941
+          ],
+          "kid": 0.0423506,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.68,
+          "precision_ci": [
+            0.6595,
+            0.7005
+          ],
+          "recall": 0.345
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.7,
+          "density": 0.2258,
+          "density_ci": [
+            0.202788,
+            0.251305
+          ],
+          "kid": 0.0254823,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.52,
+          "precision_ci": [
+            0.490487,
+            0.5485
+          ],
+          "recall": 0.3375
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.5125,
+          "density": 0.3686,
+          "density_ci": [
+            0.3348,
+            0.4024
+          ],
+          "kid": 0.0539784,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.683,
+          "precision_ci": [
+            0.648487,
+            0.7145
+          ],
+          "recall": 0.2575
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.165,
+          "density": 0.02,
+          "kid": -0.0116278,
+          "precision": -0.003,
+          "recall": 0.0875
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "7eae06df95085e06b46239660692e75f637e9fcb7d3d20d104d08355e7ccccfe",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "26d2f1505028d181569527b0144c4b49f98b767230ec39b08c5be0aa086034e3",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "5ac08257a42d7b0baed44e57a1a36a970982add5cf1668ef35bd890432d6fe4e",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "26d2f1505028d181569527b0144c4b49f98b767230ec39b08c5be0aa086034e3",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A0_s3",
+        "seconds": {
+          "extract": 1.21056,
+          "features_f": 123.889,
+          "features_h": 123.99
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.5125,
+          "density": 0.3961,
+          "feature_dim": 2048,
+          "fid": 51.8919,
+          "fid_ci_high": 54.7558,
+          "fid_ci_low": 51.3456,
+          "k": 5,
+          "kid": 0.0411251,
+          "kid_ci_high": 0.0433472,
+          "kid_ci_low": 0.0390508,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.641,
+          "recall": 0.32625,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A0_s3_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A2_s1": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.44375,
+          "density": 0.3095,
+          "density_ci": [
+            0.290797,
+            0.3287
+          ],
+          "kid": 0.0449709,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.5755,
+          "precision_ci": [
+            0.552488,
+            0.599
+          ],
+          "recall": 0.28625
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.659375,
+          "density": 0.1644,
+          "density_ci": [
+            0.150798,
+            0.177903
+          ],
+          "kid": 0.0235289,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.3995,
+          "precision_ci": [
+            0.379,
+            0.4205
+          ],
+          "recall": 0.346875
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.5925,
+          "density": 0.3068,
+          "density_ci": [
+            0.288798,
+            0.325303
+          ],
+          "kid": 0.0458958,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6145,
+          "precision_ci": [
+            0.594488,
+            0.6345
+          ],
+          "recall": 0.32
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.63125,
+          "density": 0.1635,
+          "density_ci": [
+            0.1467,
+            0.181603
+          ],
+          "kid": 0.0276528,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.418,
+          "precision_ci": [
+            0.383,
+            0.4495
+          ],
+          "recall": 0.2875
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.455,
+          "density": 0.2969,
+          "density_ci": [
+            0.267795,
+            0.324907
+          ],
+          "kid": 0.0562984,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.6335,
+          "precision_ci": [
+            0.5845,
+            0.677013
+          ],
+          "recall": 0.1825
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.1375,
+          "density": 0.0099,
+          "kid": -0.0104026,
+          "precision": -0.019,
+          "recall": 0.1375
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "675fdfeb1f8a2ebacc02a7c6a5756c2f4a6ff52ec98de6d061592413ac09c560",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "76cdcf84ce365a1a8fcd2a74131d65941a2a8761f3eda5f538a6ab62cdd9c46d",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "927cbc029ab15f0c2d3e91adc2bfb80ad859c67865683285c8b5756852bf9963",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "76cdcf84ce365a1a8fcd2a74131d65941a2a8761f3eda5f538a6ab62cdd9c46d",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A2_s1",
+        "seconds": {
+          "extract": 0.646233,
+          "features_f": 124.609,
+          "features_h": 129.452
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.4425,
+          "density": 0.31,
+          "feature_dim": 2048,
+          "fid": 55.8445,
+          "fid_ci_high": 58.5618,
+          "fid_ci_low": 55.6531,
+          "k": 5,
+          "kid": 0.045003,
+          "kid_ci_high": 0.047346,
+          "kid_ci_low": 0.0432077,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.576,
+          "recall": 0.28625,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A2_s1_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    },
+    "ixi_A2_s2": {
+      "heldout_seed_idx": [
+        5,
+        35,
+        195,
+        275,
+        335,
+        355,
+        395,
+        515,
+        615,
+        655,
+        965,
+        1145,
+        1255,
+        1355,
+        1435,
+        1515,
+        1625,
+        1655,
+        1905,
+        2075,
+        2115,
+        2155,
+        2435,
+        2465,
+        2635,
+        2665,
+        2695,
+        2735,
+        3105,
+        3125,
+        3165,
+        3185,
+        3335,
+        3355,
+        3545,
+        3695,
+        3705,
+        3895,
+        3905,
+        3925
+      ],
+      "metrics": {
+        "F_fullref": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.56,
+          "density": 0.4516,
+          "density_ci": [
+            0.426995,
+            0.47491
+          ],
+          "kid": 0.0414501,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "precision": 0.698,
+          "precision_ci": [
+            0.678,
+            0.717012
+          ],
+          "recall": 0.4325
+        },
+        "F_r5_descriptive": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.740625,
+          "density": 0.2339,
+          "density_ci": [
+            0.217998,
+            0.248902
+          ],
+          "kid": 0.0194671,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.505,
+          "precision_ci": [
+            0.484,
+            0.526
+          ],
+          "recall": 0.3375
+        },
+        "F_rminus": {
+          "bootstrap_unit": "sample",
+          "coverage": 0.7225,
+          "density": 0.4234,
+          "density_ci": [
+            0.402285,
+            0.444915
+          ],
+          "kid": 0.0421767,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.721,
+          "precision_ci": [
+            0.700987,
+            0.7405
+          ],
+          "recall": 0.47
+        },
+        "H_r5": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.803125,
+          "density": 0.2599,
+          "density_ci": [
+            0.235197,
+            0.285203
+          ],
+          "kid": 0.0239665,
+          "n_reference": 320,
+          "n_samples": 2000,
+          "precision": 0.548,
+          "precision_ci": [
+            0.509988,
+            0.581012
+          ],
+          "recall": 0.365625
+        },
+        "H_rminus": {
+          "bootstrap_unit": "seed cluster",
+          "coverage": 0.55,
+          "density": 0.4393,
+          "density_ci": [
+            0.3957,
+            0.483105
+          ],
+          "kid": 0.0572238,
+          "n_reference": 400,
+          "n_samples": 2000,
+          "precision": 0.7325,
+          "precision_ci": [
+            0.685975,
+            0.769512
+          ],
+          "recall": 0.2925
+        },
+        "gap_F_minus_H_rminus": {
+          "coverage": 0.1725,
+          "density": -0.0159,
+          "kid": -0.0150471,
+          "precision": -0.0115,
+          "recall": 0.1775
+        }
+      },
+      "provenance": {
+        "final_samples_sha256": "7c4fb44ffe04fa953d90769ea7b8d2468bc7b02bd0f70002f4c1b11fc926c253",
+        "final_seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+        "final_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "f140bd5da3b3b3942316ee4c8e7c983690b81eb160aeecc470138907e29ca33d",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 1,
+          "n_seeds": 2000,
+          "prior_noise": true,
+          "rng_seed": 0,
+          "seed_idx_sha256": "28ee6357f2bdd8c257f735464b09fdd1b36e7c5c53357d66fa5ad328bd4540ac",
+          "set": "final",
+          "start_level": 200
+        },
+        "heldout_samples_sha256": "25c31d4963847df38783f69b1f850470b70c144851f7e5726498e2eaeb93bc4d",
+        "heldout_seeds_match_dataset": true,
+        "heldout_signature": {
+          "amp": "fp16",
+          "batch_size": 32,
+          "checkpoint_sha256": "f140bd5da3b3b3942316ee4c8e7c983690b81eb160aeecc470138907e29ca33d",
+          "delta": 0.0125,
+          "device_type": "cuda",
+          "n_per_seed": 50,
+          "n_seeds": 40,
+          "prior_noise": true,
+          "rng_seed": 2026,
+          "seed_idx_sha256": "e51847a90f6df5ad7a9f47eeb4627b02b027c960852bb7bb1db4032e45450969",
+          "set": "heldout",
+          "start_level": 200
+        },
+        "run_id": "ixi_A2_s2",
+        "seconds": {
+          "extract": 0.645536,
+          "features_f": 124.283,
+          "features_h": 123.368
+        },
+        "step": 60000,
+        "stored_inception": {
+          "coverage": 0.55875,
+          "density": 0.4517,
+          "feature_dim": 2048,
+          "fid": 51.5009,
+          "fid_ci_high": 54.4398,
+          "fid_ci_low": 51.0018,
+          "k": 5,
+          "kid": 0.0414805,
+          "kid_ci_high": 0.0436966,
+          "kid_ci_low": 0.0393166,
+          "n_boot": 200,
+          "n_reference": 800,
+          "n_samples": 2000,
+          "notes": {
+            "ci_shift": "the intervals are percentile intervals over resampled samples (05 section 8); a resample holds duplicates, which inflates the finite-sample bias of FID, so fid can lie below fid_ci_low. The interval measures spread, not location.",
+            "fid_bias": "FID against 800 reference images is biased upward by a term of order 1/n_reference; the bias cancels in differences between arms of the same dataset and makes absolute values incomparable to the paper's.",
+            "headline": "KID is the headline of the two; it is unbiased.",
+            "kid_bootstrap": "the KID point estimate averages 100 subsets; each bootstrap replicate averages 10, so the interval is conservative."
+          },
+          "precision": 0.6975,
+          "recall": 0.43125,
+          "weights_path": "/tmp/inception-2015-12-05.pt"
+        },
+        "stored_step": 60000,
+        "tar": "/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/evaluation/eval_2488269/ixi_A2_s2_amp-fp16.tar",
+        "tar_bytes": 665948160
+      }
+    }
+  },
+  "seconds_total_this_invocation": 74.6027,
+  "ticket": "T7.5"
+}

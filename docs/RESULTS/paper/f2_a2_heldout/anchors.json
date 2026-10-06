@@ -1,0 +1,92 @@
+{
+  "a": {
+    "cache": "/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project/ixi/_features_inception_ref.npy",
+    "max_abs_diff": 0.00812483,
+    "min_cosine": 0.999998,
+    "n_rows": 800
+  },
+  "b": {
+    "ixi_A0_s1": {
+      "metrics": {
+        "coverage": {
+          "abs_diff": 0.00125,
+          "local": 0.4275,
+          "ok": true,
+          "stored": 0.42625
+        },
+        "density": {
+          "abs_diff": 0.0015,
+          "local": 0.3107,
+          "ok": true,
+          "stored": 0.3122
+        },
+        "kid": {
+          "abs_diff": 3.57416e-05,
+          "local": 0.0463394,
+          "ok": true,
+          "stored": 0.0463751,
+          "stored_ci": [
+            0.0439689,
+            0.0487839
+          ]
+        },
+        "precision": {
+          "abs_diff": 0.001,
+          "local": 0.573,
+          "ok": true,
+          "stored": 0.574
+        },
+        "recall": {
+          "abs_diff": 0.0025,
+          "local": 0.26,
+          "ok": true,
+          "stored": 0.2575
+        }
+      },
+      "passed": true,
+      "worst_deviation": 0.0025
+    },
+    "lsun_church_A3_s1": {
+      "metrics": {
+        "coverage": {
+          "abs_diff": 0.0,
+          "local": 0.05,
+          "ok": true,
+          "stored": 0.05
+        },
+        "density": {
+          "abs_diff": 0.0001,
+          "local": 0.0157,
+          "ok": true,
+          "stored": 0.0158
+        },
+        "kid": {
+          "abs_diff": 5.31065e-05,
+          "local": 0.220218,
+          "ok": true,
+          "stored": 0.220271,
+          "stored_ci": [
+            0.215733,
+            0.226011
+          ]
+        },
+        "precision": {
+          "abs_diff": 0.0005,
+          "local": 0.0585,
+          "ok": true,
+          "stored": 0.059
+        },
+        "recall": {
+          "abs_diff": 0.00125,
+          "local": 0.03,
+          "ok": true,
+          "stored": 0.02875
+        }
+      },
+      "passed": true,
+      "worst_deviation": 0.00125
+    }
+  },
+  "passed": true,
+  "worst_deviation": 0.0025
+}
