@@ -28,8 +28,11 @@ All outputs are byte-stable.
 
 Width 5.5 in (the NIPS 2015 `\textwidth`); smallest font 7 pt.
 
-**Pending:**
+**Wave W17 (2026-10-06):**
 
-- appendix A1 (natural-image reference runs) and the intrinsic-dimension result: T8.3 and T8.0,
-  wave W17;
-- F3, fidelity against diversity: part 2, not yet designed.
+| item | files | notes | command |
+|---|---|---|---|
+| **A1**, appendix: the natural-image reference runs | `a1_natural_images.{svg,pdf,png}`, `a1_table.{tex,md}` | [`A1.md`](A1.md): caption, about 155 words of text (the intrinsic-dimension sentence filled by main), sources | `python -m ihdm.cli.paper_a1 --results $IHDM_DATA_ROOT/_results --eval-dir <SanDisk>/evaluation/eval_2488269 --out docs/RESULTS/paper` |
+| intrinsic dimension (supports A1 and `00-framing.md` §2) | `../intrinsic_dimension/{intrinsic_dimension.json, README.md, id_vs_n.*}` | MLE k = 10, N = 3,200: IXI 17.2, OASIS-1 22.1, Churches 30.1, Bedrooms 30.8; the PCA participation ratio is higher for MRI | `python -m ihdm.cli.intrinsic_dim --data-root $IHDM_DATA_ROOT --out docs/RESULTS/intrinsic_dimension` |
+
+**Pending:** F3, fidelity against diversity (part 2, not yet designed).

@@ -300,7 +300,7 @@ The criteria of version 1 are unchanged:
 - **(b) LSD against iteration.** Why this panel is needed, even though Mario asked for the loss
   only:
   - **The loss shows the optimisation converged.** It cannot show that the *samples* did, because
-    about 98% of each level's regression target is irreducible training noise (`learning/03` §6).
+    about 98% of each level's regression target is the added training noise, i.e. the denoising part (`learning/03` §6). *("Irreducible" was wrong; corrected 2026-10-06 after T8.3: the network removes most of it.)*
   - **A loss-only panel would therefore suggest a convergence the samples never reached.**
   - **One image-space curve makes the appendix honest.** The 500-sample LSD at each 5k checkpoint
     (common random numbers across checkpoints; `summary.json` `lsd_by_step`) oscillates instead of
@@ -376,7 +376,7 @@ The numbers come from `results_discussion.md` §3, `photo_diagnostic/README.md` 
 - **F2(b) = precision × seed-NN**, chosen by Mario on 2026-10-06. By his rule (keep LSD in A1 only
   if LSD is one of F2's orthogonal metrics), **A1 drops the LSD panel**:
   - A1 = loss against iteration (with epochs) + thumbnails across checkpoints;
-  - its caption must say that the loss is dominated by irreducible training noise, so its plateau
+  - its caption must say that the loss is dominated by denoising, so its plateau
     does not imply that the samples converged;
   - the thumbnails carry that evidence.
 - **Every paper figure is also saved as an Inkscape-editable SVG** (Mario, 2026-10-06): text kept

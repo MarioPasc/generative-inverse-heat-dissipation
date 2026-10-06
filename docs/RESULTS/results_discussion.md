@@ -201,9 +201,14 @@ oscillation is larger than several arm effects on Churches (§6).
 - bottom: the per-band training loss over the last 5k iterations.
 
 Each arm regresses its own schedule's targets, so loss levels are not compared across arms; the
-panel checks stability only. A flat loss does not mean the samples have converged. About 98% of
-each level's regression target is irreducible training noise (`learning/03` §6), so sample quality
-must be read from the samples (fig. 1).
+panel checks stability only. A flat loss does not mean the samples have converged.
+
+- About 98% of each level's regression target is the added training noise (the denoising part) and
+  about 2% is the deblurring that forms the image (`learning/03` §6). The loss is therefore
+  dominated by denoising, so sample quality must be read from the samples (fig. 1).
+- *Corrected 2026-10-06.* An earlier wording called the noise "irreducible". T8.3 showed the
+  network removes most of it: the loss goes from 3.80 at step 0 (the noise term alone is 3.69) to
+  0.32.
 
 **The data.**
 
