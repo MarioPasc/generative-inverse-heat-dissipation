@@ -49,7 +49,7 @@ from ihdm.analysis.tables import AnalysisError
 from ihdm.data.format import read_dataset
 from ihdm.spectral.power import eigenvalues, octave_bins, radial_index
 from ihdm.spectral.profile import reference_example
-from ihdm.spectral.schedules import SIGMA_B_OCTAVE_EDGES, levels_per_octave
+from ihdm.spectral.schedules import levels_per_octave
 
 __all__ = [
     "ARM_LABELS",
@@ -74,6 +74,7 @@ __all__ = [
     "heat_multiplier",
     "kept_power",
     "kept_variance_per_octave",
+    "levels_per_frequency_octave",
     "layout_report",
     "load_annotations",
     "load_f1_data",
@@ -773,6 +774,40 @@ def verify_level_counts(schedules: dict[str, np.ndarray],
     return counts
 
 
+def levels_per_frequency_octave(levels: np.ndarray, width: int) -> tuple[tuple[int, ...], int]:
+    """Count reverse levels in the bars' frequency octaves, via :math:`c_k = 43.2/\\sigma_k`.
+
+    The bins are the eight c/img octaves of ``05-metrics.md`` §1 (half-open, the last closed at
+    96). Levels whose :math:`c_k` lies below 0.5 c/img (σ_B > 86.4 px at W = 192) are counted in
+    the first octave and those above 96 c/img in the last, so the counts sum to K.
+
+    Parameters
+    ----------
+    levels : numpy.ndarray
+        Blur levels in pixels, level 0 excluded (all positive).
+    width : int
+        Image side in pixels.
+
+    Returns
+    -------
+    tuple[tuple[int, ...], int]
+        The eight counts, and how many levels were folded in from below 0.5 c/img.
+
+    Raises
+    ------
+    PaperFigureError
+        If a level is not positive.
+    """
+    levels = np.asarray(levels, dtype=np.float64)
+    if levels.size == 0 or not np.all(levels > 0.0):
+        raise PaperFigureError("frequency-octave counts need positive blur levels")
+    bins = octave_bins()
+    edges = np.array([lo for _, lo, _ in bins] + [bins[-1][2]])
+    cycles = np.asarray(cycles_of_sigma(levels, width), dtype=np.float64)
+    counts, _ = np.histogram(np.clip(cycles, edges[0], edges[-1]), bins=edges)
+    return tuple(int(n) for n in counts), int((cycles < edges[0]).sum())
+
+
 def _rows(tables: dict[str, Any], key: str) -> list[dict[str, Any]]:
     try:
         return list(tables["tables"][key]["rows"])
@@ -1183,31 +1218,28 @@ def _panel_a(cv: _Canvas, data: F1Data) -> None:
     ax.legend(loc="upper right", bbox_to_anchor=(1.045, 1.05), handlelength=1.4,
               handletextpad=0.4, borderaxespad=0.1, labelspacing=0.2, fontsize=7)
 
-    # --- reverse steps per sigma_B octave ---------------------------------------------------
+    # --- reverse steps per frequency octave (the bars' bins) --------------------------------
     ar = cv.axes(_A_LEFT, 0.60, _A_RIGHT - _A_LEFT, 0.50)
     ar.set_xscale("log")
     ar.set_xlim(_C_MIN, _C_MAX)
     ar.set_ylim(0.0, 2.0)
     rows = {"default": (1.0, blue, SCHEDULES["default"]),
             "matched": (0.0, orange, SCHEDULES["matched"])}
-    sig_lo = np.array(SIGMA_B_OCTAVE_EDGES[:-1])
-    sig_hi = np.array(SIGMA_B_OCTAVE_EDGES[1:])
-    for key, (base, colour, name) in rows.items():
+    for key, (base, colour, _) in rows.items():
         cs = s / data.schedules[key]
         ar.vlines(cs, base + 0.08, base + 0.48, color=colour, lw=0.35, zorder=2)
-        counts = ann.level_counts[name]
-        for lo, hi, n in zip(sig_lo, sig_hi, counts, strict=True):
+        counts, _ = levels_per_frequency_octave(data.schedules[key], width)
+        for lo, hi, n in zip(lows, highs, counts, strict=True):
             if n == 0:
                 continue
-            c_mid = s / np.sqrt(lo * hi)
-            ar.text(c_mid, base + 0.55, f"{n}", ha="center", va="bottom", fontsize=7,
-                    color=colour)
+            ar.text(np.sqrt(lo * hi), base + 0.55, f"{n}", ha="center", va="bottom",
+                    fontsize=7, color=colour)
     c_stop = s / float(data.schedules["matched"].max())
     ar.text(np.sqrt(_C_MIN * c_stop), 0.28, "from the prior", ha="center", va="center",
             fontsize=7, color=orange, zorder=3,
             bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.3})
-    for edge in SIGMA_B_OCTAVE_EDGES[1:-1]:
-        ar.axvline(s / edge, color=MUTED, lw=0.3, alpha=0.5, zorder=0)
+    for edge in highs[:-1]:
+        ar.axvline(edge, color=MUTED, lw=0.3, alpha=0.5, zorder=0)
     ar.set_yticks([0.3, 1.3])
     ar.set_yticklabels(["matched", "default"])
     for tick, colour in zip(ar.get_yticklabels(), (orange, blue), strict=True):
@@ -1273,7 +1305,7 @@ def _panel_c(cv: _Canvas, data: F1Data) -> None:
     cell_w = (x1 - x0 - head_w) / 2
     cell_h = 0.17
     y_cols = 1.21
-    for j, name in enumerate(("log spacing", "IXI spacing")):
+    for j, name in enumerate(("log spacing", "IXI-matched")):
         cv.text(x0 + head_w + (j + 0.5) * cell_w, y_cols, name, ha="center", va="bottom",
                 fontsize=7, color=MUTED)
     grid = (("W/2", ("A0", "A2")), ("W/8", ("A1", "A3")))
@@ -1535,24 +1567,26 @@ def caption_text(data: F1Data) -> str:
     ann = data.annotations
     s = mode_scale(data.width)
     nn0, nn3 = ann.seed_nn_texts
+    folded = sum(levels_per_frequency_octave(v, data.width)[1] for v in data.schedules.values())
+    fold_note = " (levels below 0.5 c/img counted in the first octave)" if folded else ""
     return (
-        "**IHDM's defaults assume natural-image statistics; brain MRI departs from both.** "
-        "(a) IHDM generates by restoring frequency bands, coarse to fine. Top: noise-free heat "
-        f"states u(σ_B) of one IXI slice, each above c = {s:.1f}/σ_B cycles per image, the "
-        "frequency of the DCT mode whose length-scale is σ_B. Bars: IXI between-image variance "
-        "per octave; dashed: LSUN Churches; dotted: the equal share per octave of a 1/f² "
-        "spectrum, which log spacing assumes. Shading: variance kept by the default prior "
+        "**IHDM's defaults assume natural-image statistics (an equal share of variance per "
+        "octave, and no layout shared across images); brain MRI departs from both.** "
+        "(a) Top: noise-free heat states u(σ_B) of one IXI slice, each above "
+        f"c = {s:.1f}/σ_B c/img, the DCT mode of length-scale σ_B. Bars: IXI between-image "
+        "variance per octave; "
+        "dashed: LSUN Churches; dotted: the equal share of a 1/f² spectrum, which log spacing "
+        "assumes. Shading: variance kept by the default prior "
         f"(σ_B,max = {SIGMA_DEFAULT:g} px; {ann.inherited_default_text} handed over) and the "
         f"matched prior ({SIGMA_MATCHED:g} px; {ann.inherited_matched_text}). Rugs: the "
-        f"{len(data.schedules['default'])} reverse levels of each schedule, counted per σ_B "
-        f"octave. (b) The mean of {data.n_train:,} training slices, and the noise-free priors "
-        f"of {_words(len(data.subjects))} held-out subjects. (c) The four configurations: "
-        "default (A0), "
-        "+prior (A1), +spacing (A2) and matched (A3). One unseen subject, sampled from the same "
-        f"seed image and noise in both arms. Over {_words(ann.kid_n_seeds)} seeds, matched lowers "
-        "KID by "
-        f"{ann.kid_text.lstrip(chr(0x2212))}, while the share of training-seeded samples whose "
-        f"nearest training image is their own seed rises from {nn0} to {nn3}."
+        f"{len(data.schedules['default'])} reverse levels of each schedule, counted per "
+        f"frequency octave{fold_note}. (b) The mean of {data.n_train:,} training slices, and "
+        f"noise-free priors of {_words(len(data.subjects))} held-out subjects. (c) The four "
+        "configurations: default (A0), +prior (A1), +spacing (A2) and matched (A3), and one "
+        "unseen subject sampled with the same seed and noise. Over "
+        f"{_words(ann.kid_n_seeds)} seeds, matched lowers KID by "
+        f"{ann.kid_text.lstrip(chr(0x2212))}; on training seeds, samples whose nearest "
+        f"training image is their seed rise from {nn0} to {nn3}."
     )
 
 
@@ -1649,7 +1683,16 @@ def f1_markdown(data: F1Data, checks: list[MappingCheck],
               for item, printed, ref, ok in annotation_checks]
     counts = " · ".join(f"`{name}` " + "/".join(str(c) for c in ann.level_counts[name])
                         for name in SCHEDULES.values())
-    lines += ["", f"Level counts per σ_B octave (0.5–1 … 64–96 px): {counts}.", ""]
+    freq = {name: levels_per_frequency_octave(data.schedules[key], data.width)
+            for key, name in SCHEDULES.items()}
+    freq_text = " · ".join(f"`{name}` " + "/".join(str(c) for c in counts_c)
+                           + (f" ({below} below 0.5 c/img folded into the first)" if below else "")
+                           for name, (counts_c, below) in freq.items())
+    lines += ["", f"Level counts per σ_B octave (0.5–1 … 64–96 px; schedule check): {counts}.",
+              "",
+              f"Level counts per frequency octave, as printed on the rugs (c_k = "
+              f"{mode_scale(data.width):.1f}/σ_k binned on the bars' octaves 0.5–1 … 64–96 "
+              f"c/img): {freq_text}.", ""]
     lines += [f"- **{key}:** {value}" for key, value in ann.sources.items()]
     lines += [
         "",
@@ -1673,7 +1716,9 @@ def f1_markdown(data: F1Data, checks: list[MappingCheck],
         f"c = {s:.1f}/σ is the length-scale of the DCT mode (σ_n = √(2/λ)); the prior keeps "
         f"half a mode's variance up to c½ = {half_power_cycles(1.0, data.width):.1f}/σ.",
         "",
-        "**2. Level counts** equal `data_profile.md` §5 and the ticket: " + counts + ".",
+        "**2. Level counts** per σ_B octave equal `data_profile.md` §5 and the ticket: "
+        + counts + ". The rugs print the counts per frequency octave (above), which sum to "
+        + " and ".join(str(sum(c)) for c, _ in freq.values()) + ".",
         "",
         "**3. Annotated numbers** equal their sources: "
         + ("all" if all(ok for *_, ok in annotation_checks) else "**not all**")

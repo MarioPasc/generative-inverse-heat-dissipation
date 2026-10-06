@@ -134,6 +134,35 @@ def test_level_count_mismatch_raises() -> None:
         f1.verify_level_counts(_repo_schedules(), table)
 
 
+def _direct_frequency_histogram(levels: np.ndarray) -> list[int]:
+    """Independent count: each level's c = 43.2/sigma, placed by a linear scan of the edges."""
+    edges = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 96.0]
+    counts = [0] * 8
+    for sigma in levels:
+        c = WIDTH / (np.sqrt(2.0) * np.pi * sigma)
+        k = 0 if c < edges[1] else 7 if c >= edges[7] else next(
+            j for j in range(8) if edges[j] <= c < edges[j + 1])
+        counts[k] += 1
+    return counts
+
+
+@pytest.mark.parametrize(("name", "expected", "below"), [
+    ("log_W2", (31, 26, 26, 26, 27, 26, 26, 12), 4),
+    ("ixi_W8", (0, 5, 30, 38, 47, 42, 29, 9), 0),
+])
+def test_frequency_octave_counts(name: str, expected: tuple[int, ...], below: int) -> None:
+    levels = np.load(REPO / "schedules" / f"{name}.npy")[1:]
+    counts, folded = f1.levels_per_frequency_octave(levels, WIDTH)
+    assert sum(counts) == 200
+    assert list(counts) == _direct_frequency_histogram(levels)
+    assert counts == expected and folded == below
+
+
+def test_frequency_octave_counts_reject_level_zero() -> None:
+    with pytest.raises(f1.PaperFigureError):
+        f1.levels_per_frequency_octave(np.array([0.0, 1.0]), WIDTH)
+
+
 def test_parse_level_table_without_section(tmp_path: Path) -> None:
     path = tmp_path / "profile.md"
     path.write_text("# nothing\n\n## 4. other\n\n## 6. other\n", encoding="utf-8")
