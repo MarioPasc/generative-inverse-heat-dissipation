@@ -38,8 +38,9 @@ working tree, not under version control):
 | id | content | status |
 |---|---|---|
 | T8.0 | intrinsic dimension (MLE, k = 5/10/20, N = 320 and 3,200) and PCA participation ratio of the four training splits, for the §2 argument of `00-framing.md`. A main scratch check exists; a ticket must regenerate it as a committed result (CPU, minutes) | to ticket |
-| **F1** | the visual abstract: spectra, prior, heat process, what we change | **designed**: `figure-plan-part1.md` §1 |
-| **F2** | A0–A3 on MRI: samples, the fidelity–memorisation plane, the spectral error | **designed**: `figure-plan-part1.md` §2 |
+| **F1** | the visual abstract, MRI-centric: IXI heat states on one frequency axis, octave variance against the 1/f² default and a natural-image outline, the prior hand-over, the steps (default against matched), the anatomical prior (mean slice, subjects at W/2 and W/8), the arms key with an unseen-subject teaser | **designed, version 2**: `figure-plan-part1.md` §1 |
+| **F2** | the four arms on MRI: samples, realism against copying, the spectral error | **designed, version 2**: `figure-plan-part1.md` §2 |
+| **A1** | appendix (≤ 3/4 page, outside the 8): the natural-image reference runs. Loss and LSD against iteration (with epochs), sample thumbnails across checkpoints, the differences-from-paper table, about 120 words | **designed**: `figure-plan-part1.md` §4; ticket T8.3 |
 | T1 | the compact main table: IXI A0–A3 and OASIS-1 A0/A3 on the pre-registered endpoints (KID, LSD) plus precision, recall, seed-NN, $D_{pix}$ | outlined in `figure-plan-part1.md` §3 |
 | F3 | fidelity against diversity (the professor's rule 3): under-dispersion, within-seed diversity, held-out seeds | **part 2, not yet designed** |
 | A1–A3 | appendices: the photograph failure and diagnostics, the development-protocol table (H-P1), LSD against iteration and the degenerate $T_\tau$ | later |
