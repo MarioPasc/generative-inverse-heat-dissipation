@@ -613,6 +613,14 @@ def _audit(fig: Any) -> tuple[float, float, float]:
                                 f"{FIGURE_WIDTH_IN} x {FIGURE_HEIGHT_IN}")
     if min_font < MIN_FONT_PT:
         raise IntrinsicDimError(f"smallest font {min_font} pt < {MIN_FONT_PT}")
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    canvas = fig.bbox
+    for t in texts:
+        box = t.get_window_extent(renderer)
+        if (box.x0 < canvas.x0 - 0.5 or box.y0 < canvas.y0 - 0.5
+                or box.x1 > canvas.x1 + 0.5 or box.y1 > canvas.y1 + 0.5):
+            raise IntrinsicDimError(f"text {t.get_text()!r} leaves the figure canvas")
     return width, height, min_font
 
 
@@ -665,7 +673,7 @@ def plot_id_vs_n(doc: dict[str, Any], out_dir: Path, cfg: IDConfig) -> list[Path
             (proxy,) = ax.plot([], [], linestyle="none", marker="o", markersize=5.0,
                                markerfacecolor="white", markeredgecolor="#52514e")
             handles.append(proxy)
-            labels.append(f"MRI, one slice per subject (N = {min(n_values)})")
+            labels.append(f"MRI, one slice per\nsubject (N = {min(n_values)})")
         ax.set_xscale("log")
         ax.set_xticks(n_values)
         ax.set_xticklabels([f"{n:,}" for n in n_values])
