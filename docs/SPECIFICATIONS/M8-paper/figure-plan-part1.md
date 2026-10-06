@@ -373,10 +373,17 @@ The numbers come from `results_discussion.md` §3, `photo_diagnostic/README.md` 
   5.5 in), in the Overleaf `proyecto/` (`df734f3`).
 - **The arm names** default / +prior / +spacing / matched are **accepted**.
 - **The unseen-subject teaser in F1** is **kept**.
-- **The F2(b) metric pair and the A1 LSD panel are open** (asked on 2026-10-06). Mario's condition:
-  keep LSD in A1 only if it really matters *and* LSD is one of F2's orthogonal metrics.
+- **F2(b) = precision × seed-NN**, chosen by Mario on 2026-10-06. By his rule (keep LSD in A1 only
+  if LSD is one of F2's orthogonal metrics), **A1 drops the LSD panel**:
+  - A1 = loss against iteration (with epochs) + thumbnails across checkpoints;
+  - its caption must say that the loss is dominated by irreducible training noise, so its plateau
+    does not imply that the samples converged;
+  - the thumbnails carry that evidence.
+- **Every paper figure is also saved as an Inkscape-editable SVG** (Mario, 2026-10-06): text kept
+  as text, rasters inlined, deterministic ids. The SVG is the editable master; the PDF is the LaTeX
+  input.
 - **Part 2 (F3) is deferred.**
-- **F1 starts now as T8.1 (wave W16).** T8.2 (F2 + T1) starts once F2(b) is settled.
+- **Wave W16:** T8.1 (F1) and T8.2 (F2 + T1). Wave W17: T8.0 (intrinsic dimension) + T8.3 (A1).
 
 ## 7. Open points for Mario (as first asked, kept for the record)
 
