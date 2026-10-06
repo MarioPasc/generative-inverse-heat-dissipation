@@ -20,7 +20,7 @@ docs/
 │   ├── M4-metrics/T4.1-spectral-metrics.md · T4.2-memorisation-and-diversity.md · T4.3-evaluate-run-and-statistics.md
 │   ├── M5-evaluation/README.md · T5.1-evaluation-array.md · T5.2-collect-results.md
 │   ├── M6-analysis/README.md · T6.1-tables-and-statistics.md · T6.2-figures.md
-│   └── M7-diagnostics/README.md · T7.1–T7.4    post-hoc diagnostics (wave W14): photo failure, δ sweep, exploratory hardening
+│   └── M7-diagnostics/README.md · T7.1–T7.5    post-hoc diagnostics (W14: photo failure, δ sweep, exploratory hardening; W15: held-out-seed fidelity)
 ├── HARNESSES/
 │   ├── README.md                               what a harness is; the four harnesses
 │   ├── data.md                                 H-DATA: validation, counts, eyeball gates, known results, schedules
@@ -38,6 +38,7 @@ docs/
     ├── exploratory/                            post-hoc readings X1–X3 + fig. X1 (`ihdm.analysis.exploratory`), not pre-registered
     ├── delta_sweep/                            M7/T7.2: sampling-noise sweep on four 60k checkpoints (README + JSON)
     ├── photo_diagnostic/                       M7/T7.3: one-factor Churches diagnostic (128² framing, 32k images), late window
+    ├── heldout_fidelity/                       M7/T7.5: fidelity of samples from held-out seeds vs training seeds (README + JSON + grid)
     ├── diagnostic_training.md                  M7/T7.1: submission record of the two diagnostic training runs
     ├── data_profile.md · metrics_bracket.md    spectral profile of the four datasets; metric noise floors
     ├── inherited_band_audit.md                 D23: the inherited-band estimator correction
