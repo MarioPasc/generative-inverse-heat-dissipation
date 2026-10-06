@@ -46,6 +46,8 @@ def main(argv: list[str] | None = None) -> int:
         0 written, 1 analysis error, 2 missing input.
     """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # The PDF backend's font subsetting logs every glyph table at INFO.
+    logging.getLogger("fontTools").setLevel(logging.WARNING)
     args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
     try:
         doc = run(args.data_root, args.out, IDConfig())

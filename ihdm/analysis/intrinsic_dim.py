@@ -77,6 +77,8 @@ PNG_DPI: int = 300
 PDF_DPI: int = 300
 #: k of the figure and of the reading.
 K_MAIN: int = 10
+#: Horizontal offset (multiplicative, log axis) of the one-slice-per-subject markers.
+ONE_SLICE_X_SHIFT: float = 0.84
 
 
 class IntrinsicDimError(AnalysisError):
@@ -654,20 +656,25 @@ def plot_id_vs_n(doc: dict[str, Any], out_dir: Path, cfg: IDConfig) -> list[Path
                         label=entry["label"])
             one = entry.get("one_slice_per_subject")
             if one is not None:
-                ax.plot([one["N"]], [one["mle"][key]], linestyle="none", marker=marker,
-                        markersize=5.0, markerfacecolor="white", markeredgecolor=color,
-                        markeredgewidth=0.9, zorder=4)
-        ax.plot([], [], linestyle="none", marker="o", markersize=5.0, markerfacecolor="white",
-                markeredgecolor="#52514e", label="MRI, one slice per subject")
+                # Drawn left of its N so it does not hide the random-subset mean at the same N.
+                ax.plot([one["N"] * ONE_SLICE_X_SHIFT], [one["mle"][key]], linestyle="none",
+                        marker=marker, markersize=5.0, markerfacecolor="white",
+                        markeredgecolor=color, markeredgewidth=0.9, zorder=4)
+        handles, labels = ax.get_legend_handles_labels()
+        if any(name in MRI_DATASETS for name in cfg.datasets):
+            (proxy,) = ax.plot([], [], linestyle="none", marker="o", markersize=5.0,
+                               markerfacecolor="white", markeredgecolor="#52514e")
+            handles.append(proxy)
+            labels.append(f"MRI, one slice per subject (N = {min(n_values)})")
         ax.set_xscale("log")
         ax.set_xticks(n_values)
         ax.set_xticklabels([f"{n:,}" for n in n_values])
         ax.minorticks_off()
-        ax.set_xlim(n_values[0] / 1.25, n_values[-1] * 1.25)
+        ax.set_xlim(n_values[0] / 1.45, n_values[-1] * 1.25)
         ax.set_xlabel("training images N (log scale)")
         ax.set_ylabel(f"MLE intrinsic dim. (k = {K_MAIN})")
-        ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False,
-                  handlelength=2.6)
+        ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1.02, 0.5),
+                  frameon=False, handlelength=2.6)
         fig.subplots_adjust(left=0.09, right=0.66, bottom=0.21, top=0.96)
         _audit(fig)
         out_dir.mkdir(parents=True, exist_ok=True)
