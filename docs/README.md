@@ -20,7 +20,8 @@ docs/
 │   ├── M4-metrics/T4.1-spectral-metrics.md · T4.2-memorisation-and-diversity.md · T4.3-evaluate-run-and-statistics.md
 │   ├── M5-evaluation/README.md · T5.1-evaluation-array.md · T5.2-collect-results.md
 │   ├── M6-analysis/README.md · T6.1-tables-and-statistics.md · T6.2-figures.md
-│   └── M7-diagnostics/README.md · T7.1–T7.5    post-hoc diagnostics (W14: photo failure, δ sweep, exploratory hardening; W15: held-out-seed fidelity)
+│   ├── M7-diagnostics/README.md · T7.1–T7.5    post-hoc diagnostics (W14: photo failure, δ sweep, exploratory hardening; W15: held-out-seed fidelity)
+│   └── M8-paper/README.md · figure-plan-part1.md  the final paper: figure and table plan (F1 visual abstract, F2 A0–A3 on MRI), page budget
 ├── HARNESSES/
 │   ├── README.md                               what a harness is; the four harnesses
 │   ├── data.md                                 H-DATA: validation, counts, eyeball gates, known results, schedules
