@@ -385,6 +385,20 @@ The numbers come from `results_discussion.md` §3, `photo_diagnostic/README.md` 
 - **Part 2 (F3) is deferred.**
 - **Wave W16:** T8.1 (F1) and T8.2 (F2 + T1). Wave W17: T8.0 (intrinsic dimension) + T8.3 (A1).
 
+**Correction found by T8.2 (2026-10-06): the spacing's effect on precision depends on the
+reference.**
+
+- §2.2 said "the spacing barely moves precision (+0.006)". That value is against the *full* 800-image
+  `ref`, the production value in T1.
+- Against R⁻, the reference F2(b) uses, +spacing raises precision by **+0.025** on training seeds
+  and **+0.033** on unseen subjects (seeds 1–2, both positive).
+- Over the same seeds and reference, +prior raises it by about +0.057 and +0.065.
+- So the paper must not say that the spacing leaves realism unchanged. Say instead: "the spacing's
+  effect on precision is small, positive in both seeds, and depends on the reference: +0.006
+  against the full reference, +0.025 against R⁻". Its LSD and KID effect is −11%, and only 2 seeds
+  carry it.
+- The F2 caption (`docs/RESULTS/paper/F2.md`) already reports the R⁻ values.
+
 ## 7. Open points for Mario (as first asked, kept for the record)
 
 1. Do you approve **precision × seed-NN** for F2(b), with KID and LSD in T1?
