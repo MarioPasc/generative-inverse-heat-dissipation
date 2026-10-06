@@ -1194,10 +1194,10 @@ def _arm_list(arms: Sequence[str]) -> str:
 
 
 def _arms_phrase(arms: Sequence[str]) -> str:
-    """'all four configurations[ and the A2' control]' when complete, else the names."""
+    """'all four[, plus the A2' spacing control]' when complete, else the names."""
     controls = [CONTROL_LABELS[a].removeprefix("the ") for a in arms if a in CONTROL_LABELS]
     if set(ARM_LABELS) <= set(arms):
-        return "all four configurations" + (f" and the {controls[0]}" if controls else "")
+        return "all four" + (f", plus the {controls[0]}" if controls else "")
     return _arm_list(arms)
 
 
