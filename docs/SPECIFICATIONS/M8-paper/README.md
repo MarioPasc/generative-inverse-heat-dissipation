@@ -14,14 +14,18 @@ working tree, not under version control):
 
 ## Decisions taken so far
 
-1. **The main text is about MRI.** The 2 × 2 factorial (terminal blur × spacing) on IXI, with
-   OASIS-1 A0/A3 as transfer, carries the Results. The photograph arm failed at our budget, so:
-   - the pre-registered MRI-against-photograph interaction is reported as *not interpretable*: one
-     paragraph in Results plus one appendix figure (the failure and the r128/n32k diagnostics);
-   - LSUN Churches still appears in the visual abstract, as a *data* contrast (its spectrum and its
-     prior), not as a model result.
-
-   Rationale and caveats are in `figure-plan-part1.md` §0.
+1. **The framing (Mario, 2026-10-06; the details are in [`00-framing.md`](00-framing.md)).** The
+   paper asks whether IHDM's natural-image defaults (the W/2 prior, log spacing) are also right for
+   brain MRI, or whether MRI benefits from matching them to its own properties: the spectrum, and
+   the anatomy registered subjects share.
+   - **The Results are the 2 × 2 factorial on IXI**, with OASIS-1 as an independent cohort.
+   - **The natural-image (LSUN) runs** are presented as out of reach at this budget, *as expected*,
+     not as a failure. The reasons: 3% of the paper's compute, a lower intrinsic dimension of
+     registered MRI, and our zoomed-crop framing. They take 2–3 sentences and one appendix table.
+     The proposal's cross-domain interaction is stated as not reported.
+   - **LSUN Churches appears in the visual abstract** as the natural-image reference for the
+     *data* (its spectrum and its prior).
+   - **Diffusion and flow matching** get one Discussion paragraph and no experiment.
 2. **Colour means arm in every figure.** A0 blue `#2a78d6`, A1 green `#1baf7a`, A2 amber `#eda100`,
    A3 orange `#eb6834` (`ihdm/analysis/style.py`). Datasets are distinguished by greyscale, marker
    fill or line style, never by an arm colour.
@@ -33,6 +37,7 @@ working tree, not under version control):
 
 | id | content | status |
 |---|---|---|
+| T8.0 | intrinsic dimension (MLE, k = 5/10/20, N = 320 and 3,200) and PCA participation ratio of the four training splits, for the §2 argument of `00-framing.md`. A main scratch check exists; a ticket must regenerate it as a committed result (CPU, minutes) | to ticket |
 | **F1** | the visual abstract: spectra, prior, heat process, what we change | **designed**: `figure-plan-part1.md` §1 |
 | **F2** | A0–A3 on MRI: samples, the fidelity–memorisation plane, the spectral error | **designed**: `figure-plan-part1.md` §2 |
 | T1 | the compact main table: IXI A0–A3 and OASIS-1 A0/A3 on the pre-registered endpoints (KID, LSD) plus precision, recall, seed-NN, $D_{pix}$ | outlined in `figure-plan-part1.md` §3 |

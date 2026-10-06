@@ -20,25 +20,20 @@ on a figure must come from a generated file.
 **Mario's question (2026-10-06):** "If we got so much worse results on the churches dataset, why
 don't we compare for only the MRI images?"
 
-**Recommendation: yes for the Results, with three conditions.**
+**Resolved on 2026-10-06 (Mario):** the paper is framed as "are the natural-image defaults right
+for MRI, or does MRI benefit from matching them to its own spectrum and anatomy?" (see
+[`00-framing.md`](00-framing.md)).
 
-1. **The MRI comparison is itself a complete design.** The four arms on IXI form a 2 × 2 factorial
-   (terminal blur W/2 or W/8 × spacing log or IXI-matched), with 3/2/2/3 seeds. It answers "does
-   each MRI-motivated change help on MRI, against not applying it?" without the photographs.
-   OASIS-1 (A0, A3) adds the transfer.
-2. **The claim it supports is narrower than the proposal's.** The proposal's estimand was the
-   *interaction* MRI against photographs ("the schedule should depend on the spectrum").
-   - Without a working photograph model, that interaction cannot be read.
-   - The paper must say so in one paragraph of Results, with the failure and the r128/n32k
-     diagnostics in an appendix figure.
-   - Dropping the photographs silently would be HARKing (choosing the claim after seeing the
-     results).
-   - The supported claim becomes: "on brain MRI, the configuration motivated by the MRI spectrum
-     improves fidelity over the paper's default; nearly all of it is the terminal blur, and it
-     works by inheritance".
-3. **Churches stays in F1 as a *data* contrast** (its spectrum and its prior), which needs no
-   trained model. The motivation therefore keeps its two-dataset logic, and the results stay on
-   MRI.
+1. **The MRI comparison is a complete design on its own.** The four arms on IXI form a 2 × 2
+   factorial (terminal blur W/2 or W/8 × spacing log or IXI-matched), with 3/2/2/3 seeds. It
+   answers "does each MRI-matched change help, against the natural-image default?". OASIS-1 (A0,
+   A3) adds an independent cohort.
+2. **The natural-image runs** are out of reach at our budget, as expected (`00-framing.md` §2:
+   compute, intrinsic dimension, framing). They appear as 2–3 sentences and one appendix table,
+   *not* as a failure figure. The proposal's cross-domain interaction is stated as not reported.
+3. **Churches stays in F1 as the natural-image reference for the data.** The figure contrasts its
+   spectrum and its prior with MRI's, which is exactly what the defaults were tuned for, and needs
+   no trained model.
 
 **Colour, size and type.**
 
@@ -54,8 +49,9 @@ don't we compare for only the MRI images?"
 ### 1.1 The message (one sentence)
 
 *IHDM generates an image by putting frequency bands back, coarse to fine. The prior decides how many
-bands it is handed, and the level spacing decides where it spends its steps. Brain MRI and
-photographs place their variance at different scales, and we change both settings for MRI.*
+bands it is handed, and the level spacing decides where it spends its steps. Both defaults were
+tuned on natural photographs. Brain MRI places its variance at other scales and shares its coarse
+anatomy across subjects, so we match both settings to MRI.*
 
 ### 1.2 Layout (full width, 5.5 × ~2.7 in)
 
@@ -361,8 +357,7 @@ the real spectrum.
 
 ## 5. Open points for Mario (please answer in one go)
 
-1. Do you approve the **MRI-only Results**, with photographs as a negative-result paragraph plus an
-   appendix figure (§0)?
+1. ~~MRI-only Results~~: resolved on 2026-10-06 by the reframing (§0, `00-framing.md`).
 2. Do you approve **precision × seed-NN** for F2(b), with KID and LSD in T1 (§2.2)?
 3. F1 keeps **Churches as a data contrast**. Are one IXI and one Churches example enough for the
    heat-state strip, or do you want OASIS-1 as well?
