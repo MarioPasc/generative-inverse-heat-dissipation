@@ -367,7 +367,18 @@ The numbers come from `results_discussion.md` §3, `photo_diagnostic/README.md` 
 - `PAPER_WIDTH_IN = 5.5` and the arm display names in `ihdm/analysis/style.py`;
 - the CLI stub `python -m ihdm.cli.paper_figures --fig {f1,f2,t1,a1}`.
 
-## 6. Open points for Mario (in one go)
+## 6. Decisions of 2026-10-06 (Mario)
+
+- **The template** is the NIPS 2015 style linked by the course (`nips15submit_e.sty`, text width
+  5.5 in), in the Overleaf `proyecto/` (`df734f3`).
+- **The arm names** default / +prior / +spacing / matched are **accepted**.
+- **The unseen-subject teaser in F1** is **kept**.
+- **The F2(b) metric pair and the A1 LSD panel are open** (asked on 2026-10-06). Mario's condition:
+  keep LSD in A1 only if it really matters *and* LSD is one of F2's orthogonal metrics.
+- **Part 2 (F3) is deferred.**
+- **F1 starts now as T8.1 (wave W16).** T8.2 (F2 + T1) starts once F2(b) is settled.
+
+## 7. Open points for Mario (as first asked, kept for the record)
 
 1. Do you approve **precision × seed-NN** for F2(b), with KID and LSD in T1?
 2. Do you approve the **arm names** default / +prior / +spacing / matched, with the codes A0–A3 in
