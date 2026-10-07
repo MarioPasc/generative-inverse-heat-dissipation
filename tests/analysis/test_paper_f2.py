@@ -1,8 +1,10 @@
-"""Tests of F2 and T1 (T8.2): CRN and selection rules, expectations, exit codes, byte stability."""
+"""Tests of F2 and T1 (T8.2, T8.8): CRN and selection rules, expectations, band-pass images,
+the seed-distance anchor, T1 byte identity, exit codes and byte stability."""
 
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import shutil
@@ -10,9 +12,12 @@ import tarfile
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from ihdm.analysis import paper_f2 as pf
+from ihdm.analysis.heldout_fidelity import index_sha256 as ref_sha256
+from ihdm.analysis.heldout_fidelity import select_references
 from ihdm.analysis.paper_f2 import (
     ARM_LABELS,
     PAPER_WIDTH_IN,
@@ -27,29 +32,49 @@ from ihdm.analysis.paper_f2 import (
     assert_precision_means,
     assert_selection,
     assert_spectrum_means,
+    band_decomposition,
     foreground_fraction,
+    head_crop,
     kept_variance,
     merge_heldout,
     prior_state,
     select_rows,
 )
 from ihdm.cli import paper_f2 as cli
+from ihdm.data.format import DatasetMeta, write_dataset
+from ihdm.metrics.memorisation import memorisation_ratio
 
 REPO = Path(__file__).resolve().parents[2]
 T75_JSON = REPO / "docs" / "RESULTS" / "heldout_fidelity" / "heldout_fidelity.json"
 A2_JSON = REPO / "docs" / "RESULTS" / "paper" / "f2_a2_heldout" / "heldout_fidelity.json"
+PAPER = REPO / "docs" / "RESULTS" / "paper"
+#: The committed T1 (T8.2); T8.8 regenerates it with the same CLI and must not change a byte.
+T1_SHA256 = {
+    "t1_main.tex": "7e4dc907363c2e27f3769628ef6cad77d6f3c98112ebdd048e7f2186786a9f63",
+    "t1_main.md": "1791695eae6a10c0f5371a3dd5d71fa53a9ddf7dbdfaea5fde0f8a6b904066b2",
+}
+DATA_ROOT = Path("/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project")
+EVAL_DIR = Path("/media/mpascual/Sandisk2TB/research/spectral_allocation_heat_diffusion_project/"
+                "evaluation/eval_2488269")
 
 SIZE = 16
-N_IMAGES = 3312
+#: Synthetic MRI-like datasets: subject = image // 10, slice = image % 10. The seed subjects
+#: 0, 3, 19 put their slice-5 images at 5, 35, 195 (the real held-out seeds of panel (a)); the
+#: extra ref subject 370 puts its slice 5 at 3705, which reference_example(rng 2026) picks
+#: among the four slice-5 ref images, as on the real data.
+N_SLICES = 10
+N_IMAGES = 3710
+SEED_SUBJECTS = (0, 3, 19)
+REF_SUBJECTS = (*SEED_SUBJECTS, 370)
 FINAL_IDX = np.array([3311, 2488, 1995, 1073, 1205, 161], dtype=np.int64)
 HELDOUT_IDX = np.array([5, 35, 195], dtype=np.int64)
 PER_SEED = 4
 IXI_CELLS = {"A0": 3, "A2": 2, "A1": 2, "A3": 3}
 OASIS_CELLS = {"A0": 2, "A3": 2}
-#: Per-arm (precision F, precision H, seed-NN) equal to the ticket's expected means.
-PRECISION = {"A0": (0.655, 0.661, 0.06), "A2": (0.66, 0.68, 0.07), "A1": (0.70, 0.715, 0.66),
-             "A3": (0.757, 0.758, 0.72)}
-OASIS_PRECISION = {"A0": (0.70, 0.70, 0.02), "A3": (0.83, 0.84, 0.56)}
+#: Per-run precision and recall of the synthetic tree: the committed held-out JSONs' (T7.5 and
+#: the A2 extension), so that panel (b) is laid out as on the real data and T8.5's expectation
+#: table (asserted by the build) holds.
+REAL_METRICS = merge_heldout([T75_JSON, A2_JSON])[0]
 PROFILES = {
     "A0": [-0.02, -0.30, -0.39, -0.18, -0.13, -0.16, -0.13, -0.18],
     "A2": [-0.01, -0.24, -0.35, -0.23, -0.14, -0.15, -0.09, -0.16],
@@ -64,13 +89,36 @@ PROFILES = {
 
 
 def _images() -> np.ndarray:
-    """Disc phantoms: every image has a bright disc (foreground well above 10%)."""
+    """Disc phantoms with texture: a bright disc (foreground well above 10%) plus noise, so that
+    every image is distinct and no two images are at distance 0."""
     yy, xx = np.mgrid[:SIZE, :SIZE]
     disc = ((yy - SIZE / 2 + 0.5) ** 2 + (xx - SIZE / 2 + 0.5) ** 2) <= (SIZE / 3) ** 2
-    base = (disc * 200).astype(np.uint8)
-    out = np.repeat(base[None], N_IMAGES, axis=0)
-    out[:, 0, 0] = (np.arange(N_IMAGES) % 251).astype(np.uint8)  # make images distinct
-    return out
+    noise = np.random.default_rng(11).integers(0, 50, (N_IMAGES, SIZE, SIZE))
+    return np.clip(disc[None] * 180 + noise, 0, 255).astype(np.uint8)
+
+
+def _write_dataset(root: Path, name: str, images: np.ndarray) -> None:
+    """A standard-format dataset: train = every subject outside ``REF_SUBJECTS``."""
+    idx = np.arange(N_IMAGES)
+    subjects = [f"S{i // N_SLICES:03d}" for i in idx]
+    slices = (idx % N_SLICES).tolist()
+    in_ref = np.isin(idx // N_SLICES, REF_SUBJECTS)
+    in_seed = np.isin(idx // N_SLICES, SEED_SUBJECTS)
+    index = pd.DataFrame({"idx": idx, "subject": subjects, "slice": slices,
+                          "z_mm": [float(s) for s in slices],
+                          "source": [f"synthetic/{s}/{k}" for s, k in zip(subjects, slices,
+                                                                          strict=True)],
+                          "split": np.where(in_seed, "seed", np.where(in_ref, "ref", "train"))})
+    splits = {"train": idx[~in_ref].tolist(), "ref": idx[in_ref].tolist(),
+              "seed": idx[in_seed].tolist(),
+              "train_subjects": sorted({subjects[i] for i in idx[~in_ref]}),
+              "ref_subjects": sorted({subjects[i] for i in idx[in_ref]}),
+              "seed_subjects": sorted({subjects[i] for i in idx[in_seed]}), "rng_seed": 2026}
+    meta = DatasetMeta(dataset_id=name, n_images=N_IMAGES, image_size=SIZE, dtype="uint8",
+                       pipeline="tests.analysis.test_paper_f2", pipeline_version="1.0",
+                       git_sha="test", created="2026-10-07T00:00:00", raw_root=str(root),
+                       parameters={}, counts={})
+    write_dataset(root / name, images, index, splits, meta)
 
 
 def _sample_set(name: str, images: np.ndarray, seed_idx: np.ndarray, per_seed: int, rng_seed: int,
@@ -87,13 +135,21 @@ def _npy_bytes(array: np.ndarray) -> bytes:
     return buffer.getvalue()
 
 
-def _write_tar(path: Path, run_id: str, images: np.ndarray, arm_seed: int,
-               final_idx: np.ndarray = FINAL_IDX) -> None:
+def _sets(images: np.ndarray, arm_seed: int,
+          final_idx: np.ndarray = FINAL_IDX) -> dict[str, SampleSet]:
+    """The final set (6 training seeds x 1) and the held-out set (3 unseen seeds x 4)."""
+    final = _sample_set("final", images, final_idx, 1, 0, arm_seed)
+    # Half of the training-seeded samples are near-copies of their seed (seed-NN > 0).
+    copies = np.clip(images[final_idx[::2]].astype(int) + 3, 0, 255).astype(np.uint8)
+    samples = final.samples.copy()
+    samples[::2] = copies
+    return {"final": SampleSet("final", final.seed_idx, final.seeds, samples, final.signature),
+            "heldout": _sample_set("heldout", images, HELDOUT_IDX, PER_SEED, 2026,
+                                   arm_seed + 100)}
+
+
+def _write_tar(path: Path, run_id: str, sets: dict[str, SampleSet]) -> None:
     base = f"{run_id}/samples_amp-fp16/060000"
-    sets = {
-        "final": _sample_set("final", images, final_idx, 1, 0, arm_seed),
-        "heldout": _sample_set("heldout", images, HELDOUT_IDX, PER_SEED, 2026, arm_seed + 100),
-    }
     with tarfile.open(path, "w") as tar:
         for name, s in sets.items():
             members = {
@@ -117,47 +173,68 @@ def _runs() -> list[tuple[str, str, str, int]]:
     return out
 
 
-def _values(dataset: str, arm: str) -> tuple[float, float, float]:
-    return (PRECISION if dataset == "ixi" else OASIS_PRECISION)[arm]
+def _memorisation(images: np.ndarray, final: SampleSet) -> tuple[float, float, float]:
+    """M, seed-NN and M's denominator of a synthetic run, from the production metric (the
+    independent reference the build's recomputation is anchored to)."""
+    index = pd.DataFrame({"idx": np.arange(N_IMAGES), "slice": np.arange(N_IMAGES) % N_SLICES,
+                          "subject": [f"S{i // N_SLICES:03d}" for i in range(N_IMAGES)]})
+    ref = np.flatnonzero(np.isin(np.arange(N_IMAGES) // N_SLICES, REF_SUBJECTS))
+    train = np.setdiff1d(np.arange(N_IMAGES), ref)
+    heldout = np.setdiff1d(ref, np.flatnonzero(np.isin(np.arange(N_IMAGES) // N_SLICES,
+                                                       SEED_SUBJECTS)))
+    result = memorisation_ratio(final.samples, images[train], images[heldout],
+                                index["subject"].to_numpy()[train].tolist(),
+                                np.searchsorted(train, final.seed_idx), device="cpu")
+    return result.M, result.seed_nn_fraction, result.d_heldout_median
+
+
+def _references(data_root: Path, dataset: str) -> dict[str, object]:
+    frame = pd.read_csv(data_root / dataset / "index.csv")
+    splits = json.loads((data_root / dataset / "splits.json").read_text())
+    refs = select_references(frame, splits, dataset)
+    return {"n_ref": int(refs.ref_idx.size), "n_r_minus": int(refs.r_minus_idx.size),
+            "ref_idx_sha256": ref_sha256(refs.ref_idx),
+            "r_minus_idx_sha256": ref_sha256(refs.r_minus_idx)}
 
 
 def build_tree(root: Path, broken_crn: bool = False) -> dict[str, Path]:
     """Write a complete synthetic input tree; return the CLI paths."""
     images = _images()
     data_root = root / "data"
-    (data_root / "ixi").mkdir(parents=True)
-    np.save(data_root / "ixi" / "images.npy", images)
+    for dataset in ("ixi", "oasis1"):
+        _write_dataset(data_root, dataset, images)
     eval_dir = root / "eval"
     eval_dir.mkdir()
-    for k, arm in enumerate(("A0", "A2", "A1", "A3")):
-        final_idx = FINAL_IDX.copy()
-        if broken_crn and arm == "A3":
-            final_idx[2], final_idx[3] = final_idx[3], final_idx[2]
-        _write_tar(eval_dir / f"ixi_{arm}_s1_amp-fp16.tar", f"ixi_{arm}_s1", images, k,
-                   final_idx)
     results = root / "results"
     (results / "runs").mkdir(parents=True)
     rows, t1a, t1b, held = [], [], [], {}
-    for rid, dataset, arm, seed in _runs():
-        prec_f, prec_h, seed_nn = _values(dataset, arm)
+    for k, (rid, dataset, arm, seed) in enumerate(_runs()):
+        final_idx = FINAL_IDX.copy()
+        if broken_crn and rid == "ixi_A3_s1":
+            final_idx[2], final_idx[3] = final_idx[3], final_idx[2]
+        sets = _sets(images, k, final_idx)
+        _write_tar(eval_dir / f"{rid}_amp-fp16.tar", rid, sets)
+        m_ratio, seed_nn, d_heldout = _memorisation(images, sets["final"])
+        metrics = REAL_METRICS[rid]
         row = {"index": len(rows), "run_id": rid, "dataset": dataset, "arm": arm, "seed": seed,
-               "kid": 0.01 * (seed + 1), "lsd_final": 0.1 * seed, "precision": prec_f - 0.02,
-               "recall": 0.3, "seed_nn_fraction": seed_nn, "D_pix": 0.011}
+               "kid": 0.01 * (seed + 1), "lsd_final": 0.1 * seed,
+               "precision": metrics["F_rminus"]["precision"] - 0.02, "recall": 0.3,
+               "seed_nn_fraction": seed_nn, "D_pix": 0.011, "M": m_ratio}
         rows.append(row)
         t1a.append({"run_id": rid, "kid": row["kid"], "lsd_final": row["lsd_final"],
                     "recall": row["recall"]})
         t1b.append({"run_id": rid, "seed_nn_fraction": seed_nn, "D_pix": row["D_pix"]})
-        held[rid] = {"metrics": {"F_rminus": {"precision": prec_f},
-                                 "H_rminus": {"precision": prec_h}}}
+        held[rid] = {"metrics": {key: metrics[key] for key in ("F_rminus", "H_rminus", "H_r5")}}
+        (results / "runs" / rid).mkdir()
+        record: dict[str, object] = {"d_heldout_median": d_heldout}
         if dataset == "ixi":
-            (results / "runs" / rid).mkdir()
-            octaves = dict(zip(pf.LSD_OCTAVES, PROFILES[arm], strict=True))
-            (results / "runs" / rid / "final.json").write_text(json.dumps({"lsd_octaves": octaves}))
+            record["lsd_octaves"] = dict(zip(pf.LSD_OCTAVES, PROFILES[arm], strict=True))
+        (results / "runs" / rid / "final.json").write_text(json.dumps(record))
     with (results / "index.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    references = {"ixi": {"r_minus_idx_sha256": "abc", "n_r_minus": 400}}
+    references = {d: _references(data_root, d) for d in ("ixi", "oasis1")}
     heldout = root / "heldout.json"
     heldout.write_text(json.dumps({"references": references, "runs": held}))
     tables = root / "tables.json"
@@ -495,13 +572,18 @@ def test_build_end_to_end_and_byte_stable(tree: dict[str, Path], tmp_path: Path)
         assert (outs[0] / name).read_bytes() == (outs[1] / name).read_bytes(), name
     svg = (outs[0] / "f2_arms.svg").read_text()
     assert "<dc:date>" not in svg and "data:image/png;base64" in svg
-    for gid in ("a_thumb_r2_A3", "a_thumb_r0_u_matched", "b_arrow_A1", "b_arrow_A2",
-                "b_arrow_oasis", "b_strip", "c_prior_fill", "key"):
+    for gid in ("a_thumb_r2_A3", "a_thumb_r0_u_matched", "b_pr", "b_pr_arrow_F_ixi",
+                "b_pr_arrow_H_oasis1", "b_pr_mean_H_ixi_A3", "b_dist", "b_dist_real_band",
+                "b_dist_mean_H_train_A3", "c_spectrum", "c_prior_fill", "c_band_0", "c_band_7"):
         assert f'id="{gid}"' in svg, gid
+    for gone in ("key", "b_strip", "c_band_label_0"):  # the configurations key, the old (b)
+        assert f'id="{gone}"' not in svg, gone
     assert "<text" in svg  # svg.fonttype none keeps text as text
     notes = (outs[0] / "F2.md").read_text()
     assert "rows are images (3311, 2488, 5), as expected; no skip" in notes
     assert "CRN, final set" in notes
+    assert "each band scaled to its own range" in notes
+    assert "M ixi_A0_s1: recomputed" in notes and "M ixi_A3_s1: recomputed" in notes
     tex = (outs[0] / "t1_main.tex").read_text()
     assert "\\toprule" in tex and "\\scriptsize [" in tex and "matched (A3)" in tex
     assert "resizebox" not in tex
@@ -515,3 +597,187 @@ def test_t1_cross_check_detects_a_mismatch(tree: dict[str, Path], tmp_path: Path
     rows = pf.t1_rows(pf.read_index(tree["results"]))
     with pytest.raises(PaperF2Error, match="differ from tables.json"):
         pf.cross_check_tables(rows, path)
+
+
+def test_missing_oasis_tar_exits_2(tree: dict[str, Path], tmp_path: Path) -> None:
+    eval_dir = tmp_path / "eval"
+    shutil.copytree(tree["eval_dir"], eval_dir)
+    (eval_dir / "oasis1_A3_s2_amp-fp16.tar").unlink()
+    assert cli.main(_argv({**tree, "eval_dir": eval_dir}, tmp_path / "out", tmp_path / "w")) == 2
+
+
+def test_missing_dataset_file_exits_2(tree: dict[str, Path], tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    shutil.copytree(tree["data_root"], data_root)
+    (data_root / "oasis1" / "splits.json").unlink()
+    assert cli.main(_argv({**tree, "data_root": data_root}, tmp_path / "out",
+                          tmp_path / "w")) == 2
+
+
+def _edited_index(tree: dict[str, Path], tmp_path: Path, run_id: str, key: str,
+                  delta: float) -> dict[str, Path]:
+    results = tmp_path / "results"
+    shutil.copytree(tree["results"], results)
+    rows = list(csv.DictReader((results / "index.csv").open(newline="")))
+    for row in rows:
+        if row["run_id"] == run_id:
+            row[key] = str(float(row[key]) + delta)
+    with (results / "index.csv").open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    # T1 cross-checks seed-NN against tables.json: change it there too, so the anchor fails.
+    tables = json.loads(tree["tables"].read_text())
+    for row in tables["tables"]["t1b_cells_mechanism"]["rows"]:
+        if row["run_id"] == run_id and key in row:
+            row[key] += delta
+    (tmp_path / "tables.json").write_text(json.dumps(tables))
+    return {**tree, "results": results, "tables": tmp_path / "tables.json"}
+
+
+@pytest.mark.parametrize("run_id, key", [("ixi_A0_s1", "M"), ("ixi_A3_s1", "seed_nn_fraction")])
+def test_anchor_mismatch_exits_1(tree: dict[str, Path], tmp_path: Path, capsys, run_id: str,
+                                 key: str) -> None:
+    edited = _edited_index(tree, tmp_path, run_id, key, 0.01)
+    assert cli.main(_argv(edited, tmp_path / "out", tmp_path / "w")) == 1
+    err = capsys.readouterr().err
+    assert "distance anchor" in err and run_id in err
+    assert not (tmp_path / "out" / "f2_arms.pdf").exists()
+
+
+def test_fidelity_diversity_table_mismatch_exits_1(tree: dict[str, Path], tmp_path: Path,
+                                                   capsys) -> None:
+    report = json.loads(tree["heldout"].read_text())
+    report["runs"]["ixi_A2_s1"]["metrics"]["H_rminus"]["recall"] += 0.01
+    heldout = tmp_path / "heldout.json"
+    heldout.write_text(json.dumps(report))
+    assert cli.main(_argv({**tree, "heldout": heldout}, tmp_path / "out", tmp_path / "w")) == 1
+    assert "IXI +spacing recall H" in capsys.readouterr().err
+
+
+def test_r_minus_must_match_the_heldout_json(tree: dict[str, Path], tmp_path: Path,
+                                             capsys) -> None:
+    report = json.loads(tree["heldout"].read_text())
+    report["references"]["oasis1"]["r_minus_idx_sha256"] = "0" * 64
+    heldout = tmp_path / "heldout.json"
+    heldout.write_text(json.dumps(report))
+    assert cli.main(_argv({**tree, "heldout": heldout}, tmp_path / "out", tmp_path / "w")) == 1
+    assert "R⁻ rebuilt from the dataset" in capsys.readouterr().err
+
+
+def test_anchor_lines_name_the_required_runs(tree: dict[str, Path], tmp_path: Path) -> None:
+    paths = pf.F2Paths(tree["data_root"], tree["results"], tree["eval_dir"], (tree["heldout"],),
+                       tmp_path / "out", tmp_path / "w", tree["tables"])
+    index = pf.read_index(tree["results"])
+    _, record = merge_heldout([tree["heldout"]])
+    distances = pf.load_distances(paths, index, record["references"])
+    lines = pf.assert_anchor(distances, index, Expectations())
+    assert sum(line.startswith("M ixi_A") for line in lines) == 2
+    assert lines[-1].startswith("the other 12 runs also match")
+    with pytest.raises(ExpectationError, match="anchor runs not computed"):
+        pf.assert_anchor(distances, index, Expectations(anchor_runs=("ixi_A9_s1",)))
+    # The band of real images is centred on 1 by construction (D_ref is its median).
+    lo, hi = distances.real_quartiles["ixi"]
+    assert lo <= 1.0 <= hi
+    assert distances.sizes["ixi"] == {"n_train": 3670, "n_r_minus": 10, "n_train_subjects": 367}
+
+
+# --------------------------------------------------------------------------------------------
+# Panel (c): band-pass images
+# --------------------------------------------------------------------------------------------
+
+
+def test_band_images_sum_back_to_the_slice() -> None:
+    from ihdm.analysis.paper_fm import mode_cycles
+
+    image = np.random.default_rng(5).random((192, 192))
+    bands, dc, corner = band_decomposition(image)
+    assert len(bands) == 8
+    np.testing.assert_allclose(sum(bands) + dc + corner, image, rtol=0, atol=1e-10)
+    np.testing.assert_allclose(dc, np.full_like(image, image.mean()), atol=1e-10)
+    # Each band holds only its octave's modes; the corner only modes above 96 c/img.
+    from scipy.fft import dctn
+
+    cycles = mode_cycles(192)
+    for (lo, hi), band in zip(pf.OCTAVE_EDGES, bands, strict=True):
+        coef = dctn(band, norm="ortho")
+        inside = (cycles >= lo) & ((cycles < hi) | ((hi == 96.0) & (cycles == hi)))
+        assert np.abs(coef[~inside]).max() < 1e-10
+        assert np.abs(coef[inside]).max() > 0
+    assert np.abs(dctn(corner, norm="ortho")[cycles <= 96.0]).max() < 1e-10
+    assert np.abs(corner).max() > 0
+
+
+def test_head_crop_is_a_centred_square() -> None:
+    image = np.zeros((192, 192))
+    image[20:192, 14:177] = 0.5  # the reference slice's head box (rows 20-191, cols 14-176)
+    assert head_crop(image) == (20, 192, 9, 181)
+    assert head_crop(np.zeros((8, 8))) == (0, 8, 0, 8)
+    corner = np.zeros((10, 10))
+    corner[0:2, 0:6] = 1.0  # a wide box at the edge: the square is clipped to the image
+    assert head_crop(corner) == (0, 6, 0, 6)
+
+
+@pytest.mark.skipif(not (DATA_ROOT / "ixi" / "images.npy").is_file(),
+                    reason="the IXI dataset is needed")
+def test_reference_slice_is_image_3705_and_decomposes_exactly() -> None:
+    from ihdm.spectral.profile import reference_example
+
+    bands = pf.load_band_images(DATA_ROOT, Expectations())
+    assert bands.image_index == 3705 and bands.crop == (20, 192, 9, 181)
+    image, _ = reference_example(DATA_ROOT, "ixi", np.random.default_rng(2026))
+    parts, dc, corner = band_decomposition(np.asarray(image, dtype=np.float64))
+    np.testing.assert_allclose(sum(parts) + dc + corner, image, rtol=0, atol=1e-10)
+
+
+# --------------------------------------------------------------------------------------------
+# T1 and the distance anchor on the real data
+# --------------------------------------------------------------------------------------------
+
+
+def test_committed_t1_is_byte_identical() -> None:
+    for name, digest in T1_SHA256.items():
+        assert hashlib.sha256((PAPER / name).read_bytes()).hexdigest() == digest, name
+
+
+def test_committed_caption_length_and_content() -> None:
+    text = (PAPER / "F2.md").read_text()
+    caption = "\n".join(line for line in text.split("## Caption draft", 1)[1].splitlines()
+                        if line.startswith(">"))
+    words = pf.caption_words(caption)
+    assert 180 <= words <= 230, words
+    assert f"Caption length: {words} words." in text
+    for phrase in ("R⁻", "(F, filled)", "(H, hollow)", "40 prior states at one slice level",
+                   "R5", "n = 3/2/2/3", "n = 2/2", "post hoc",
+                   "each band scaled to its own range"):
+        assert phrase in caption, phrase
+
+
+def test_caption_words_ignores_markup() -> None:
+    assert pf.caption_words("> **Bold title.**\n>\n> (a) One → two, 0.5 c/img.") == 7
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not (EVAL_DIR.is_dir() and (DATA_ROOT / "_results" / "index.csv").is_file()),
+                    reason="the IXI eval tars (SanDisk) and the data root are needed")
+@pytest.mark.parametrize("run_id", ["ixi_A0_s1", "ixi_A3_s1"])
+def test_anchor_reproduces_index_csv(run_id: str, tmp_path: Path) -> None:
+    from ihdm.analysis import seed_distance as sd
+    from ihdm.data.format import read_dataset
+
+    images, frame, splits, _ = read_dataset(DATA_ROOT / "ixi")
+    refs = select_references(frame, splits, "ixi")
+    train_idx = np.sort(np.asarray(splits["train"], dtype=np.int64))
+    train = np.asarray(images[train_idx])
+    subjects = frame["subject"].astype(str).to_numpy()[train_idx]
+    d_ref = float(np.median(sd.reference_distances(np.asarray(images[refs.r_minus_idx]), train)))
+    folder = pf.extract_run(EVAL_DIR, run_id, tmp_path)
+    final = pf.load_sample_set(folder / "final", "final")
+    held = pf.load_sample_set(folder / "heldout", "heldout")
+    run = sd.compute_run(run_id, final.samples, np.searchsorted(train_idx, final.seed_idx),
+                         held.samples, held.seeds, train, subjects, d_ref)
+    stored = {r.run_id: r for r in pf.read_index(DATA_ROOT / "_results")}[run_id]
+    assert abs(run.m_ratio - stored.value("M")) <= 5e-3
+    assert abs(run.seed_nn - stored.value("seed_nn_fraction")) <= 5e-3
+    final_json = json.loads((DATA_ROOT / "_results" / "runs" / run_id / "final.json").read_text())
+    np.testing.assert_allclose(d_ref, final_json["d_heldout_median"], rtol=1e-4)
