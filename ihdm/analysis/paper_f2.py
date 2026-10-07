@@ -72,7 +72,7 @@ logger = logging.getLogger(__name__)
 PAPER_WIDTH_IN: float = 5.5
 ARM_LABELS: dict[str, str] = {"A0": "default", "A1": "+prior", "A2": "+spacing", "A3": "matched"}
 
-FIG_HEIGHT_IN: float = 4.78
+FIG_HEIGHT_IN: float = 4.8
 MAX_HEIGHT_IN: float = 4.8
 MIN_FONT_PT: float = 7.0
 MIN_THUMB_IN: float = 0.45
@@ -1346,10 +1346,10 @@ class F2Layout:
     thumb_gap: float = 0.03
     group_gap: float = 0.10
     thumb_x0: float = 1.02
-    pr: Box = (0.47, 1.88, 2.30, 0.90)
-    dist: Box = (3.30, 1.88, 2.12, 0.90)
+    pr: Box = (0.47, 1.88, 2.30, 0.86)
+    dist: Box = (3.30, 1.88, 2.12, 0.86)
     spec: Box = (0.47, 0.36, 4.95, 1.02)
-    b_title_y: float = 2.89
+    b_title_y: float = 2.85
     c_title_y: float = 1.48
     b_title_x: tuple[float, float] = (0.26, 2.98)
     key_y: float = 0.10
