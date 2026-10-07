@@ -1105,22 +1105,26 @@ def caption_text(data: FMData) -> str:
     fine = f"{_num(data.octave_edges[n_shown][0])}\u2013{_num(data.octave_edges[-1][1])}"
     k_def = data.n_levels["default"]
     equal = 100.0 / len(labels)
+    scale = f"{f1.mode_scale(data.width):.1f}"  # 43.2 at W = 192
+    kept = f"{f1.mode_scale(data.width) / f1.SIGMA_MATCHED:.1f}"  # c of the matched prior
+    floor = _num(data.octave_edges[0][0])
     return (
         "**IHDM, octave by octave.** Top: an IXI slice x is a weighted "
         "sum of orthonormal DCT-II modes φ_{i,j}; mode (i, j) carries c = ½√(i²+j²) cycles per "
         "image (c/img), and the modes fall into octaves (colours; the mean in grey), "
         "quarter-annuli of the (i, j) plane (inset, log radius). Rows: noise-free heat "
         "states of x. The forward process q(u_k | u_0) multiplies a mode at c by "
-        "d = exp(−σ_B²/σ_n²), σ_n ≈ 43.2/c px; each state is drawn at σ_B = 43.2/c_b, where "
+        f"d = exp(−σ_B²/σ_n²), σ_n ≈ {scale}/c px; each state is drawn at σ_B = {scale}/c_b, "
+        "where "
         "the octave starting at c_b keeps d = e⁻¹ and every finer mode d ≤ e⁻⁴. One arrow is "
         f"therefore a macro-step over many of the K = {k_def} levels: default (log) "
         f"{_slash(data.level_counts['default'])} and matched "
         f"{_slash(data.level_counts['matched'])} levels per octave, {first} to {last} c/img "
-        f"(right panel; {data.folded['default']} default levels below 0.5 c/img in the "
+        f"(right panel; {data.folded['default']} default levels below {floor} c/img in the "
         f"first). The ellipsis folds {fine} c/img. The reverse row is "
         "the ideal path of p_θ(u_{k−1} | u_k): the same states read backwards. Dashed: the "
         "priors, where generation starts; the default (W/2) keeps almost nothing, the matched "
-        "(W/8) the octaves below about 1.8 c/img. Right: IXI's between-image variance per "
+        f"(W/8) the octaves below about {kept} c/img. Right: IXI's between-image variance per "
         f"octave against the {equal:g}% equal share of a 1/f² spectrum."
     )
 
