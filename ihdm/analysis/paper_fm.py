@@ -100,6 +100,8 @@ logger = logging.getLogger(__name__)
 FM_NAME: str = "fm_method"
 #: Height cap of the ticket (FM's own height, ``FM_HEIGHT_IN``, follows from the layout below).
 FM_MAX_HEIGHT_IN: float = 3.8
+#: Smallest raster resolution of the PDF the ticket allows.
+MIN_PDF_DPI: float = 300.0
 #: Smallest thumbnails the ticket allows.
 MIN_MODE_THUMB_IN: float = 0.22
 MIN_STATE_THUMB_IN: float = 0.40
@@ -750,7 +752,7 @@ _HEADER_H = 0.35
 _TERM_LINE_H = 0.52
 _BOX_H = _HEADER_H + 2 * _TERM_LINE_H + 0.06
 _MODE = 0.26
-_MRI = 0.66
+_MRI = 0.62
 _INSET = 0.80
 #: FM's height, from the stack above.
 FM_HEIGHT_IN: float = round(_BOX_Y0 + _BOX_H + _EDGE, 2)
@@ -1046,11 +1048,15 @@ class FMLayoutReport:
         Size, smallest font, text overlaps and clipping.
     min_mode_in, min_state_in : float
         Smallest mode and state thumbnail side.
+    min_image_dpi : float
+        Lowest resolution of an embedded raster in the PDF and SVG, which embed each array
+        unresampled: its pixels over its printed side.
     """
 
     base: f1.LayoutReport
     min_mode_in: float
     min_state_in: float
+    min_image_dpi: float
 
 
 def fm_layout_report(fig: Figure) -> FMLayoutReport:
@@ -1069,12 +1075,16 @@ def fm_layout_report(fig: Figure) -> FMLayoutReport:
     with fm_style():
         base = f1.layout_report(fig)
     sizes: dict[str, list[float]] = {"mode": [], "state": []}
+    dpis = []
     for ax in fig.axes:
         role = str(ax.get_label()).split(":", 1)[0]
         if role in sizes and ax.get_images():
             sizes[role].append(min(ax.bbox.width, ax.bbox.height) / fig.dpi)
+        for im in ax.get_images():
+            pixels = min(im.get_array().shape[:2])
+            dpis.append(pixels / (max(ax.bbox.width, ax.bbox.height) / fig.dpi))
     return FMLayoutReport(base, min(sizes["mode"], default=0.0),
-                          min(sizes["state"], default=0.0))
+                          min(sizes["state"], default=0.0), min(dpis, default=0.0))
 
 
 # --------------------------------------------------------------------------------------------
@@ -1170,7 +1180,8 @@ def fm_markdown(data: FMData, checks: Sequence[MacroStepCheck], report: FMLayout
         f"Size {base.size_in[0]:g} × {base.size_in[1]:g} in; smallest font "
         f"{base.min_font_pt:g} pt; smallest mode thumbnail {report.min_mode_in:.2f} in; smallest "
         f"state thumbnail {report.min_state_in:.2f} in; text boxes overlapping: "
-        f"{len(base.overlaps)}; text outside the figure: {len(base.outside)}. Formulas use "
+        f"{len(base.overlaps)}; text outside the figure: {len(base.outside)}; embedded rasters "
+        f"at {report.min_image_dpi:.0f} dpi or more (PDF, SVG). Formulas use "
         "mathtext `stixsans` (FM only; F1 and F2 use the default DejaVu mathtext).",
         "",
     ]

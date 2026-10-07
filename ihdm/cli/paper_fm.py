@@ -58,6 +58,15 @@ def _run(args: argparse.Namespace, command: str) -> int:
 
     fig = fm.draw_fm(data)
     report = fm.fm_layout_report(fig)
+    base = report.base
+    breaches = [name for name, ok in (
+        ("height", base.size_in[1] <= fm.FM_MAX_HEIGHT_IN),
+        ("font", base.min_font_pt >= f1.MIN_FONT_PT),
+        ("mode thumbnail", report.min_mode_in >= fm.MIN_MODE_THUMB_IN),
+        ("state thumbnail", report.min_state_in >= fm.MIN_STATE_THUMB_IN),
+        ("raster dpi", report.min_image_dpi >= fm.MIN_PDF_DPI)) if not ok]
+    if breaches:
+        raise fm.MethodFigureError("the layout breaks the format contract: " + ", ".join(breaches))
     names = [f"{fm.FM_NAME}.{ext}" for ext in ("pdf", "svg", "png")]
     previous = {n: f1.sha256_of(args.out / n) for n in names if (args.out / n).is_file()}
     paths = fm.save_fm(fig, args.out)
@@ -79,11 +88,10 @@ def _run(args: argparse.Namespace, command: str) -> int:
         print(f"levels {f1.SCHEDULES[key]} per frequency octave: "
               + "/".join(map(str, data.level_counts[key])))
     print("modes per octave: " + "/".join(map(str, data.mode_counts)))
-    base = report.base
     print(f"layout: {base.size_in[0]:g} x {base.size_in[1]:g} in, min font {base.min_font_pt:g} "
           f"pt, min mode thumbnail {report.min_mode_in:.2f} in, min state thumbnail "
-          f"{report.min_state_in:.2f} in, overlaps {len(base.overlaps)}, outside "
-          f"{len(base.outside)}")
+          f"{report.min_state_in:.2f} in, min raster {report.min_image_dpi:.0f} dpi, overlaps "
+          f"{len(base.overlaps)}, outside {len(base.outside)}")
     for a, b in base.overlaps:
         print(f"  overlap: {a!r} / {b!r}")
     print(f"selected: example {data.example_index}")

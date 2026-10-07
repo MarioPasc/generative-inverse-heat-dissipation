@@ -253,6 +253,7 @@ def test_layout_and_caption_on_tiny_dataset(tiny: Path) -> None:
     assert report.base.min_font_pt >= f1.MIN_FONT_PT
     assert report.min_mode_in >= fm.MIN_MODE_THUMB_IN
     assert report.min_state_in >= fm.MIN_STATE_THUMB_IN
+    assert report.min_image_dpi >= fm.MIN_PDF_DPI
     assert report.base.overlaps == [] and report.base.outside == []
     caption = fm.caption_text(data)
     assert 150 <= len(caption.replace("*", " ").split()) <= 200
