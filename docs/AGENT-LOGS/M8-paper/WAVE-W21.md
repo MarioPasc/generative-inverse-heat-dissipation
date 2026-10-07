@@ -87,3 +87,35 @@ The grey band (the interquartile range of real R⁻ images to the training set) 
    LaTeX port.
 2. Overleaf still holds the old `f2_arms.pdf`.
 3. Carried over: the `creator` keyword; `paper_f1`'s uncaught `ScheduleError`.
+
+## Return 1: the two-column layout (Mario, 2026-10-07)
+
+**Mario's request:** "panel (a) Samples and (c) Spectrum in the left of the image, occupying maybe 60-65%
+of the width, while the panel (b), fidelity vs diversity, is one plot on top of the other, and
+occupies the other 30-35% of the width of the image, the image would be as wide as possible."
+
+**Sent to the same agent as a RETURN**, with relaxed minimums: thumbnails ≥ 0.40 in and band images
+≥ 0.34 in. It is not a redo, so the content, the numbers, the checks and T1 stayed fixed.
+
+**Verdict: ACCEPT.**
+
+- **Commits** `63401f4` (code and tests), `d7edd5f` (outputs) and `ac7c6a0` (log §9); the file
+  table equals the diff (7 files).
+- **The figure** is 5.50 × 3.53 in, with the left column at 62.7%. Thumbnails are 0.43 in, with all
+  7 columns kept. The band images are 0.381 in square, edge to edge.
+- **Checks.** Main re-ran the F2 and seed-distance tests (54 passed) and rebuilt from the cache: the
+  PDF, SVG, PNG and `t1_main.*` are byte-identical; T1 is unchanged against the base. The agent's
+  fast suite passed 1462.
+- **The PNG was viewed by main.**
+- **Layout calls (accepted):**
+  - the scatter has no configuration names (no room), since (a)'s coloured headers are the key;
+  - the F/H key sits in the scatter's lower-left;
+  - the distance plot's group labels are "Training (F)" and "Unseen (H)";
+  - the band is labelled R⁻;
+  - the "Samples" title was dropped (collision).
+
+**Next (Mario, 2026-10-07):**
+
+- `fm_method.pdf` becomes the paper's visual abstract (Figure 1) and `f2_arms.pdf` the main results
+  figure (Figure 2), both embedded in Overleaf `main.tex` with brief captions;
+- the merge to `main` (local) follows the full suite.
