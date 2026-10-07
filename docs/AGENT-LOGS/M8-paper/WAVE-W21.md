@@ -119,3 +119,15 @@ occupies the other 30-35% of the width of the image, the image would be as wide 
 - `fm_method.pdf` becomes the paper's visual abstract (Figure 1) and `f2_arms.pdf` the main results
   figure (Figure 2), both embedded in Overleaf `main.tex` with brief captions;
 - the merge to `main` (local) follows the full suite.
+
+**Full suite after return 1 (`integration/W21`):** 1462 passed, 1 skipped, 29 deselected (895.85 s).
+
+**Overleaf (Mario's instruction, 2026-10-07):** `4bc478d`.
+
+- `main.tex` embeds `fm_method.pdf` as Figure 1 (the visual abstract, `fig:method`, in the
+  Introduction) and the two-column `f2_arms.pdf` as Figure 2 (the main results, `fig:results`), each
+  with a brief caption.
+- A local compile gives 3 pages, with no errors and no undefined references.
+- `f1_visual_abstract.pdf` stays in `figures/` but is unused.
+
+**Merged to local `main`**; the fork is not pushed.
