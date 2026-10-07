@@ -646,3 +646,107 @@ Proceed with (c.1) and clearly state that we were not trying to replicate the or
   - pinning torch;
   - the Picasso cleanup;
   - the removal of the local worktrees (W14 and W15) after the merge.
+
+## 20. Session 4, continued (2026-10-06 → 2026-10-07): the paper phase (M8)
+
+**What was done** (details in `docs/SPECIFICATIONS/M8-paper/` and `docs/AGENT-LOGS/M8-paper/WAVE-W16.md`
+and `WAVE-W17.md`):
+
+- **W15 was merged** to `main` (`efaf4ec`).
+- **The course rules** are harnesses in the TFM working tree, `projects/GenAI/project/HARNESSES/`
+  (git-ignored there):
+  - P1, prototype on a small problem;
+  - P3, fidelity and diversity;
+  - P4, use cases against diffusion and flow matching: one Discussion paragraph, no experiment;
+  - D, the deliverables, due 2026-11-03 14:00.
+- **The framing** (`M8-paper/00-framing.md`, Mario):
+  - are IHDM's natural-image defaults right for brain MRI, or does MRI benefit from a prior and
+    spacing matched to its spectrum and shared anatomy?
+  - the Results are IXI 2 × 2 + OASIS-1;
+  - LSUN is "out of reach at this budget, as expected" (appendix A1), never a failure;
+  - the claims ledger is C1–C8.
+- **The arm names:** default (A0), +prior (A1), +spacing (A2), matched (A3).
+- **The paper template** is NIPS 2015 (`nips15submit_e.sty`) in the Overleaf clone
+  `projects/GenAI/project/6aab9fca47dc3902a0dbfcef/proyecto/`, with a skeleton holding the required
+  sections in order.
+- **W16:** F1 (the visual abstract), F2 (the configurations on MRI; precision × seed-NN, chosen by
+  Mario), T1. Merged as `eb64c66`.
+- **W17:** T8.0 (intrinsic dimension: MLE k = 10 IXI 17.2, OASIS-1 22.1, Churches 30.1, Bedrooms
+  30.8; the PCA participation ratio is higher for MRI) and T8.3 (appendix A1, no LSD panel by
+  Mario's rule). Merged as `b968786`.
+- **The PDFs and LaTeX tables** of F1, F2, T1 and A1 are in Overleaf `proyecto/figures` and
+  `proyecto/tables` (`a9d8e52`). The SVGs (the Inkscape masters) are in `docs/RESULTS/paper/`.
+- **Corrections the agents found and main applied:**
+  - the spacing's precision effect depends on the reference (+0.006 on the full ref, +0.025 on R⁻);
+  - the loss is "98% denoising", not "irreducible noise";
+  - the N-scaling of the intrinsic dimension is +0/+18/+34/+49% (10 subsets), not the scratch
+    single-draw values.
+- **On 2026-10-07:**
+  - all merged worktrees and branches were removed after a merge check: 13 worktrees and 31
+    branches;
+  - `ticket/T3.1-picasso-setup` was kept, because its remote copy differs and git refused a safe
+    delete.
+
+## 21. Handoff (2026-10-07): START HERE
+
+**The state.**
+
+- The fork `main` is `ccc57a6` (the T8.4 ticket) and is pushed. The full suite at W17 passed
+  (1364).
+- The only worktree is `wt/T8.4` (branch `ticket/T8.4-method-figure`, base `ccc57a6`). It was
+  created and **not yet spawned**.
+
+**The next action: spawn T8.4, the method figure.**
+
+- The prompt is ready at `projects/GenAI/code/wave-W18-prompts/T8.4-prompt.md`, and the ticket is
+  `docs/SPECIFICATIONS/M8-paper/T8.4-method-figure.md`.
+- Spawn one `opus55-xhigh` with the prompt file's content, verbatim.
+- **Review it as W16/W17 were reviewed:**
+  - the log file table equals the diff;
+  - re-run its tests (via the `python -c subprocess` wrapper if `rtk` rewrites pytest);
+  - **view the PNG yourself;**
+  - check the exact-content section of the ticket:
+    - $q(\mathbf u_k\mid\mathbf u_0)$, not a Markov forward;
+    - the macro-step disclaimer;
+    - the level counts 31/26/…/12 and 0/5/30/38/47/42/29/9;
+    - the octave colours do not reuse the arm colours.
+- **Then:**
+  - merge `--no-ff` into `integration/W18`;
+  - paste the prompt into the log's §1;
+  - run the full suite;
+  - merge into `main`, push;
+  - copy `fm_method.pdf` into Overleaf `proyecto/figures/` (`git pull --rebase`, then push; the
+    credential helper is host-scoped);
+  - add an FM row to `docs/RESULTS/paper/README.md` and a `WAVE-W18.md`.
+
+**Still to do for the paper:**
+
+1. **Part 2, F3: fidelity against diversity** (the professor's rule 3). Not yet designed. Material:
+   - under-dispersion (variance ratio, ρ);
+   - within-seed diversity $D_{pix}$;
+   - precision and recall;
+   - the held-out seeds (T7.5).
+
+   Ask Mario before designing.
+2. **The paper text.** Write it against `00-framing.md` (the claims ledger, the "must not claim"
+   list) and the harnesses. Wording rules:
+   - say "98% denoising";
+   - say "lower intrinsic (local) dimension";
+   - never say "significant".
+3. **The repository README** (still the upstream IHDM one) and the PyTorch-tutorial-style notebook
+   (harness D).
+4. **Still `[ask Mario]`:**
+   - the professor's rule 2 (never provided);
+   - CRediT roles;
+   - the wording of the AI declaration;
+   - the Picasso cleanup;
+   - whether to version the HARNESSES folder.
+
+**Working rules** (memory `genai-orchestrator-does-not-code`, `parallel-agents` skill):
+
+- the orchestrator does not code;
+- ≤ 2 agents at once;
+- manual worktrees `projects/GenAI/code/wt/<ticket>`;
+- prompts saved in `projects/GenAI/code/wave-W<n>-prompts/` and pasted into logs at merge time;
+- agents stop at GO gates for any Picasso compute;
+- every number is read from files.
