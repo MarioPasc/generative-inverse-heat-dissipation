@@ -1,7 +1,12 @@
-"""Build F2 (the four arms on brain MRI), T1 (the main table) and their notes (T8.2).
+"""Build F2 (the paper's results figure), T1 (the main table) and their notes (T8.2, T8.8).
 
 ``python -m ihdm.cli.paper_f2 --data-root <root> --results <_results> --eval-dir <tars>
 --heldout <json> [<json> ...] --out <dir> [--work <scratch>] [--tables <tables.json>]``
+
+The seed distances of panel (b) need the ``final/`` and ``heldout/`` sample sets of every IXI and
+OASIS-1 run (extracted from ``--eval-dir`` into ``--work``) and the ``ixi`` and ``oasis1``
+datasets of ``--data-root``; they run on the CPU and are cached in ``<work>/seed_distance/``
+under a key that hashes their inputs (about 16 min the first time).
 
 ``python -m ihdm.cli.paper_f2 a2-heldout --eval-dir <tars> --data-root <root> --work <T7.5 cache>
 --out <dir> --runs <ids> [--reference <T7.5 json>]`` runs the unchanged T7.5 CLI with +spacing
@@ -99,8 +104,11 @@ def _run(argv: list[str]) -> int:
     report = build(paths)
     a = report.audit
     print(f"F2: {a.width_in:.2f} x {a.height_in:.2f} in, smallest font {a.min_font_pt:g} pt, "
-          f"smallest thumbnail {a.min_thumb_in:.2f} in; rows "
-          f"{[r.image_index for r in report.rows]}; {report.selection}")
+          f"smallest thumbnail {a.min_thumb_in:.2f} in, smallest band image "
+          f"{a.min_band_in:.3f} in; rows {[r.image_index for r in report.rows]}; "
+          f"{report.selection}")
+    for line in report.anchor_checks:
+        print(f"  anchor: {line}")
     for name, digest in report.sha256().items():
         print(f"  {name}  {digest}")
     return EXIT_OK

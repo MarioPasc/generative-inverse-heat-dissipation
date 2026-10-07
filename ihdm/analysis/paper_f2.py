@@ -1,11 +1,15 @@
-"""F2 (the four arms on brain MRI) and T1 (the main table) of the course paper (T8.2).
+"""F2 (the paper's results figure) and T1 (the main table) of the course paper (T8.2, T8.8).
 
 F2 has three panels: (a) samples of the four IXI arms from the same seed images and the same
-sampling noise (common random numbers, asserted), (b) per-sample realism (precision against R⁻)
-against copying (seed-NN fraction), with the held-out-seed strip of T7.5, and (c) the per-octave
-spectral error. T1 is the compact main table. Every number is read from a file at build time; the
-expected seed means of the ticket are asserted, and a failed assertion raises
-:class:`PaperF2Error`.
+sampling noise (common random numbers, asserted); (b) fidelity against diversity (precision
+against recall, both against R⁻, for training seeds F and unseen seeds H; the numbers of
+:mod:`ihdm.analysis.paper_f3`) above a post hoc distance plot (each sample's distance to its own
+seed and to the training set, in units of M's denominator; :mod:`ihdm.analysis.seed_distance`);
+and (c) the per-octave spectral error with one band-pass image of the reference slice per
+octave. (a) sits above (c) in a left column; (b)'s two plots fill a right column of full height.
+T1 is the compact main table. Every number is read from a file at build time; the
+expected seed means of the tickets and the M / seed-NN anchor are asserted, and a failed assertion
+raises :class:`PaperF2Error`.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ import tarfile
 import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -29,19 +34,30 @@ from ihdm.analysis.tables import AnalysisError
 
 __all__ = [
     "ARM_LABELS",
+    "LAYOUT",
     "PAPER_WIDTH_IN",
+    "BandImages",
     "CRNError",
+    "DistanceData",
     "Expectations",
+    "F2Layout",
     "F2Paths",
     "MissingInputError",
     "PaperF2Error",
     "RowChoice",
     "SampleSet",
     "SelectionError",
+    "assert_anchor",
     "assert_crn",
+    "band_decomposition",
     "build",
+    "caption_words",
     "foreground_fraction",
+    "head_crop",
     "kept_variance",
+    "load_band_images",
+    "load_distances",
+    "load_fidelity_diversity",
     "merge_heldout",
     "prior_state",
     "run_a2_heldout",
@@ -57,10 +73,14 @@ logger = logging.getLogger(__name__)
 PAPER_WIDTH_IN: float = 5.5
 ARM_LABELS: dict[str, str] = {"A0": "default", "A1": "+prior", "A2": "+spacing", "A3": "matched"}
 
-FIG_HEIGHT_IN: float = 3.1
-MAX_HEIGHT_IN: float = 3.1
+FIG_HEIGHT_IN: float = 3.53
+MAX_HEIGHT_IN: float = 4.8
 MIN_FONT_PT: float = 7.0
-MIN_THUMB_IN: float = 0.45
+#: Relaxed for the two-column layout (main, 2026-10-07; were 0.45 and 0.40 in).
+MIN_THUMB_IN: float = 0.40
+MIN_BAND_IN: float = 0.34
+#: The left column ((a) above (c)) takes at most this share of the width.
+MAX_LEFT_FRACTION: float = 0.65
 PNG_DPI: int = 300
 PDF_DPI: int = 300
 SVG_HASHSALT: str = "ihdm-t8.2"
@@ -93,10 +113,6 @@ LSD_OCTAVES: tuple[str, ...] = ("0.5-1", "1-2", "2-4", "4-8", "8-16", "16-32", "
 OCTAVE_EDGES: tuple[tuple[float, float], ...] = (
     (0.5, 1.0), (1.0, 2.0), (2.0, 4.0), (4.0, 8.0), (8.0, 16.0), (16.0, 32.0), (32.0, 64.0),
     (64.0, 96.0),
-)
-ANATOMY_BANDS: tuple[tuple[str, float, float], ...] = (
-    ("head outline", 0.5, 2.0),
-    ("ventricles, WM ring", 2.0, 4.0),
 )
 
 
@@ -155,6 +171,15 @@ class Expectations:
         Arms whose 1–2 and 2–4 c/img means must be within ``near_zero_tol`` of 0.
     near_zero_tol : float
         Bound of "about 0".
+    pr : dict | None
+        Panel (b) seed means ``{(dataset, arm): (precision F, recall F, precision H, recall H)}``;
+        ``None`` asserts the expectation table of :mod:`ihdm.analysis.paper_f3` (T8.5).
+    anchor_runs : tuple[str, ...]
+        Runs whose recomputed ``M`` and seed-NN fraction must equal ``index.csv``.
+    anchor_tol : float
+        Absolute tolerance of that anchor.
+    band_image : int | None
+        Dataset index the reference slice of panel (c) must have (``None``: not asserted).
     """
 
     rows: tuple[int, ...] = (3311, 2488, 5)
@@ -170,6 +195,10 @@ class Expectations:
     spectrum_tol: float = 1e-2
     near_zero_arms: tuple[str, ...] = ("A1", "A3")
     near_zero_tol: float = 0.05
+    pr: dict[tuple[str, str], tuple[float, float, float, float]] | None = None
+    anchor_runs: tuple[str, ...] = ("ixi_A0_s1", "ixi_A3_s1")
+    anchor_tol: float = 5e-3
+    band_image: int | None = 3705
 
 
 # --------------------------------------------------------------------------------------------
@@ -759,6 +788,294 @@ def assert_spectrum_means(profiles: Mapping[str, np.ndarray], expect: Expectatio
 
 
 # --------------------------------------------------------------------------------------------
+# Panel (b), top: precision and recall against R⁻ (the loaders and table of paper_f3)
+# --------------------------------------------------------------------------------------------
+
+Cell = tuple[str, str]
+
+
+def load_fidelity_diversity(index: Sequence[IndexRun], heldout: Mapping[str, Mapping[str, Any]],
+                            expect: Expectations) -> tuple[dict[Cell, Any], list[str]]:
+    """Read precision and recall (F, H against R⁻; H against R5) and assert their seed means.
+
+    Uses :func:`paper_f3.load_pr` and :func:`paper_f3.assert_pr_means` unchanged (imported here:
+    ``paper_f3`` imports this module), with T8.5's expectation table unless ``expect.pr`` is set.
+
+    Returns
+    -------
+    tuple[dict, list[str]]
+        ``{(dataset, arm): paper_f3.PRCell}`` and the check lines.
+
+    Raises
+    ------
+    MissingInputError
+        If a run is absent from ``index.csv`` or from every held-out JSON.
+    PaperF2Error
+        If a seed mean differs from its expectation.
+    """
+    from ihdm.analysis import paper_f3 as f3
+
+    table = f3.F3Expectations() if expect.pr is None else f3.F3Expectations(pr=dict(expect.pr))
+    try:
+        pr = f3.load_pr(index, heldout)
+        return pr, f3.assert_pr_means(pr, table)
+    except f3.F3MissingInputError as error:
+        raise MissingInputError(str(error)) from error
+    except f3.PaperF3Error as error:
+        raise ExpectationError(str(error)) from error
+
+
+# --------------------------------------------------------------------------------------------
+# Panel (b), bottom: distance to the own seed and to the training set (post hoc)
+# --------------------------------------------------------------------------------------------
+
+#: Datasets and arms whose distances are computed (OASIS-1 is reported in F2.md).
+DISTANCE_CELLS: tuple[Cell, ...] = (*(("ixi", a) for a in IXI_ARMS),
+                                    *(("oasis1", a) for a in OASIS_ARMS))
+DATASET_FILES: tuple[str, ...] = ("images.npy", "index.csv", "splits.json", "meta.json")
+
+
+@dataclass(frozen=True)
+class DistanceData:
+    """Everything the distance plot and its notes need.
+
+    Attributes
+    ----------
+    configs : dict[Cell, seed_distance.ConfigDistances]
+        Per configuration: per-run medians, pooled quartiles, recomputed M and seed-NN.
+    d_ref : dict[str, float]
+        :math:`D_{\\text{ref}}` per dataset (pixel units).
+    real_quartiles : dict[str, tuple[float, float]]
+        Per dataset: 25th and 75th percentiles of the R⁻ images' own distance to the training
+        set, in units of :math:`D_{\\text{ref}}` (the grey band; its median is 1).
+    sizes : dict[str, dict[str, int]]
+        Per dataset: ``n_train``, ``n_r_minus`` and ``n_train_subjects``.
+    stored_d_ref : dict[str, float | None]
+        Per dataset: ``d_heldout_median`` of the first anchor run's ``final.json``, if present.
+    """
+
+    configs: dict[Cell, Any]
+    d_ref: dict[str, float]
+    real_quartiles: dict[str, tuple[float, float]]
+    sizes: dict[str, dict[str, int]]
+    stored_d_ref: dict[str, float | None]
+
+
+def _read_dataset(data_root: Path, dataset: str) -> tuple[Any, Any, dict[str, Any]]:
+    from ihdm.data.format import DataFormatError, read_dataset
+
+    try:
+        images, frame, splits, _ = read_dataset(Path(data_root) / dataset)
+    except DataFormatError as error:
+        raise MissingInputError(str(error)) from error
+    return images, frame, splits
+
+
+def _stored_d_ref(results: Path, run_id: str) -> float | None:
+    path = Path(results) / "runs" / run_id / "final.json"
+    if not path.is_file():
+        return None
+    value = json.loads(path.read_text()).get("d_heldout_median")
+    return None if value is None else float(value)
+
+
+def load_distances(paths: F2Paths, index: Sequence[IndexRun],
+                   references: Mapping[str, Mapping[str, Any]]) -> DistanceData:
+    """Compute (or read from the scratch cache) the seed distances of every run.
+
+    R⁻ is rebuilt from the dataset with :func:`heldout_fidelity.select_references` and must have
+    the sha256 the held-out JSONs record; the stored seeds of both sets must equal the dataset
+    images.
+
+    Raises
+    ------
+    MissingInputError
+        If a dataset file or a tar is absent.
+    PaperF2Error
+        If R⁻ differs from the held-out JSONs' or a seed differs from the dataset.
+    """
+    from ihdm.analysis import seed_distance as sd
+    from ihdm.analysis.heldout_fidelity import index_sha256 as ref_sha256
+    from ihdm.analysis.heldout_fidelity import select_references
+
+    configs: dict[Cell, Any] = {}
+    d_ref: dict[str, float] = {}
+    real_q: dict[str, tuple[float, float]] = {}
+    sizes: dict[str, dict[str, int]] = {}
+    stored: dict[str, float | None] = {}
+    cache = Path(paths.work) / "seed_distance"
+    for dataset in dict.fromkeys(d for d, _ in DISTANCE_CELLS):
+        images, frame, splits = _read_dataset(paths.data_root, dataset)
+        refs = select_references(frame, splits, dataset)
+        expected = references.get(dataset, {}).get("r_minus_idx_sha256")
+        if ref_sha256(refs.r_minus_idx) != expected:
+            raise PaperF2Error(f"{dataset}: R⁻ rebuilt from the dataset (sha256 "
+                               f"{ref_sha256(refs.r_minus_idx)[:12]}…) differs from the "
+                               f"held-out JSONs' ({str(expected)[:12]}…)")
+        train_idx = np.sort(np.asarray(splits["train"], dtype=np.int64))
+        train = np.asarray(images[train_idx])
+        subjects = frame["subject"].astype(str).to_numpy()[train_idx]
+        d_real = sd.reference_distances(np.asarray(images[refs.r_minus_idx]), train)
+        d_ref[dataset] = float(np.median(d_real))
+        q_real = np.asarray(d_real, dtype=np.float64) / d_ref[dataset]
+        real_q[dataset] = (float(np.percentile(q_real, 25.0)), float(np.percentile(q_real, 75.0)))
+        sizes[dataset] = {"n_train": int(train_idx.size), "n_r_minus": int(refs.r_minus_idx.size),
+                          "n_train_subjects": len(set(subjects.tolist()))}
+        stored[dataset] = None
+        for arm in (a for d, a in DISTANCE_CELLS if d == dataset):
+            runs = []
+            for run in runs_of(index, dataset, arm):
+                folder = extract_run(paths.eval_dir, run.run_id, paths.work)
+                final = load_sample_set(folder / "final", "final")
+                held = load_sample_set(folder / "heldout", "heldout")
+                assert_seeds_match(final, images, f"{run.run_id}/final")
+                assert_seeds_match(held, images, f"{run.run_id}/heldout")
+                rows = np.searchsorted(train_idx, final.seed_idx)
+                if rows.max() >= train_idx.size or not np.array_equal(train_idx[rows],
+                                                                       final.seed_idx):
+                    raise PaperF2Error(f"{run.run_id}: final seeds are not training images")
+                if stored[dataset] is None:
+                    stored[dataset] = _stored_d_ref(paths.results, run.run_id)
+                runs.append(sd.load_or_compute(cache, run.run_id, final.samples, rows,
+                                               held.samples, held.seeds, train, train_idx,
+                                               subjects, d_ref[dataset]))
+            configs[(dataset, arm)] = sd.config_distances(dataset, arm, runs)
+        logger.info("%s: D_ref %.4f over %d R⁻ images", dataset, d_ref[dataset],
+                    refs.r_minus_idx.size)
+    return DistanceData(configs, d_ref, real_q, sizes, stored)
+
+
+def assert_anchor(distances: DistanceData, index: Sequence[IndexRun],
+                  expect: Expectations) -> list[str]:
+    """Assert that the recomputed ``M`` and seed-NN equal ``index.csv``; return the check lines.
+
+    The runs of ``expect.anchor_runs`` are required; every other computed run is checked too.
+
+    Raises
+    ------
+    ExpectationError
+        If a value differs by more than ``expect.anchor_tol`` or an anchor run is missing.
+    """
+    by_id = {r.run_id: r for r in index}
+    failures: list[str] = []
+    lines: list[str] = []
+    seen = set()
+    for config in distances.configs.values():
+        for i, rid in enumerate(config.run_ids):
+            seen.add(rid)
+            for name, value, key in (("M", config.m_ratio[i], "M"),
+                                     ("seed-NN", config.seed_nn[i], "seed_nn_fraction")):
+                stored = by_id[rid].value(key)
+                ok = abs(float(value) - stored) <= expect.anchor_tol
+                if rid in expect.anchor_runs or not ok:
+                    lines.append(f"{name} {rid}: recomputed {value:.4f}, index.csv {stored:.4f} "
+                                 f"(± {expect.anchor_tol:g}) {'ok' if ok else 'FAIL'}")
+                if not ok:
+                    failures.append(f"{name} {rid} = {value:.5f}, index.csv {stored}")
+    missing = [r for r in expect.anchor_runs if r not in seen]
+    if missing:
+        failures.append(f"anchor runs not computed: {missing}")
+    others = sorted(seen - set(expect.anchor_runs))
+    lines.append(f"the other {len(others)} runs also match index.csv within "
+                 f"{expect.anchor_tol:g} (M and seed-NN)")
+    if failures:
+        raise ExpectationError("distance anchor: " + "; ".join(failures))
+    return lines
+
+
+# --------------------------------------------------------------------------------------------
+# Panel (c): band-pass images of the reference slice
+# --------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BandImages:
+    """One band-pass image per octave of the reference slice, and how they were made.
+
+    Attributes
+    ----------
+    image_index : int
+        Dataset index of the slice.
+    bands : tuple[numpy.ndarray, ...]
+        Eight ``(W, W)`` images, coarsest first (the inverse DCT of each octave's modes).
+    crop : tuple[int, int, int, int]
+        Common square window ``(row0, row1, col0, col1)`` around the head, half-open.
+    """
+
+    image_index: int
+    bands: tuple[np.ndarray, ...]
+    crop: tuple[int, int, int, int]
+
+
+def band_decomposition(image: np.ndarray) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+    """Split an image into its eight octave band-pass images, its DC and its corner modes.
+
+    Each band is the inverse orthonormal DCT of the image's coefficients restricted to one
+    octave of :func:`paper_fm.octave_masks` (``[c, 2c)``; the last closed at 96 c/img). The
+    eight bands, the DC image and the corner image (modes above 96 c/img) sum to the image.
+
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Square image ``(W, W)``.
+
+    Returns
+    -------
+    tuple[list[numpy.ndarray], numpy.ndarray, numpy.ndarray]
+        The eight bands (coarsest first), the DC image and the corner image, ``float64``.
+    """
+    from ihdm.analysis.paper_fm import dct_weights, mode_cycles, octave_masks, synthesise
+
+    weights = dct_weights(image)
+    width = int(weights.shape[0])
+    masks = octave_masks(width)
+    dc = mode_cycles(width) == 0.0
+    corner = ~(dc | np.logical_or.reduce(masks))
+
+    def part(mask: np.ndarray) -> np.ndarray:
+        return synthesise(np.where(mask, weights, 0.0))
+
+    return [part(m) for m in masks], part(dc), part(corner)
+
+
+def head_crop(image: np.ndarray, level: float = EMPTY_LEVEL) -> tuple[int, int, int, int]:
+    """Return the smallest square window, centred on the head, holding every pixel above
+    ``level`` (clipped to the image): ``(row0, row1, col0, col1)``, half-open."""
+    mask = np.asarray(image) > level
+    if not mask.any():
+        return 0, image.shape[0], 0, image.shape[1]
+    rows, cols = np.flatnonzero(mask.any(axis=1)), np.flatnonzero(mask.any(axis=0))
+    side = int(max(rows[-1] - rows[0], cols[-1] - cols[0]) + 1)
+    out = []
+    for lo, hi, size in ((rows[0], rows[-1], image.shape[0]), (cols[0], cols[-1], image.shape[1])):
+        start = int((lo + hi + 1 - side) // 2)
+        start = min(max(start, 0), size - side)
+        out += [start, start + side]
+    return out[0], out[1], out[2], out[3]
+
+
+def load_band_images(data_root: Path, expect: Expectations) -> BandImages:
+    """Band-pass images of the F1/FM reference slice (``reference_example`` at rng 2026).
+
+    Raises
+    ------
+    SelectionError
+        If the slice is not the expected dataset image.
+    """
+    from ihdm.analysis.paper_f1 import DEFAULT_RULES
+    from ihdm.spectral.profile import reference_example
+
+    image, image_index = reference_example(Path(data_root), "ixi",
+                                           np.random.default_rng(DEFAULT_RULES.example_rng_seed))
+    if expect.band_image is not None and int(image_index) != expect.band_image:
+        raise SelectionError(f"reference slice is image {image_index}, expected "
+                             f"{expect.band_image}")
+    image = np.asarray(image, dtype=np.float64)
+    bands, _, _ = band_decomposition(image)
+    return BandImages(int(image_index), tuple(bands), head_crop(image))
+
+
+# --------------------------------------------------------------------------------------------
 # T1: the main table
 # --------------------------------------------------------------------------------------------
 
@@ -916,7 +1233,7 @@ def render_t1_md(rows: Sequence[T1Row]) -> str:
 
 #: Panel (a) columns: (key, header). Prior-state keys are ``u:<prior>``.
 COLUMNS: tuple[tuple[str, str], ...] = (
-    ("seed", "seed"),
+    ("seed", "Seed"),
     ("u:default", r"$u(96)$"), ("A0", "default"), ("A2", "+spacing"),
     ("u:matched", r"$u(24)$"), ("A1", "+prior"), ("A3", "matched"),
 )
@@ -924,8 +1241,17 @@ GROUPS: tuple[tuple[str, int, int], ...] = (
     ("default prior (W/2)", 1, 3),
     ("matched prior (W/8)", 4, 6),
 )
+#: Row headers of panel (a) (Title Case); the row labels of :class:`RowChoice` stay lowercase.
+ROW_HEADERS: dict[str, str] = {"train 1": "Train 1", "train 2": "Train 2", "unseen": "Unseen"}
 OASIS_GREY: str = "#8a8780"
 PRIOR_FILL: str = "#e4e1da"
+#: Grey band of the distance plot: where real R⁻ images sit (interquartile range).
+REAL_BAND: str = "#e4e1da"
+#: Panel (b) markers: dataset by shape (never colour), sample set by fill.
+DATASET_MARKERS: dict[str, str] = {"ixi": "o", "oasis1": "s"}
+#: Panel (c): the y-axis goes down to -1; the band-pass images fill [-1, STRIP_TOP].
+SPEC_YMIN: float = -1.0
+STRIP_TOP: float = -0.55
 
 _PAPER_RC: dict[str, object] = {
     "font.size": 7.0,
@@ -954,21 +1280,30 @@ class F2Data:
     """Everything F2 draws; built from files by :func:`build` or synthetically by tests."""
 
     panel_a: PanelA
-    ixi: dict[str, ArmPoints]
-    oasis: dict[str, ArmPoints]
+    pr: dict[Cell, Any]
+    distances: DistanceData
     profiles: dict[str, np.ndarray]
+    bands: BandImages
     width_px: int = 192
 
 
 @dataclass(frozen=True)
 class LayoutAudit:
-    """Measured legibility of the drawn figure."""
+    """Measured legibility of the drawn figure.
+
+    ``min_band_in`` and ``overlaps`` default to "nothing measured", so that figures without band
+    images (F3 reuses :func:`audit_layout`) are unaffected.
+    """
 
     width_in: float
     height_in: float
     min_font_pt: float
     min_thumb_in: float
     n_texts: int
+    min_band_in: float = float("inf")
+    overlaps: tuple[str, ...] = ()
+    left_fraction: float = 0.0
+    band_aspect: float = 0.0
 
     def problems(self) -> list[str]:
         out = []
@@ -978,39 +1313,93 @@ class LayoutAudit:
             out.append(f"height {self.height_in} in > {MAX_HEIGHT_IN}")
         if self.min_font_pt < MIN_FONT_PT:
             out.append(f"smallest font {self.min_font_pt} pt < {MIN_FONT_PT}")
-        if self.min_thumb_in < MIN_THUMB_IN:
+        if self.min_thumb_in < MIN_THUMB_IN - 1e-9:
             out.append(f"smallest thumbnail {self.min_thumb_in:.3f} in < {MIN_THUMB_IN}")
+        if self.min_band_in < MIN_BAND_IN - 1e-9:
+            out.append(f"smallest band image {self.min_band_in:.3f} in < {MIN_BAND_IN}")
+        if self.left_fraction > MAX_LEFT_FRACTION + 1e-9:
+            out.append(f"left column {self.left_fraction:.1%} of the width > "
+                       f"{MAX_LEFT_FRACTION:.0%}")
+        if self.band_aspect > 0.01:
+            out.append(f"band images not square (|w/h - 1| up to {self.band_aspect:.3f})")
+        if self.overlaps:
+            out.append("overlapping texts: " + "; ".join(self.overlaps))
         return out
 
 
-# Layout in inches (origin bottom-left).
-THUMB_IN: float = 0.46
-THUMB_GAP: float = 0.03
-GROUP_GAP: float = 0.10
-THUMB_X0: float = 0.24
-THUMB_TOP: float = FIG_HEIGHT_IN - 0.34
-BOTTOM_Y: float = 0.36
-BOTTOM_H: float = 0.72
+Box = tuple[float, float, float, float]
 
 
-def _column_x(j: int) -> float:
-    x = THUMB_X0 + j * (THUMB_IN + THUMB_GAP)
-    if j >= 1:
-        x += GROUP_GAP - THUMB_GAP
-    if j >= 4:
-        x += GROUP_GAP - THUMB_GAP
-    return x
+@dataclass(frozen=True)
+class F2Layout:
+    """Positions of F2 in inches (origin bottom-left): a frozen value, so variants are cheap.
+
+    Attributes
+    ----------
+    height : float
+        Figure height.
+    thumb, thumb_gap, group_gap : float
+        Panel (a) thumbnail side, gap between thumbnails, gap between column groups.
+    thumb_x0 : float
+        Left edge of the first thumbnail column.
+    header : float
+        Height of panel (a)'s header block (group names, rules, column names) above the
+        thumbnails.
+    pr, dist, spec : Box
+        ``(x, y, w, h)`` of the precision–recall axes, the distance axes and the spectrum axes.
+    b_label, pr_title, dist_title : tuple[float, float]
+        Left edge and centre height of the "(b)" label and of the two panel (b) titles.
+    c_title_y : float
+        Centre height of the panel (c) title row.
+    shade_key, size_key : tuple[float, float]
+        Left edge and centre height of the prior-shading key and of the marker-size key.
+    """
+
+    height: float = FIG_HEIGHT_IN
+    thumb: float = 0.43
+    thumb_gap: float = 0.02
+    group_gap: float = 0.08
+    thumb_x0: float = 0.20
+    header: float = 0.34
+    pr: Box = (3.93, 2.16, 1.52, 1.15)
+    dist: Box = (3.93, 0.50, 1.52, 1.16)
+    spec: Box = (0.47, 0.55, 2.98, 1.10)
+    b_label: tuple[float, float] = (3.55, FIG_HEIGHT_IN - 0.10)
+    pr_title: tuple[float, float] = (3.79, FIG_HEIGHT_IN - 0.10)
+    dist_title: tuple[float, float] = (3.55, 1.76)
+    c_title_y: float = 1.75
+    shade_key: tuple[float, float] = (0.47, 0.09)
+    size_key: tuple[float, float] = (3.55, 0.09)
+
+    @property
+    def thumb_top(self) -> float:
+        return self.height - self.header
+
+    def column_x(self, j: int) -> float:
+        """Left edge of panel (a) column ``j`` (two group gaps, after columns 0 and 3)."""
+        x = self.thumb_x0 + j * (self.thumb + self.thumb_gap)
+        if j >= 1:
+            x += self.group_gap - self.thumb_gap
+        if j >= 4:
+            x += self.group_gap - self.thumb_gap
+        return x
+
+
+#: The layout of the paper figure (Mario, 2026-10-07): (a) above (c) in a left column, (b)'s two
+#: plots stacked in a right column of full height. Earlier layouts are in the T8.8 log.
+LAYOUT: F2Layout = F2Layout()
 
 
 def _axes(fig: Any, x: float, y: float, w: float, h: float, gid: str, **kw: Any) -> Any:
-    ax = fig.add_axes((x / PAPER_WIDTH_IN, y / FIG_HEIGHT_IN, w / PAPER_WIDTH_IN,
-                       h / FIG_HEIGHT_IN), **kw)
+    fw, fh = (float(v) for v in fig.get_size_inches())
+    ax = fig.add_axes((x / fw, y / fh, w / fw, h / fh), **kw)
     ax.set_gid(gid)
     return ax
 
 
 def _fig_text(fig: Any, x: float, y: float, text: str, gid: str, **kw: Any) -> Any:
-    artist = fig.text(x / PAPER_WIDTH_IN, y / FIG_HEIGHT_IN, text, **kw)
+    fw, fh = (float(v) for v in fig.get_size_inches())
+    artist = fig.text(x / fw, y / fh, text, **kw)
     artist.set_gid(gid)
     return artist
 
@@ -1018,202 +1407,265 @@ def _fig_text(fig: Any, x: float, y: float, text: str, gid: str, **kw: Any) -> A
 def _fig_line(fig: Any, xs: Sequence[float], ys: Sequence[float], gid: str, **kw: Any) -> None:
     from matplotlib.lines import Line2D
 
-    line = Line2D([x / PAPER_WIDTH_IN for x in xs], [y / FIG_HEIGHT_IN for y in ys],
-                  transform=fig.transFigure, **kw)
+    fw, fh = (float(v) for v in fig.get_size_inches())
+    line = Line2D([x / fw for x in xs], [y / fh for y in ys], transform=fig.transFigure, **kw)
     line.set_gid(gid)
     fig.add_artist(line)
 
 
-def _draw_panel_a(fig: Any, panel: PanelA) -> None:
+def _draw_panel_a(fig: Any, panel: PanelA, lay: F2Layout) -> None:
     from ihdm.analysis.style import INK, MUTED, arm_style
 
-    _fig_text(fig, 0.02, FIG_HEIGHT_IN - 0.10, "(a)", "a_label", fontsize=8, fontweight="bold",
+    top, size = lay.height, lay.thumb
+    _fig_text(fig, 0.02, top - 0.10, "(a)", "a_label", fontsize=8, fontweight="bold",
               va="center", ha="left")
     for name, j0, j1 in GROUPS:
-        x0, x1 = _column_x(j0), _column_x(j1) + THUMB_IN
-        _fig_text(fig, (x0 + x1) / 2, FIG_HEIGHT_IN - 0.10, name, f"a_group_{j0}",
+        x0, x1 = lay.column_x(j0), lay.column_x(j1) + size
+        _fig_text(fig, (x0 + x1) / 2, top - 0.10, name, f"a_group_{j0}",
                   fontsize=7.5, ha="center", va="center", color=INK)
-        _fig_line(fig, [x0, x1], [FIG_HEIGHT_IN - 0.17] * 2, f"a_group_rule_{j0}",
-                  color=MUTED, lw=0.6)
+        _fig_line(fig, [x0, x1], [top - 0.17] * 2, f"a_group_rule_{j0}", color=MUTED, lw=0.6)
     for j, (key, header) in enumerate(COLUMNS):
-        xc = _column_x(j) + THUMB_IN / 2
+        xc = lay.column_x(j) + size / 2
         gid_key = key.replace(":", "_")
-        _fig_text(fig, xc, FIG_HEIGHT_IN - 0.255, header, f"a_header_{gid_key}", fontsize=7,
+        _fig_text(fig, xc, top - 0.255, header, f"a_header_{gid_key}", fontsize=7,
                   ha="center", va="center", color=INK)
         if key in ARM_LABELS:
-            _fig_line(fig, [_column_x(j) + 0.06, _column_x(j) + THUMB_IN - 0.06],
-                      [THUMB_TOP + 0.025] * 2, f"a_header_bar_{key}",
+            _fig_line(fig, [lay.column_x(j) + 0.06, lay.column_x(j) + size - 0.06],
+                      [lay.thumb_top + 0.025] * 2, f"a_header_bar_{key}",
                       color=arm_style(key).color, lw=1.6, solid_capstyle="butt")
     for r, row in enumerate(panel.rows):
-        y = THUMB_TOP - (r + 1) * THUMB_IN - r * THUMB_GAP
-        _fig_text(fig, THUMB_X0 - 0.06, y + THUMB_IN / 2, row.label, f"a_row_{r}", fontsize=7,
-                  rotation=90, ha="center", va="center", color=INK)
+        y = lay.thumb_top - (r + 1) * size - r * lay.thumb_gap
+        _fig_text(fig, lay.thumb_x0 - 0.06, y + size / 2, ROW_HEADERS.get(row.label, row.label),
+                  f"a_row_{r}", fontsize=7, rotation=90, ha="center", va="center", color=INK)
         for j, (key, _) in enumerate(COLUMNS):
             gid = f"a_thumb_r{r}_{key.replace(':', '_')}"
-            ax = _axes(fig, _column_x(j), y, THUMB_IN, THUMB_IN, gid)
+            ax = _axes(fig, lay.column_x(j), y, size, size, gid)
             ax.imshow(np.clip(panel.images[(r, key)], 0.0, 1.0), cmap="gray", vmin=0.0,
                       vmax=1.0, interpolation="none", resample=False)
             ax.set_axis_off()
 
 
-def _draw_key(fig: Any) -> None:
-    """The 2 × 2 configuration key (prior × spacing) that serves panels (b) and (c)."""
-    from ihdm.analysis.style import INK, MUTED, arm_style
-
-    ax = _axes(fig, 3.97, 1.46, 1.46, FIG_HEIGHT_IN - 1.52, "key")
-    ax.set_axis_off()
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.text(0.0, 0.97, "configurations", fontsize=7.5, va="top", ha="left", color=INK,
-            gid="key_title")
-    ax.text(0.62, 0.84, "spacing", fontsize=7, ha="center", va="center", color=MUTED,
-            gid="key_spacing")
-    ax.text(0.0, 0.72, "prior", fontsize=7, ha="left", va="center", color=MUTED,
-            gid="key_prior")
-    ax.text(0.37, 0.72, "log", fontsize=7, ha="center", va="center", color=MUTED,
-            gid="key_col_log")
-    ax.text(0.80, 0.72, "IXI-matched", fontsize=7, ha="center", va="center", color=MUTED,
-            gid="key_col_matched")
-    cells = (("W/2", 0.58, ("A0", "A2")), ("W/8", 0.44, ("A1", "A3")))
-    for prior, y, arms in cells:
-        ax.text(0.0, y, prior, fontsize=7, ha="left", va="center", color=MUTED,
-                gid=f"key_row_{prior.replace('/', '')}")
-        for x, arm in zip((0.24, 0.62), arms, strict=True):
-            style = arm_style(arm)
-            ax.plot([x], [y], marker=style.marker, color=style.color, ms=5, ls="none",
-                    gid=f"key_marker_{arm}")
-            ax.text(x + 0.05, y, ARM_LABELS[arm], fontsize=7, ha="left", va="center",
-                    color=INK, gid=f"key_label_{arm}")
-    oasis = ax.annotate("", xy=(0.17, 0.25), xytext=(0.0, 0.25),
+def _arrow(ax: Any, start: tuple[float, float], end: tuple[float, float], gid: str,
+           color: str, shrink: float = 3.5) -> None:
+    arrow = ax.annotate("", xy=end, xytext=start,
                         arrowprops={"arrowstyle": "-|>", "lw": 0.9, "mutation_scale": 6,
-                                    "color": OASIS_GREY, "shrinkA": 0, "shrinkB": 0})
-    oasis.arrow_patch.set_gid("key_oasis_arrow")
-    ax.text(0.22, 0.25, "OASIS-1 cohort", fontsize=7, ha="left", va="center", color=INK,
-            gid="key_oasis")
-    ax.plot([0.03], [0.11], marker="o", color=MUTED, ms=2.6, ls="none", alpha=0.7,
-            gid="key_run_marker")
-    ax.plot([0.12], [0.11], marker="o", color=MUTED, ms=5.5, ls="none", gid="key_mean_marker")
-    ax.text(0.22, 0.11, "run · seed mean", fontsize=7, ha="left", va="center", color=INK,
-            gid="key_sizes")
+                                    "color": color, "shrinkA": shrink, "shrinkB": shrink},
+                        zorder=3)
+    arrow.arrow_patch.set_gid(gid)
 
 
-def _draw_panel_b(fig: Any, data: F2Data) -> tuple[Any, Any]:
+#: Panel (b), top: configuration labels at the F means, ``arm: (dx, dy, ha, va)`` in points.
+#: Empty in the two-column layout: the 1.5 in scatter has no free room next to its F cluster,
+#: and the coloured column headers of (a), on the same row, are the configuration key.
+PR_LABELS: dict[str, tuple[float, float, str, str]] = {}
+#: Labels drawn with a leader line to their mean.
+PR_LEADERS: tuple[str, ...] = ()
+#: Room below the lowest precision (in precision units) for the two-line fill key.
+PR_FOOT: float = 0.12
+
+
+def _draw_pr(fig: Any, data: F2Data, lay: F2Layout) -> Any:
+    """Panel (b), top: precision against recall, F filled and H hollow (T8.5's panel (a))."""
     from ihdm.analysis.style import INK, MUTED, arm_style
 
-    strip = _axes(fig, 0.42, BOTTOM_Y, 0.46, BOTTOM_H, "b_strip")
-    plane = _axes(fig, 0.97, BOTTOM_Y, 1.86, BOTTOM_H, "b_plane", sharey=strip)
-    _fig_text(fig, 0.02, BOTTOM_Y + BOTTOM_H + 0.12, "(b)", "b_label", fontsize=8,
-              fontweight="bold", va="center", ha="left")
-    _fig_text(fig, 0.26, BOTTOM_Y + BOTTOM_H + 0.12, "realism vs copying", "b_title",
-              fontsize=7.5, va="center", ha="left", color=INK)
+    ax = _axes(fig, *lay.pr, "b_pr")
+    for (dataset, arm), pts in data.pr.items():
+        color, marker, gid = arm_style(arm).color, DATASET_MARKERS[dataset], f"{dataset}_{arm}"
+        if dataset == "ixi":
+            ax.plot(pts.recall_f, pts.precision_f, ls="none", marker=marker, color=color,
+                    ms=2.4, alpha=0.6, mew=0, gid=f"b_pr_runs_F_{gid}", zorder=2)
+            ax.plot(pts.recall_h, pts.precision_h, ls="none", marker=marker, mfc="white",
+                    mec=color, ms=2.6, mew=0.6, alpha=0.8, gid=f"b_pr_runs_H_{gid}", zorder=2)
+        pf_, rf, ph, rh = pts.mean()
+        ax.plot([rf], [pf_], ls="none", marker=marker, color=color, ms=5.0, mec="white",
+                mew=0.5, gid=f"b_pr_mean_F_{gid}", zorder=4)
+        ax.plot([rh], [ph], ls="none", marker=marker, mfc="white", mec=color, ms=4.8,
+                mew=1.1, gid=f"b_pr_mean_H_{gid}", zorder=4)
+    for dataset, color in (("ixi", INK), ("oasis1", OASIS_GREY)):
+        m0, m3 = data.pr[(dataset, "A0")].mean(), data.pr[(dataset, "A3")].mean()
+        _arrow(ax, (m0[1], m0[0]), (m3[1], m3[0]), f"b_pr_arrow_F_{dataset}", color)
+        _arrow(ax, (m0[3], m0[2]), (m3[3], m3[2]), f"b_pr_arrow_H_{dataset}", color)
+    for arm, (dx, dy, ha, va) in PR_LABELS.items():
+        pf_, rf, _, _ = data.pr[("ixi", arm)].mean()
+        # +prior sits under OASIS-1's default square: a leader line ties it to its own mean.
+        leader = ({"arrowstyle": "-", "lw": 0.5, "color": MUTED, "shrinkA": 0, "shrinkB": 3}
+                  if arm in PR_LEADERS else None)
+        ax.annotate(ARM_LABELS[arm], xy=(rf, pf_), xytext=(dx, dy), textcoords="offset points",
+                    ha=ha, va=va, fontsize=7, color=INK, gid=f"b_pr_label_{arm}",
+                    arrowprops=leader)
+    # OASIS-1 is named once, right of its matched H square (the end of its long H arrow).
+    o3 = data.pr[("oasis1", "A3")].mean()
+    ax.annotate("OASIS-1", xy=(o3[3], o3[2]), xytext=(6, 3), textcoords="offset points",
+                ha="left", va="center", fontsize=7, color=OASIS_GREY, gid="b_pr_label_oasis")
+    # The fill key, stacked in the empty lower-left corner (below every marker).
+    ax.text(0.02, 0.14, "● Training Seeds (F)", transform=ax.transAxes, fontsize=7,
+            ha="left", va="bottom", color=MUTED, gid="b_pr_label_F")
+    ax.text(0.02, 0.02, "○ Unseen Seeds (H)", transform=ax.transAxes, fontsize=7, ha="left",
+            va="bottom", color=MUTED, gid="b_pr_label_H")
 
-    # Unseen-subject strip: precision on H, one column per arm.
-    for k, arm in enumerate(IXI_ARMS):
-        pts, style = data.ixi[arm], arm_style(arm)
-        offsets = (np.arange(pts.n) - (pts.n - 1) / 2) * 0.16
-        strip.plot(k + offsets, pts.precision_h, ls="none", marker=style.marker,
-                   color=style.color, ms=2.6, alpha=0.7, gid=f"b_strip_runs_{arm}")
-        strip.plot([k], [pts.mean()[2]], ls="none", marker=style.marker, color=style.color,
-                   ms=5.5, mec="white", mew=0.5, gid=f"b_strip_mean_{arm}", zorder=3)
-    strip.set_xlim(-0.6, len(IXI_ARMS) - 0.4)
-    strip.set_xticks([])
-    strip.grid(axis="x", visible=False)
-    strip.set_xlabel("unseen\nsubjects\n(cannot copy)", fontsize=7, labelpad=2,
-                     linespacing=1.0)
-    strip.set_ylabel("precision vs R⁻")
-
-    # Main plane: precision on F against seed-NN.
-    for arm in IXI_ARMS:
-        pts, style = data.ixi[arm], arm_style(arm)
-        plane.plot(pts.seed_nn, pts.precision_f, ls="none", marker=style.marker,
-                   color=style.color, ms=2.6, alpha=0.7, gid=f"b_runs_{arm}")
-        x, y, _ = pts.mean()
-        plane.plot([x], [y], ls="none", marker=style.marker, color=style.color, ms=5.5,
-                   mec="white", mew=0.5, zorder=4, gid=f"b_mean_{arm}")
-    means = {arm: data.ixi[arm].mean()[:2] for arm in IXI_ARMS}
-    for target in ("A1", "A2"):
-        arrow = plane.annotate("", xy=means[target], xytext=means["A0"],
-                               arrowprops={"arrowstyle": "-|>", "lw": 0.9, "mutation_scale": 6,
-                                           "color": arm_style(target).color,
-                                           "shrinkA": 3.5, "shrinkB": 3.5}, zorder=3)
-        arrow.arrow_patch.set_gid(f"b_arrow_{target}")
-    for source in ("A1", "A2"):
-        plane.plot([means[source][0], means["A3"][0]], [means[source][1], means["A3"][1]],
-                   color=MUTED, lw=0.5, ls=(0, (2, 1.5)), zorder=2, gid=f"b_close_{source}")
-    mid = (0.25 * means["A0"][0] + 0.75 * means["A1"][0],
-           0.25 * means["A0"][1] + 0.75 * means["A1"][1])
-    plane.annotate("+prior", xy=mid, xytext=(0, -4), textcoords="offset points", ha="center",
-                   va="top", fontsize=7, color=INK, gid="b_label_arrow_prior")
-    # The default -> +spacing arrow is a few points long: its label sits in the free lower
-    # area with a leader line, so that the grey OASIS-1 arrow does not seem to start from it.
-    plane.annotate("+spacing", xy=means["A2"], xytext=(4, -11), textcoords="offset points",
-                   ha="left", va="center", fontsize=7, color=INK, gid="b_label_arrow_spacing",
-                   arrowprops={"arrowstyle": "-", "lw": 0.5, "color": MUTED, "shrinkA": 1,
-                               "shrinkB": 4})
-    plane.annotate("default", xy=means["A0"], xytext=(-6, 0), textcoords="offset points",
-                   ha="right", va="center", fontsize=7, color=INK, gid="b_label_default")
-    plane.annotate("matched", xy=means["A3"], xytext=(0, 6), textcoords="offset points",
-                   ha="center", va="bottom", fontsize=7, color=INK, gid="b_label_matched")
-
-    # OASIS-1: default -> matched, grey.
-    o0, o3 = data.oasis["A0"].mean()[:2], data.oasis["A3"].mean()[:2]
-    arrow = plane.annotate("", xy=o3, xytext=o0,
-                           arrowprops={"arrowstyle": "-|>", "lw": 0.9, "mutation_scale": 6,
-                                       "color": OASIS_GREY, "shrinkA": 2, "shrinkB": 2},
-                           zorder=2)
-    arrow.arrow_patch.set_gid("b_arrow_oasis")
-    plane.annotate("OASIS-1", xy=((o0[0] + o3[0]) / 2, (o0[1] + o3[1]) / 2), xytext=(-2, 4),
-                   textcoords="offset points", ha="right", va="bottom", fontsize=7,
-                   color=OASIS_GREY, gid="b_label_oasis")
-
-    values = np.concatenate([np.concatenate([p.precision_f, p.precision_h])
-                             for p in [*data.ixi.values(), *data.oasis.values()]])
-    strip.set_ylim(float(values.min()) - 0.03, float(values.max()) + 0.03)
-    # Room left of 0 holds the labels of the default/+spacing cluster.
-    plane.set_xlim(-0.19, 0.82)
-    plane.set_xticks([0.0, 0.2, 0.4, 0.6, 0.8])
-    plane.xaxis.set_major_formatter(_percent_formatter())
-    plane.tick_params(axis="y", labelleft=False)
-    plane.set_xlabel("seed-NN fraction (copying)", labelpad=2)
-    return strip, plane
+    # Limits from what is drawn: every IXI run, the OASIS-1 seed means.
+    xs, ys = [], []
+    for (dataset, _), p in data.pr.items():
+        if dataset == "ixi":
+            xs += [p.recall_f, p.recall_h]
+            ys += [p.precision_f, p.precision_h]
+        else:
+            xs.append(np.array(p.mean()[1::2]))
+            ys.append(np.array(p.mean()[0::2]))
+    x_all, y_all = np.concatenate(xs), np.concatenate(ys)
+    ax.set_xlim(max(0.0, float(x_all.min()) - 0.04), float(x_all.max()) + 0.04)
+    ax.set_ylim(float(y_all.min()) - PR_FOOT, float(y_all.max()) + 0.03)
+    ax.set_xlabel("Recall vs R⁻", labelpad=2)
+    ax.set_ylabel("Precision vs R⁻", labelpad=2)
+    ax.tick_params(axis="both", pad=1.5)
+    return ax
 
 
-def _percent_formatter() -> Any:
-    from matplotlib.ticker import FuncFormatter
+def _draw_distance(fig: Any, data: F2Data, lay: F2Layout) -> Any:
+    """Panel (b), bottom: distance to the own seed and to the training set, over D_ref."""
+    from ihdm.analysis.seed_distance import QUANTITIES
+    from ihdm.analysis.style import INK, MUTED, arm_style
 
-    return FuncFormatter(lambda v, _: f"{v * 100:.0f}%")
+    ax = _axes(fig, *lay.dist, "b_dist")
+    lo, hi = data.distances.real_quartiles["ixi"]
+    band = ax.axhspan(lo, hi, color=REAL_BAND, lw=0, zorder=0)
+    band.set_gid("b_dist_real_band")
+    ax.axhline(1.0, color=MUTED, lw=0.6, ls=(0, (2, 1.5)), zorder=1, gid="b_dist_real_line")
+    centres = _distance_columns()
+    offsets = (np.arange(len(IXI_ARMS)) - (len(IXI_ARMS) - 1) / 2) * 0.19
+    values = [lo, hi]
+    for j, name in enumerate(QUANTITIES):
+        hollow = name.startswith("H")
+        for k, arm in enumerate(IXI_ARMS):
+            cfg, color = data.distances.configs[("ixi", arm)], arm_style(arm).color
+            x = centres[j] + offsets[k]
+            q25, q75 = cfg.quartiles[j]
+            values += [q25, q75]
+            ax.plot([x, x], [q25, q75], color=color, lw=0.8, solid_capstyle="butt", zorder=2,
+                    gid=f"b_dist_iqr_{name}_{arm}")
+            ax.plot(np.full(cfg.n, x), cfg.medians[:, j], ls="none", marker="o",
+                    mfc="white" if hollow else color, mec=color, ms=2.4, mew=0.5, alpha=0.8,
+                    zorder=3, gid=f"b_dist_runs_{name}_{arm}")
+            mean = float(cfg.mean()[j])
+            if hollow:
+                ax.plot([x], [mean], ls="none", marker="o", mfc="white", mec=color, ms=4.6,
+                        mew=1.1, zorder=4, gid=f"b_dist_mean_{name}_{arm}")
+            else:
+                ax.plot([x], [mean], ls="none", marker="o", color=color, ms=4.8, mec="white",
+                        mew=0.5, zorder=4, gid=f"b_dist_mean_{name}_{arm}")
+    ax.axvline((centres[1] + centres[2]) / 2, color=MUTED, lw=0.5, zorder=1, gid="b_dist_split")
+    ax.set_xlim(centres[0] - 0.5, centres[-1] + 0.5)
+    ax.set_ylim(min(values) - 0.05, max(values) + 0.05)
+    ax.set_xticks(centres)
+    ax.set_xticklabels(["Seed", "Train", "Seed", "Train"])
+    ax.tick_params(axis="x", length=0, pad=2)
+    ax.tick_params(axis="y", pad=1.5)
+    ax.grid(axis="x", visible=False)
+    for (c0, c1), text, gid in (((centres[0], centres[1]), DIST_GROUPS[0], "F"),
+                                ((centres[2], centres[3]), DIST_GROUPS[1], "H")):
+        ax.annotate(text, xy=((c0 + c1) / 2, 0.0), xycoords=("data", "axes fraction"),
+                    xytext=(0, -12), textcoords="offset points", ha="center", va="top",
+                    fontsize=7, color=INK, gid=f"b_dist_group_{gid}", annotation_clip=False)
+    # The grey band is R⁻ (new real images); its label sits inside it, at the right edge, in
+    # the upper half that no whisker reaches.
+    ax.text(centres[-1] + 0.47, (1.0 + hi) / 2, "R⁻", fontsize=7, ha="right", va="center",
+            color=MUTED, gid="b_dist_real_label")
+    ax.set_ylabel(r"Distance / $D_{\mathrm{ref}}$", labelpad=2)
+    return ax
 
 
-def _draw_panel_c(fig: Any, data: F2Data) -> Any:
-    from matplotlib import transforms
+#: Group labels under the distance plot's columns (the scatter above defines F and H).
+DIST_GROUPS: tuple[str, str] = ("Training (F)", "Unseen (H)")
+
+
+def _distance_columns() -> np.ndarray:
+    """x of the four columns (F seed, F train, H seed, H train), with a gap between F and H."""
+    return np.array([0.0, 1.0, 2.4, 3.4])
+
+
+def _draw_panel_b(fig: Any, data: F2Data, lay: F2Layout) -> tuple[Any, Any]:
+    from ihdm.analysis.style import INK, MUTED
+
+    _fig_text(fig, *lay.b_label, "(b)", "b_label", fontsize=8, fontweight="bold",
+              va="center", ha="left")
+    _fig_text(fig, *lay.pr_title, "Fidelity vs Diversity", "b_title", fontsize=7.5,
+              va="center", ha="left", color=INK)
+    _fig_text(fig, *lay.dist_title, DIST_TITLE, "b_title_dist", fontsize=7.5, va="center",
+              ha="left", color=INK)
+    _fig_text(fig, *lay.size_key, "small: runs · large: seed means", "key_sizes", fontsize=7,
+              va="center", ha="left", color=MUTED)
+    return _draw_pr(fig, data, lay), _draw_distance(fig, data, lay)
+
+
+#: Title of the distance plot (short enough for the right column).
+DIST_TITLE: str = "Distance to Seed, Train (Post Hoc)"
+
+
+def _x_inch(c: float, box: Box) -> float:
+    """Horizontal position (in) of ``c`` c/img on the log2 frequency axis of ``box``."""
+    lo, hi = OCTAVE_EDGES[0][0], OCTAVE_EDGES[-1][1]
+    return box[0] + box[2] * math.log2(c / lo) / math.log2(hi / lo)
+
+
+def _draw_bands(fig: Any, bands: BandImages, lay: F2Layout, ymax: float) -> None:
+    """One band-pass image per octave, inside the strip [-1, STRIP_TOP] of the spectrum axes.
+
+    Every image shows the common head crop and is square: as tall as the strip, or as wide as
+    a full octave when that is smaller (then centred vertically in the strip); it is centred
+    in its octave. An octave narrower than that side (64-96 c/img) shows the centre columns of
+    the crop only. Each image is drawn in its own axes so that its pixels stay square on the
+    log axis, with a symmetric grey map scaled to its own largest |value|.
+    """
+    x0, y0, w, h = lay.spec
+    strip = h * (STRIP_TOP - SPEC_YMIN) / (ymax - SPEC_YMIN)
+    pad = 0.006
+    octave = _x_inch(OCTAVE_EDGES[0][1], lay.spec) - _x_inch(OCTAVE_EDGES[0][0], lay.spec)
+    side = min(strip, octave) - 2 * pad
+    bottom = y0 + (strip - side) / 2
+    r0, r1, c0, c1 = bands.crop
+    for k, ((lo, hi), band) in enumerate(zip(OCTAVE_EDGES, bands.bands, strict=True)):
+        left, right = _x_inch(lo, lay.spec) + pad, _x_inch(hi, lay.spec) - pad
+        width = min(side, right - left)
+        crop = band[r0:r1, c0:c1]
+        if width < side - 1e-9:  # keep the centre columns, at the same pixel scale
+            keep = int(round(crop.shape[1] * width / side))
+            start = (crop.shape[1] - keep) // 2
+            crop = crop[:, start:start + keep]
+            width = side * crop.shape[1] / (r1 - r0)
+        centre = _x_inch(math.sqrt(lo * hi), lay.spec)
+        ax = _axes(fig, centre - width / 2, bottom, width, side, f"c_band_{k}")
+        scale = float(np.max(np.abs(crop))) or 1.0
+        ax.imshow(crop, cmap="gray", vmin=-scale, vmax=scale, interpolation="none",
+                  resample=False, aspect="auto")
+        ax.set_axis_off()
+
+
+def _draw_panel_c(fig: Any, data: F2Data, lay: F2Layout) -> Any:
     from matplotlib.patches import Rectangle
 
     from ihdm.analysis.style import INK, MUTED, arm_style
 
-    ax = _axes(fig, 3.43, BOTTOM_Y, 2.0, BOTTOM_H, "c_spectrum")
-    _fig_text(fig, 3.0, BOTTOM_Y + BOTTOM_H + 0.12, "(c)", "c_label", fontsize=8,
-              fontweight="bold", va="center", ha="left")
-    _fig_text(fig, 3.24, BOTTOM_Y + BOTTOM_H + 0.12, "spectrum, synthetic vs real", "c_title",
+    ax = _axes(fig, *lay.spec, "c_spectrum")
+    _fig_text(fig, 0.02, lay.c_title_y, "(c)", "c_label", fontsize=8, fontweight="bold",
+              va="center", ha="left")
+    _fig_text(fig, 0.26, lay.c_title_y, "Spectrum, Synthetic vs Real", "c_title",
               fontsize=7.5, va="center", ha="left", color=INK)
     ax.set_xscale("log", base=2)
-    ax.set_xlim(0.5, 96.0)
+    ax.set_xlim(OCTAVE_EDGES[0][0], OCTAVE_EDGES[-1][1])
 
     all_values = np.concatenate([p.ravel() for p in data.profiles.values()])
-    low, high = float(all_values.min()), max(float(all_values.max()), 0.0)
-    y0, y1 = low - 0.15, high + 0.2
-    ax.set_ylim(y0, y1)
-    blend = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-    # The fill height is the variance share kept by u(24), drawn as a fraction of the panel.
-    c = np.geomspace(0.5, 96.0, 400)
-    fill = ax.fill_between(c, y0, y0 + (y1 - y0) * kept_variance(
-        c, PRIOR_SIGMA["matched"], data.width_px), color=PRIOR_FILL, lw=0, zorder=0)
+    if float(all_values.min()) <= STRIP_TOP:
+        raise PaperF2Error(f"a spectral value ({float(all_values.min()):+.3f}) reaches the "
+                           f"image strip below {STRIP_TOP}")
+    ymax = max(0.10, float(all_values.max()) + 0.06)
+    ax.set_ylim(SPEC_YMIN, ymax)
+    # The share of each frequency's variance that u(24) keeps, drawn above the image strip
+    # only: from the strip's top edge, as a fraction of the space up to the top of the axes.
+    c = np.geomspace(OCTAVE_EDGES[0][0], OCTAVE_EDGES[-1][1], 400)
+    kept = kept_variance(c, PRIOR_SIGMA["matched"], data.width_px)
+    fill = ax.fill_between(c, STRIP_TOP, STRIP_TOP + (ymax - STRIP_TOP) * kept,
+                           color=PRIOR_FILL, lw=0, zorder=0)
     fill.set_gid("c_prior_fill")
-    swatch = Rectangle((2.35, 0.855), 0.65, 0.09, transform=blend, color=PRIOR_FILL, lw=0)
-    swatch.set_gid("c_prior_swatch")
-    ax.add_patch(swatch)
-    ax.text(3.15, 0.90, "kept by matched prior", transform=blend, fontsize=7,
-            va="center", ha="left", color=MUTED, gid="c_prior_label")
-
     ax.axhline(0.0, color=MUTED, lw=0.7, zorder=1, gid="c_zero")
     ax.text(90.0, 0.0, "real", fontsize=7, ha="right", va="bottom", color=MUTED, gid="c_real")
 
@@ -1226,21 +1678,23 @@ def _draw_panel_c(fig: Any, data: F2Data) -> Any:
                     ms=1.8, alpha=0.55, zorder=2, gid=f"c_runs_{arm}_{i}")
         ax.plot(centres * shift, profile.mean(axis=0), color=style.color, lw=1.0,
                 marker=style.marker, ms=3.0, zorder=3, gid=f"c_mean_{arm}")
-
-    # Head outline above the curves (top band), ventricles below the deficit (bottom band):
-    # side by side the two labels would collide.
-    for i, (label, lo, hi) in enumerate(ANATOMY_BANDS):
-        rule_y, text_y, va = (0.80, 0.83, "bottom") if i == 0 else (0.17, 0.14, "top")
-        ax.plot([lo * 1.04, hi / 1.04], [rule_y, rule_y], transform=blend, color=INK, lw=0.8,
-                solid_capstyle="butt", gid=f"c_band_rule_{i}")
-        ax.text(math.sqrt(lo * hi) if i == 0 else lo * 1.04, text_y, label, transform=blend,
-                fontsize=7, ha="center" if i == 0 else "left", va=va, color=INK,
-                gid=f"c_band_label_{i}")
     ax.set_xticks([0.5, 1, 2, 4, 8, 16, 32, 64])
     ax.xaxis.set_major_formatter(_plain_formatter())
     ax.xaxis.set_minor_locator(_null_locator())
-    ax.set_xlabel("frequency (cycles per image)", labelpad=2)
+    ax.set_yticks([0.0, -0.2, -0.4])
+    ax.set_xlabel("Frequency (Cycles per Image)", labelpad=2)
     ax.set_ylabel(r"$\log_{10} P_{\mathrm{synth}}/P_{\mathrm{real}}$", labelpad=2)
+    _draw_bands(fig, data.bands, lay, ymax)
+
+    # The prior-shading key, in the bottom row under the panel.
+    key_x, key_y = lay.shade_key
+    swatch = Rectangle((key_x / PAPER_WIDTH_IN, (key_y - 0.04) / lay.height),
+                       0.16 / PAPER_WIDTH_IN, 0.08 / lay.height, transform=fig.transFigure,
+                       color=PRIOR_FILL, lw=0)
+    swatch.set_gid("c_prior_swatch")
+    fig.add_artist(swatch)
+    _fig_text(fig, key_x + 0.21, key_y, "variance kept by the matched prior", "c_prior_label",
+              fontsize=7, va="center", ha="left", color=MUTED)
     return ax
 
 
@@ -1256,30 +1710,84 @@ def _null_locator() -> Any:
     return NullLocator()
 
 
-def draw_f2(data: F2Data) -> Any:
-    """Draw F2 at 5.5 × 3.1 in and return the figure (caller saves and closes it)."""
+def draw_f2(data: F2Data, lay: F2Layout = LAYOUT) -> Any:
+    """Draw F2 at 5.5 in × ``lay.height`` and return the figure (caller saves and closes it)."""
     from matplotlib import pyplot as plt
 
-    fig = plt.figure(figsize=(PAPER_WIDTH_IN, FIG_HEIGHT_IN))
-    _draw_panel_a(fig, data.panel_a)
-    _draw_key(fig)
-    _draw_panel_b(fig, data)
-    _draw_panel_c(fig, data)
+    fig = plt.figure(figsize=(PAPER_WIDTH_IN, lay.height))
+    _draw_panel_a(fig, data.panel_a, lay)
+    _draw_panel_b(fig, data, lay)
+    _draw_panel_c(fig, data, lay)
     return fig
 
 
+def _smallest(fig: Any, prefix: str, side: str = "min") -> float:
+    width, height = (float(v) for v in fig.get_size_inches())
+    sizes = []
+    for ax in fig.axes:
+        if (ax.get_gid() or "").startswith(prefix):
+            pos = ax.get_position()
+            w, h = pos.width * width, pos.height * height
+            sizes.append(min(w, h) if side == "min" else h)
+    return min(sizes) if sizes else float("inf")
+
+
 def audit_layout(fig: Any) -> LayoutAudit:
-    """Measure the figure size, the smallest font and the smallest thumbnail."""
+    """Measure the figure size, the smallest font, thumbnail and band image, and text overlaps.
+
+    Overlaps are measured only when the figure has band images (F2); F3 reuses this function
+    for its size and font and runs its own overlap check.
+    """
     from matplotlib.text import Text
 
     fig.canvas.draw()
     texts = [t for t in fig.findobj(Text) if t.get_visible() and t.get_text().strip()]
     width, height = (float(v) for v in fig.get_size_inches())
-    thumbs = [ax for ax in fig.axes if (ax.get_gid() or "").startswith("a_thumb")]
-    sizes = [min(ax.get_position().width * width, ax.get_position().height * height)
-             for ax in thumbs]
+    band = _smallest(fig, "c_band", side="height")
+    overlaps: tuple[str, ...] = ()
+    left, aspect = 0.0, 0.0
+    if band != float("inf"):
+        overlaps = tuple(_text_problems(fig, texts))
+        left = max(ax.get_position().x1 for ax in fig.axes
+                   if (ax.get_gid() or "").startswith(("a_thumb", "c_spectrum")))
+        # Every octave but the narrower 64-96 one holds a full square image.
+        full = [ax.get_position() for ax in fig.axes
+                if (ax.get_gid() or "").startswith("c_band_")
+                and ax.get_gid() != f"c_band_{len(OCTAVE_EDGES) - 1}"]
+        aspect = max((abs(p.width * width / (p.height * height) - 1.0) for p in full),
+                     default=0.0)
     return LayoutAudit(width, height, min(float(t.get_fontsize()) for t in texts),
-                       min(sizes) if sizes else float("inf"), len(texts))
+                       _smallest(fig, "a_thumb"), len(texts), band, overlaps, left, aspect)
+
+
+def _text_problems(fig: Any, texts: Sequence[Any]) -> list[str]:
+    """Pairs of drawn, unrotated texts whose boxes intersect, and texts leaving the figure.
+
+    As :func:`paper_f3.text_overlaps`, but on the box of the text alone: an annotation's own
+    box also holds its leader line, which would flag a label as overlapping whatever its leader
+    passes.
+    """
+    from matplotlib.text import Text
+
+    from ihdm.analysis.paper_f3 import _undrawn_tick_labels
+
+    renderer = fig.canvas.get_renderer()
+    hidden = _undrawn_tick_labels(fig)
+    boxes = []
+    for t in texts:
+        if id(t) in hidden:
+            continue
+        box = Text.get_window_extent(t, renderer)
+        if box.width > 1.0 and box.height > 1.0:
+            boxes.append((t.get_gid() or t.get_text(), box, bool(t.get_rotation() % 360)))
+    out = [f"{name} outside the figure" for name, box, _ in boxes
+           if box.x0 < -0.5 or box.y0 < -0.5 or box.x1 > fig.bbox.x1 + 0.5
+           or box.y1 > fig.bbox.y1 + 0.5]
+    for i, (name_a, a, rot_a) in enumerate(boxes):
+        for name_b, b, rot_b in boxes[i + 1:]:
+            if not (rot_a or rot_b) and a.overlaps(b):
+                out.append(f"{name_a} / {name_b}")
+    return out
 
 
 def save_paper_figure(fig: Any, out_dir: Path, name: str) -> dict[str, Path]:
@@ -1353,6 +1861,11 @@ class BuildReport:
     t1_checks: list[str]
     audit: LayoutAudit
     files: dict[str, Path] = field(default_factory=dict)
+    pr: dict[Cell, Any] = field(default_factory=dict)
+    pr_checks: list[str] = field(default_factory=list)
+    distances: DistanceData | None = None
+    anchor_checks: list[str] = field(default_factory=list)
+    bands: BandImages | None = None
 
     def sha256(self) -> dict[str, str]:
         return {name: file_sha256(path) for name, path in sorted(self.files.items())}
@@ -1360,8 +1873,10 @@ class BuildReport:
 
 def check_inputs(paths: F2Paths) -> None:
     """Raise :class:`MissingInputError` naming every absent top-level input."""
+    datasets = [Path(paths.data_root) / d / name
+                for d in dict.fromkeys(d for d, _ in DISTANCE_CELLS) for name in DATASET_FILES]
     missing = [str(p) for p in (Path(paths.results) / "index.csv", Path(paths.tables_json),
-                                Path(paths.data_root) / "ixi" / "images.npy", *paths.heldout)
+                                *datasets, *paths.heldout)
                if not Path(p).is_file()]
     if not Path(paths.eval_dir).is_dir():
         missing.append(str(paths.eval_dir))
@@ -1432,9 +1947,13 @@ def build(paths: F2Paths, expect: Expectations | None = None) -> BuildReport:
     spectrum_checks = assert_spectrum_means(profiles, expect)
     t1 = t1_rows(index)
     t1_checks = cross_check_tables(t1, paths.tables_json)
+    pr, pr_checks = load_fidelity_diversity(index, heldout, expect)
 
     panel_a, crn, selection, width = load_panel_a(paths, expect)
-    data = F2Data(panel_a, ixi, oasis, profiles, width)
+    distances = load_distances(paths, index, heldout_record["references"])
+    anchor_checks = assert_anchor(distances, index, expect)
+    bands = load_band_images(paths.data_root, expect)
+    data = F2Data(panel_a, pr, distances, profiles, bands, width)
     out = Path(paths.out)
     with paper_style():
         fig = draw_f2(data)
@@ -1452,7 +1971,7 @@ def build(paths: F2Paths, expect: Expectations | None = None) -> BuildReport:
     files["t1_main.md"] = out / "t1_main.md"
     report = BuildReport(paths, crn, panel_a.rows, selection, ixi, oasis, profiles, profile_runs,
                          heldout_record, precision_checks, spectrum_checks, t1, t1_checks, audit,
-                         files)
+                         files, pr, pr_checks, distances, anchor_checks, bands)
     (out / "F2.md").write_text(render_f2_notes(report))
     (out / "T1.md").write_text(render_t1_notes(report))
     return report
@@ -1463,106 +1982,275 @@ def build(paths: F2Paths, expect: Expectations | None = None) -> BuildReport:
 # --------------------------------------------------------------------------------------------
 
 
-def _paired_delta(a: ArmPoints, b: ArmPoints, attr: str) -> float:
-    """Mean over the seeds ``a`` has of ``a - b`` (b restricted to the same seeds)."""
-    seeds_b = {rid.rsplit("_s", 1)[1]: i for i, rid in enumerate(b.run_ids)}
-    va, vb = getattr(a, attr), getattr(b, attr)
-    pairs = [(va[i], vb[seeds_b[rid.rsplit("_s", 1)[1]]]) for i, rid in enumerate(a.run_ids)]
-    return float(np.mean([x - y for x, y in pairs]))
-
-
 def _sources_line(report: BuildReport) -> str:
     return ", ".join(f"`{p}`" for p in report.paths.heldout)
 
 
+def _half_up(value: float, places: int = 3) -> str:
+    """Round half up at ``places`` decimals (0.2375 -> 0.238), after removing float noise."""
+    quantum = Decimal(1).scaleb(-places)
+    return str(Decimal(f"{value:.10f}").quantize(quantum, rounding=ROUND_HALF_UP))
+
+
+def _change(before: float, after: float, places: int = 2) -> str:
+    """``"falls from x to y"`` / ``"rises from x to y"`` / ``"stays at x"`` at ``places``."""
+    a, b = _half_up(before, places), _half_up(after, places)
+    if a == b:
+        return f"stays at {a}"
+    return f"{'falls' if after < before else 'rises'} from {a} to {b}"
+
+
+def _position(value: float, band: tuple[float, float], name: str = "the grey band") -> str:
+    """Where ``value`` sits relative to the real images' interquartile range ``band``."""
+    lo, hi = band
+    if value < lo:
+        return f"below {name}"
+    if value > hi:
+        return f"above {name}"
+    return f"inside {name}"
+
+
+def caption_words(caption: str) -> int:
+    """Words of the caption draft (the blockquote markers and the bold markup excluded)."""
+    text = caption.replace(">", " ").replace("**", " ")
+    return len([w for w in text.split() if any(ch.isalnum() for ch in w)])
+
+
 def _f2_caption(report: BuildReport) -> str:
-    ixi, rows = report.ixi, report.rows
-    a0, a1, a2, a3 = (ixi[a].mean() for a in ("A0", "A1", "A2", "A3"))
-    g_f, g_h = a3[1] - a0[1], a3[2] - a0[2]
-    sp_f = _paired_delta(ixi["A2"], ixi["A0"], "precision_f")
-    sp_h = _paired_delta(ixi["A2"], ixi["A0"], "precision_h")
-    o0, o3 = report.oasis["A0"].mean(), report.oasis["A3"].mean()
+    rows, pr = report.rows, report.pr
+    dist = report.distances
+    if dist is None:
+        raise PaperF2Error("the caption needs the seed distances")
+    i0, i3 = pr[("ixi", "A0")].mean(), pr[("ixi", "A3")].mean()
+    r5 = [float(np.mean(pr[("ixi", a)].recall_h_r5)) for a in ("A0", "A3")]
+    n_ixi = "/".join(str(pr[("ixi", a)].n) for a in IXI_ARMS)
+    n_oasis = "/".join(str(pr[("oasis1", a)].n) for a in OASIS_ARMS)
+    d0, d3 = dist.configs[("ixi", "A0")].mean(), dist.configs[("ixi", "A3")].mean()
+    band = dist.real_quartiles["ixi"]
     prof = {arm: report.profiles[arm].mean(axis=0) for arm in IXI_ARMS}
     i12, i24 = LSD_OCTAVES.index("1-2"), LSD_OCTAVES.index("2-4")
     w8 = max(abs(prof[a][i]) for a in ("A1", "A3") for i in (i12, i24))
     skips = [s for r in rows for s in r.skipped]
-    skip_clause = ("; no seed was skipped" if not skips else
+    skip_clause = ("" if not skips else
                    "; skipped as near-empty: " + ", ".join(f"image {s.image_index}" for s in skips))
-    n = "/".join(str(ixi[a].n) for a in IXI_ARMS)
+    n_minus = report.heldout_record["references"]["ixi"]["n_r_minus"]
+    seed_f, seed_h = _change(d0[0], d3[0]), _change(d0[2], d3[2])
+    if seed_f.split()[0] == seed_h.split()[0] and seed_h.split()[0] != "stays":
+        seed_h = seed_h.split(" ", 1)[1]  # "falls from a to b (F) and from c to d (H)"
+    h_train = (f"H samples' distance to the training set {_change(d0[3], d3[3])}, "
+               f"{_position(d3[3], band)} ({_half_up(band[0], 2)}–{_half_up(band[1], 2)})")
+
+    def signed(value: float) -> str:
+        return f"{value:+.2f}".replace("-", "−")
+
     return "\n".join([
-        "> **Matching the prior to brain anatomy drives fidelity; matching the spacing adds a "
-        "small spectral correction.**",
+        "> **Matching the prior to brain anatomy raises fidelity; its samples inherit their "
+        "seed.**",
         ">",
-        "> (a) Samples of the four configurations from the same seed images and the same sampling "
-        f"noise (IXI, run seed {CRN_RUN_SEED}, {STEP // 1000}k iterations; two training seeds, "
-        f"images {rows[0].image_index} and {rows[1].image_index}, and one unseen subject, image "
-        f"{rows[2].image_index}, chosen by a pre-declared rule{skip_clause}). "
-        "$u(\\sigma)$ is the noise-free prior state at the default ($\\sigma$ = 96 px, W/2) and "
-        "the matched ($\\sigma$ = 24 px, W/8) terminal blur; sampling starts from it plus noise.",
+        "> (a) Samples sharing seeds and sampling noise (IXI, run seed "
+        f"{CRN_RUN_SEED}, pre-declared rows{skip_clause}); $u(\\sigma)$: noise-free prior "
+        "state.",
         ">",
-        "> (b) Per-sample realism (Inception precision, k = 5, against the reference split without "
-        "the seed subjects, 400 images) against copying (the share of samples whose nearest "
-        f"training image is their own seed). Small markers are runs (n = {n}) and large markers "
-        f"are means. From default to matched, copying rises from {a0[0]:.0%} to {a3[0]:.0%} and "
-        f"precision from {a0[1]:.3f} to {a3[1]:.3f}. The left strip gives realism on unseen "
-        f"subjects, where copying is impossible: {a0[2]:.3f} to {a3[2]:.3f}, "
-        f"{g_h / g_f:.0%} of the gain on training seeds. +spacing changes precision by "
-        f"{sp_f:+.3f} on training seeds and {sp_h:+.3f} on unseen subjects (paired, seeds "
-        "1–2). Grey arrow: the OASIS-1 cohort, default to matched "
-        f"({o0[1]:.3f} to {o3[1]:.3f}; copying {o0[0]:.0%} to {o3[0]:.0%}).",
+        "> (b) Top: Inception precision and recall (k = 5) against R⁻ (the reference minus "
+        f"the 40 seed subjects, {n_minus} images) of 2,000 training-seeded samples (F, filled) "
+        f"and 40 unseen seeds × 50 (H, hollow); circles: IXI (n = {n_ixi} runs; large: means), "
+        f"squares: OASIS-1 means (n = {n_oasis}). Default → matched, F: precision "
+        f"{_half_up(i0[0])} → {_half_up(i3[0])}, recall {_half_up(i0[1])} → "
+        f"{_half_up(i3[1])}; H: {_half_up(i0[2])} → {_half_up(i3[2])}, {_half_up(i0[3])} → "
+        f"{_half_up(i3[3])}. H has 40 prior states at one slice level; against the "
+        f"slice-matched R5 its recall still falls ({_half_up(r5[0])} → {_half_up(r5[1])}). "
+        "Bottom: median pixel distance to the own seed and to the nearest training image of "
+        "another subject, in units of R⁻'s median distance to the training set (grey: its "
+        f"interquartile range). Default → matched, the distance to the own seed {seed_f} (F) "
+        f"and {seed_h} (H); {h_train}.",
         ">",
-        "> (c) Per-octave spectral error of 2,000 samples against real images "
-        "($\\log_{10}$ power ratio; 0 = real). default lacks power at 1–2 and 2–4 c/img "
-        f"({prof['A0'][i12]:+.2f} and {prof['A0'][i24]:+.2f}: {10 ** prof['A0'][i12]:.0%} and "
-        f"{10 ** prof['A0'][i24]:.0%} of the real power); +spacing reduces the deficit to "
-        f"{prof['A2'][i12]:+.2f} and {prof['A2'][i24]:+.2f}; with the matched prior it is gone "
-        f"(|·| ≤ {w8:.2f}). Every configuration stays below 0 above 4 c/img. The shading is the "
-        "share of each frequency's variance that the matched prior hands over, "
-        "$\\exp(-(2\\pi c\\sigma/W)^2)$ at $\\sigma$ = 24 px.",
+        "> (c) Per-octave spectral error of 2,000 samples ($\\log_{10}$ power ratio; 0 = real): "
+        f"default lacks power at 1–4 c/img ({signed(prof['A0'][i12])}, "
+        f"{signed(prof['A0'][i24])}); matched prior: |·| ≤ {w8:.2f}. Shading: variance the "
+        "matched prior keeps. Strip: one IXI slice per octave, each band scaled to its own "
+        "range.",
         ">",
-        "> Precision is exploratory; the pre-registered KID and LSD are in Table 1.",
+        "> (b) is post hoc; pre-registered KID and LSD: Table 1.",
     ])
+
+
+def _pr_lines(report: BuildReport) -> list[str]:
+    """Panel (b), top: precision and recall per run, with the seed-NN of ``index.csv``."""
+    src = report.heldout_record["sources"]
+    seed_nn = {rid: float(v) for pts in (*report.ixi.values(), *report.oasis.values())
+               for rid, v in zip(pts.run_ids, pts.seed_nn, strict=True)}
+    lines = [
+        "### Panel (b), top: precision and recall against R⁻ (Inception, k = 5)",
+        "",
+        "Loaded with `paper_f3.load_pr` from `runs.<id>.metrics.{F_rminus,H_rminus}."
+        f"{{precision,recall}}` and `H_r5.recall` of {_sources_line(report)}. F = 2,000 "
+        "training-seeded samples (one per seed image); H = 40 unseen subjects (slice 5) × 50 "
+        "samples. Seed-NN: `seed_nn_fraction` of "
+        f"`{Path(report.paths.results) / 'index.csv'}` (not plotted any more; the distance plot "
+        "replaces it).",
+        "",
+        "| dataset | configuration | run | precision F | recall F | precision H | recall H | "
+        "recall H vs R5 | seed-NN | source |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---|",
+    ]
+    for (dataset, arm), c in report.pr.items():
+        ds, label = DATASET_NAMES[dataset], ARM_LABELS[arm]
+        for i, rid in enumerate(c.run_ids):
+            lines.append(f"| {ds} | {label} | `{rid}` | {c.precision_f[i]:.4f} | "
+                         f"{c.recall_f[i]:.4f} | {c.precision_h[i]:.4f} | {c.recall_h[i]:.4f} | "
+                         f"{c.recall_h_r5[i]:.4f} | {seed_nn[rid]:.4f} | "
+                         f"`{Path(src[rid]).parent.name}/{Path(src[rid]).name}` |")
+        m = c.mean()
+        lines.append(f"| {ds} | **{label} mean** (n = {c.n}) | | **{m[0]:.4f}** | "
+                     f"**{m[1]:.4f}** | **{m[2]:.4f}** | **{m[3]:.4f}** | "
+                     f"**{float(np.mean(c.recall_h_r5)):.4f}** | "
+                     f"**{float(np.mean([seed_nn[r] for r in c.run_ids])):.4f}** | |")
+    return lines
+
+
+def _distance_lines(report: BuildReport) -> list[str]:
+    """Panel (b), bottom: the per-run medians, seed means, pooled quartiles and the reference."""
+    from ihdm.analysis.seed_distance import QUANTITIES
+
+    dist = report.distances
+    if dist is None:
+        return []
+    refs = report.heldout_record["references"]
+    lines = [
+        "### Panel (b), bottom: distance to the own seed and to the training set (post hoc)",
+        "",
+        "Pixel-space Euclidean distance with each image's DC removed "
+        "(`ihdm.metrics.memorisation.nn_distances`, CPU, float32), computed by "
+        "`ihdm.analysis.seed_distance` from the `final/` (F: 2,000 samples, one per training "
+        "seed) and `heldout/` (H: 40 unseen seeds × 50) sample sets of each run's evaluation tar "
+        f"`{report.paths.eval_dir}/<run>_amp-fp16.tar` (step 60k). Corpus: the full training "
+        "split. Unit: $D_{\\text{ref}}$, the median distance from an R⁻ image to its nearest "
+        "training image (M's denominator), so 1 = as far as a new real image.",
+        "",
+        "- F seed = d(sample, its own seed image); F train = d(sample, nearest training image of "
+        "another subject: the seed subject's 10 slices excluded); H seed = d(sample, its own "
+        "unseen seed); H train = d(sample, nearest training image).",
+        "- Plotted: per-run medians (small markers), their seed mean (large marker), the "
+        "interquartile range of the samples pooled over the runs (vertical line), and the "
+        "interquartile range of the R⁻ images' own distance to the training set (grey band; "
+        "its median is 1 by construction). OASIS-1 is reported here only; the plot shows IXI.",
+        "",
+        "| dataset | D_ref (this build) | `final.json` `d_heldout_median` | R⁻ images | "
+        "training images (subjects) | R⁻ band (25th–75th percentile) | R⁻ sha256 |",
+        "|---|---:|---:|---:|---:|---:|---|",
+    ]
+    for dataset, d_ref in dist.d_ref.items():
+        stored = dist.stored_d_ref.get(dataset)
+        lo, hi = dist.real_quartiles[dataset]
+        size = dist.sizes[dataset]
+        lines.append(f"| {DATASET_NAMES[dataset]} | {d_ref:.4f} | "
+                     f"{'n/a' if stored is None else f'{stored:.4f}'} | {size['n_r_minus']} | "
+                     f"{size['n_train']} ({size['n_train_subjects']}) | {lo:.3f}–{hi:.3f} | "
+                     f"`{refs[dataset]['r_minus_idx_sha256'][:12]}…` (equals the held-out "
+                     "JSONs') |")
+    names = " | ".join(q.replace("_", " ") for q in QUANTITIES)
+    lines += [
+        "",
+        "Per-run medians, in units of $D_{\\text{ref}}$; M and seed-NN recomputed from the same "
+        "nearest neighbours (F, own subject included) next to `index.csv`.",
+        "",
+        f"| dataset | configuration | run | {names} | M | M (index.csv) | seed-NN | "
+        "seed-NN (index.csv) |",
+        "|---|---|---|" + "---:|" * (len(QUANTITIES) + 4),
+    ]
+    index = {r.run_id: r for r in read_index(report.paths.results)}
+    for (dataset, arm), cfg in dist.configs.items():
+        ds, label = DATASET_NAMES[dataset], ARM_LABELS[arm]
+        for i, rid in enumerate(cfg.run_ids):
+            meds = " | ".join(f"{v:.3f}" for v in cfg.medians[i])
+            lines.append(f"| {ds} | {label} | `{rid}` | {meds} | {cfg.m_ratio[i]:.4f} | "
+                         f"{index[rid].value('M'):.4f} | {cfg.seed_nn[i]:.4f} | "
+                         f"{index[rid].value('seed_nn_fraction'):.4f} |")
+        means = " | ".join(f"**{v:.3f}**" for v in cfg.mean())
+        lines.append(f"| {ds} | **{label} seed mean** (n = {cfg.n}) | | {means} | | | | |")
+    lines += ["", "Default → matched, seed means (computed, not interpreted):", ""]
+    for dataset in dist.d_ref:
+        d0, d3 = dist.configs[(dataset, "A0")].mean(), dist.configs[(dataset, "A3")].mean()
+        band = dist.real_quartiles[dataset]
+        parts = [f"{q.replace('_', ' ')} {_change(a, b, 3)} (matched "
+                 f"{_position(b, band, 'the R⁻ band')})"
+                 for q, a, b in zip(QUANTITIES, d0, d3, strict=True)]
+        lines.append(f"- {DATASET_NAMES[dataset]}: " + "; ".join(parts) + ".")
+    lines += [
+        "",
+        "Interquartile range of the samples, pooled over the runs (the vertical lines):",
+        "",
+        f"| dataset | configuration | {names} |",
+        "|---|---|" + "---:|" * len(QUANTITIES),
+    ]
+    for (dataset, arm), cfg in dist.configs.items():
+        cells = " | ".join(f"{q25:.3f}–{q75:.3f}" for q25, q75 in cfg.quartiles)
+        lines.append(f"| {DATASET_NAMES[dataset]} | {ARM_LABELS[arm]} | {cells} |")
+    return lines
+
+
+def _band_lines(report: BuildReport) -> list[str]:
+    """Panel (c): how the band-pass images were made."""
+    bands = report.bands
+    if bands is None:
+        return []
+    r0, r1, c0, c1 = bands.crop
+    scales = ", ".join(f"{lo:g}–{hi:g}: {float(np.max(np.abs(b[r0:r1, c0:c1]))):.3f}"
+                       for (lo, hi), b in zip(OCTAVE_EDGES, bands.bands, strict=True))
+    return [
+        "### Panel (c): the band-pass images",
+        "",
+        f"- **Slice:** IXI dataset image {bands.image_index}, "
+        "`reference_example(root, \"ixi\", np.random.default_rng(2026))` (the slice of F1 and FM; "
+        "asserted).",
+        "- **Bands:** for each octave [c, 2c) (the last closed at 96 c/img), the inverse "
+        "orthonormal DCT of the slice's coefficients restricted to that octave's modes "
+        "(`paper_fm.dct_weights`, `paper_fm.octave_masks(192)`, `paper_fm.synthesise`); the DC "
+        "and the corner modes above 96 c/img belong to no band. Bands + DC + corner = slice "
+        "(tested to 1e-10).",
+        f"- **Crop:** every band shows the same square window, rows {r0}–{r1 - 1} and columns "
+        f"{c0}–{c1 - 1} ({r1 - r0} px; the smallest square centred on the pixels above "
+        f"{EMPTY_LEVEL} of the slice), so the head fills the image. Each image is square, as "
+        "tall as the strip between −1 and −0.55 or as wide as one octave on the log axis, "
+        "whichever is smaller, and centred in its octave and in the strip; the 64–96 octave "
+        "is narrower, so its image shows the centre columns of the window at the same pixel "
+        "scale.",
+        "- **Grey map:** symmetric, mid-grey = 0, each band scaled to its own range "
+        f"(± its largest |value| in the window; slice on [0, 1]): {scales}.",
+        "- **Shading:** the share of variance kept by the matched prior is drawn above the image "
+        "strip only (from −0.55 up, as a fraction of the space to the top of the axes), so it "
+        "never covers an image.",
+    ]
 
 
 def render_f2_notes(report: BuildReport) -> str:
     """Return ``F2.md``: caption draft, numbers with sources, rows, checks, files, commands."""
     p = report.paths
+    caption = _f2_caption(report)
     lines = [
-        "# F2 — the four arms on brain MRI (T8.2)",
+        "# F2 — the paper's results figure (T8.2, reworked in T8.8)",
         "",
         "Generated by `python -m ihdm.cli.paper_f2`; do not edit by hand, rerun the command.",
         "Inkscape master: `f2_arms.svg` (text kept as text, rasters inlined, every panel, "
-        "thumbnail, "
-        "label and arrow a separate element with its own `id`); LaTeX input: `f2_arms.pdf`.",
+        "thumbnail, band image, marker, label and arrow a separate element with its own `id`); "
+        "LaTeX input: `f2_arms.pdf`; preview: `f2_arms.png` (300 dpi).",
         "",
         "## Caption draft",
         "",
-        _f2_caption(report),
+        caption,
+        "",
+        f"Caption length: {caption_words(caption)} words.",
         "",
         "## Numbers and their sources",
         "",
-        f"Precision against R⁻ (F: 2,000 training-seeded samples; H: 40 unseen seeds × 50): "
-        f"`runs.<id>.metrics.{{F,H}}_rminus.precision` of {_sources_line(report)}. Seed-NN: "
-        f"`seed_nn_fraction` of `{Path(p.results) / 'index.csv'}`.",
+        *_pr_lines(report),
         "",
-        "| dataset | configuration | run | seed-NN | precision F | precision H "
-        "| source of precision |",
-        "|---|---|---|---:|---:|---:|---|",
-    ]
-    src = report.heldout_record["sources"]
-    for dataset, points in (("IXI", report.ixi), ("OASIS-1", report.oasis)):
-        for arm, pts in points.items():
-            for i, rid in enumerate(pts.run_ids):
-                lines.append(f"| {dataset} | {ARM_LABELS[arm]} | `{rid}` | {pts.seed_nn[i]:.4f} | "
-                             f"{pts.precision_f[i]:.4f} | {pts.precision_h[i]:.4f} | "
-                             f"`{Path(src[rid]).name}` ({Path(src[rid]).parent.name}) |")
-            m = pts.mean()
-            lines.append(f"| {dataset} | **{ARM_LABELS[arm]} mean** (n = {pts.n}) | | "
-                         f"**{m[0]:.4f}** | **{m[1]:.4f}** | **{m[2]:.4f}** | |")
-    lines += [
+        *_distance_lines(report),
         "",
-        "Spectrum: `lsd_octaves` of `<results>/runs/<run>/final.json` (seed means; per-run values "
-        "are plotted as dots).",
+        "### Panel (c): spectrum",
+        "",
+        "`lsd_octaves` of `<results>/runs/<run>/final.json` (seed means; per-run values are "
+        "plotted as dots).",
         "",
         "| configuration | runs | " + " | ".join(LSD_OCTAVES) + " |",
         "|---|---|" + "---:|" * len(LSD_OCTAVES),
@@ -1572,6 +2260,7 @@ def render_f2_notes(report: BuildReport) -> str:
         runs = ", ".join(f"`{r}`" for r in report.profile_runs[arm])
         lines.append(f"| {ARM_LABELS[arm]} | {runs}"
                      " | " + " | ".join(f"{v:+.3f}" for v in mean) + " |")
+    lines += ["", *_band_lines(report)]
     lines += [
         "",
         "## Panel (a): the rows (pre-declared rule)",
@@ -1602,16 +2291,24 @@ def render_f2_notes(report: BuildReport) -> str:
                  f"`{held['references']['ixi']['r_minus_idx_sha256'][:12]}…` "
                  f"({held['references']['ixi']['n_r_minus']} images).")
     lines += [f"- {line}" for line in report.precision_checks]
+    lines.append("- **Panel (b), top (T8.5's expectation table, `paper_f3.assert_pr_means`):**")
+    lines += [f"  - {line}" for line in report.pr_checks]
+    lines.append("- **Distance anchor (`M` and seed-NN recomputed from the samples):**")
+    lines += [f"  - {line}" for line in report.anchor_checks]
     lines += [f"- {line}" for line in report.spectrum_checks]
     lines.append("- The ticket gives +spacing 2–4 c/img as −0.35; `final.json` gives "
                  f"{report.profiles['A2'].mean(axis=0)[LSD_OCTAVES.index('2-4')]:+.4f} "
                  "(rounds to −0.34), so the spectral tolerance is 0.01, not 0.005.")
+    lines.append(f"- No spectral value reaches the image strip (every value > {STRIP_TOP}).")
     a = report.audit
     lines += [
         f"- **Layout (measured on the drawn figure):** {a.width_in:.2f} × {a.height_in:.2f} in, "
         f"smallest font {a.min_font_pt:g} pt over {a.n_texts} text elements, smallest thumbnail "
-        f"{a.min_thumb_in:.2f} in (limits: {PAPER_WIDTH_IN} in wide, ≤ {MAX_HEIGHT_IN} in, "
-        f"≥ {MIN_FONT_PT:g} pt, ≥ {MIN_THUMB_IN} in).",
+        f"{a.min_thumb_in:.2f} in, smallest band image {a.min_band_in:.3f} in tall (square to "
+        f"{a.band_aspect:.1e}), left column {a.left_fraction:.1%} of the width, "
+        f"{len(a.overlaps)} overlapping text boxes (limits: {PAPER_WIDTH_IN} in wide, "
+        f"≤ {MAX_HEIGHT_IN} in, ≥ {MIN_FONT_PT:g} pt, thumbnails ≥ {MIN_THUMB_IN} in, band "
+        f"images ≥ {MIN_BAND_IN} in, left column ≤ {MAX_LEFT_FRACTION:.0%}, no overlap).",
         "",
         "## Files",
         "",
