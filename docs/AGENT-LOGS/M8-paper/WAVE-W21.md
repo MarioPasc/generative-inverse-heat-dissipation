@@ -76,7 +76,9 @@ The grey band (the interquartile range of real R⁻ images to the training set) 
 | `integration/W21` cut from `main` `0274cc0` | — |
 | `183a45c` | merge(T8.8) |
 | `fbe1337` | the T8.8 prompt pasted into its log |
-| next docs commit | this file |
+| `ac1bb8c` | this file |
+
+**Full suite on `integration/W21`:** 1461 passed, 1 skipped, 29 deselected (890.53 s). Not merged to `main` yet: this waits for Mario's GO.
 
 ## Follow-ups
 
