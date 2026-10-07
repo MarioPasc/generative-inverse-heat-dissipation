@@ -3,10 +3,11 @@
 F2 has three panels: (a) samples of the four IXI arms from the same seed images and the same
 sampling noise (common random numbers, asserted); (b) fidelity against diversity (precision
 against recall, both against R⁻, for training seeds F and unseen seeds H; the numbers of
-:mod:`ihdm.analysis.paper_f3`) beside a post hoc distance plot (each sample's distance to its own
+:mod:`ihdm.analysis.paper_f3`) above a post hoc distance plot (each sample's distance to its own
 seed and to the training set, in units of M's denominator; :mod:`ihdm.analysis.seed_distance`);
-and (c) the per-octave spectral error, full width, with one band-pass image of the reference slice
-per octave. T1 is the compact main table. Every number is read from a file at build time; the
+and (c) the per-octave spectral error with one band-pass image of the reference slice per
+octave. (a) sits above (c) in a left column; (b)'s two plots fill a right column of full height.
+T1 is the compact main table. Every number is read from a file at build time; the
 expected seed means of the tickets and the M / seed-NN anchor are asserted, and a failed assertion
 raises :class:`PaperF2Error`.
 """
@@ -72,11 +73,14 @@ logger = logging.getLogger(__name__)
 PAPER_WIDTH_IN: float = 5.5
 ARM_LABELS: dict[str, str] = {"A0": "default", "A1": "+prior", "A2": "+spacing", "A3": "matched"}
 
-FIG_HEIGHT_IN: float = 4.8
+FIG_HEIGHT_IN: float = 3.53
 MAX_HEIGHT_IN: float = 4.8
 MIN_FONT_PT: float = 7.0
-MIN_THUMB_IN: float = 0.45
-MIN_BAND_IN: float = 0.40
+#: Relaxed for the two-column layout (main, 2026-10-07; were 0.45 and 0.40 in).
+MIN_THUMB_IN: float = 0.40
+MIN_BAND_IN: float = 0.34
+#: The left column ((a) above (c)) takes at most this share of the width.
+MAX_LEFT_FRACTION: float = 0.65
 PNG_DPI: int = 300
 PDF_DPI: int = 300
 SVG_HASHSALT: str = "ihdm-t8.2"
@@ -784,7 +788,7 @@ def assert_spectrum_means(profiles: Mapping[str, np.ndarray], expect: Expectatio
 
 
 # --------------------------------------------------------------------------------------------
-# Panel (b), left: precision and recall against R⁻ (the loaders and table of paper_f3)
+# Panel (b), top: precision and recall against R⁻ (the loaders and table of paper_f3)
 # --------------------------------------------------------------------------------------------
 
 Cell = tuple[str, str]
@@ -822,7 +826,7 @@ def load_fidelity_diversity(index: Sequence[IndexRun], heldout: Mapping[str, Map
 
 
 # --------------------------------------------------------------------------------------------
-# Panel (b), right: distance to the own seed and to the training set (post hoc)
+# Panel (b), bottom: distance to the own seed and to the training set (post hoc)
 # --------------------------------------------------------------------------------------------
 
 #: Datasets and arms whose distances are computed (OASIS-1 is reported in F2.md).
@@ -1298,6 +1302,8 @@ class LayoutAudit:
     n_texts: int
     min_band_in: float = float("inf")
     overlaps: tuple[str, ...] = ()
+    left_fraction: float = 0.0
+    band_aspect: float = 0.0
 
     def problems(self) -> list[str]:
         out = []
@@ -1307,10 +1313,15 @@ class LayoutAudit:
             out.append(f"height {self.height_in} in > {MAX_HEIGHT_IN}")
         if self.min_font_pt < MIN_FONT_PT:
             out.append(f"smallest font {self.min_font_pt} pt < {MIN_FONT_PT}")
-        if self.min_thumb_in < MIN_THUMB_IN:
+        if self.min_thumb_in < MIN_THUMB_IN - 1e-9:
             out.append(f"smallest thumbnail {self.min_thumb_in:.3f} in < {MIN_THUMB_IN}")
         if self.min_band_in < MIN_BAND_IN - 1e-9:
             out.append(f"smallest band image {self.min_band_in:.3f} in < {MIN_BAND_IN}")
+        if self.left_fraction > MAX_LEFT_FRACTION + 1e-9:
+            out.append(f"left column {self.left_fraction:.1%} of the width > "
+                       f"{MAX_LEFT_FRACTION:.0%}")
+        if self.band_aspect > 0.01:
+            out.append(f"band images not square (|w/h - 1| up to {self.band_aspect:.3f})")
         if self.overlaps:
             out.append("overlapping texts: " + "; ".join(self.overlaps))
         return out
@@ -1331,32 +1342,38 @@ class F2Layout:
         Panel (a) thumbnail side, gap between thumbnails, gap between column groups.
     thumb_x0 : float
         Left edge of the first thumbnail column.
+    header : float
+        Height of panel (a)'s header block (group names, rules, column names) above the
+        thumbnails.
     pr, dist, spec : Box
         ``(x, y, w, h)`` of the precision–recall axes, the distance axes and the spectrum axes.
-    b_title_y, c_title_y : float
-        Baseline (centre) of the panel (b) and (c) title rows.
-    b_title_x : tuple[float, float]
-        Left edge of the two panel (b) titles.
-    key_y : float
-        Centre of the bottom key row (run/seed-mean sizes, the prior shading).
+    b_label, pr_title, dist_title : tuple[float, float]
+        Left edge and centre height of the "(b)" label and of the two panel (b) titles.
+    c_title_y : float
+        Centre height of the panel (c) title row.
+    shade_key, size_key : tuple[float, float]
+        Left edge and centre height of the prior-shading key and of the marker-size key.
     """
 
     height: float = FIG_HEIGHT_IN
-    thumb: float = 0.46
-    thumb_gap: float = 0.03
-    group_gap: float = 0.10
-    thumb_x0: float = 1.02
-    pr: Box = (0.47, 1.88, 2.30, 0.86)
-    dist: Box = (3.30, 1.88, 2.12, 0.86)
-    spec: Box = (0.47, 0.36, 4.95, 1.02)
-    b_title_y: float = 2.85
-    c_title_y: float = 1.48
-    b_title_x: tuple[float, float] = (0.26, 2.98)
-    key_y: float = 0.10
+    thumb: float = 0.43
+    thumb_gap: float = 0.02
+    group_gap: float = 0.08
+    thumb_x0: float = 0.20
+    header: float = 0.34
+    pr: Box = (3.93, 2.16, 1.52, 1.15)
+    dist: Box = (3.93, 0.50, 1.52, 1.16)
+    spec: Box = (0.47, 0.55, 2.98, 1.10)
+    b_label: tuple[float, float] = (3.55, FIG_HEIGHT_IN - 0.10)
+    pr_title: tuple[float, float] = (3.79, FIG_HEIGHT_IN - 0.10)
+    dist_title: tuple[float, float] = (3.55, 1.76)
+    c_title_y: float = 1.75
+    shade_key: tuple[float, float] = (0.47, 0.09)
+    size_key: tuple[float, float] = (3.55, 0.09)
 
     @property
     def thumb_top(self) -> float:
-        return self.height - 0.34
+        return self.height - self.header
 
     def column_x(self, j: int) -> float:
         """Left edge of panel (a) column ``j`` (two group gaps, after columns 0 and 3)."""
@@ -1368,7 +1385,8 @@ class F2Layout:
         return x
 
 
-#: The layout of the paper figure (three rows; the alternative tried is in the T8.8 log).
+#: The layout of the paper figure (Mario, 2026-10-07): (a) above (c) in a left column, (b)'s two
+#: plots stacked in a right column of full height. Earlier layouts are in the T8.8 log.
 LAYOUT: F2Layout = F2Layout()
 
 
@@ -1401,8 +1419,6 @@ def _draw_panel_a(fig: Any, panel: PanelA, lay: F2Layout) -> None:
     top, size = lay.height, lay.thumb
     _fig_text(fig, 0.02, top - 0.10, "(a)", "a_label", fontsize=8, fontweight="bold",
               va="center", ha="left")
-    _fig_text(fig, 0.26, top - 0.10, "Samples", "a_title", fontsize=7.5, va="center",
-              ha="left", color=INK)
     for name, j0, j1 in GROUPS:
         x0, x1 = lay.column_x(j0), lay.column_x(j1) + size
         _fig_text(fig, (x0 + x1) / 2, top - 0.10, name, f"a_group_{j0}",
@@ -1438,19 +1454,18 @@ def _arrow(ax: Any, start: tuple[float, float], end: tuple[float, float], gid: s
     arrow.arrow_patch.set_gid(gid)
 
 
-#: Panel (b) left: offsets (points) and alignment of the configuration labels at the F means.
-PR_LABELS: dict[str, tuple[float, float, str, str]] = {
-    "A0": (-5.0, -1.0, "right", "top"),
-    "A2": (0.0, -7.0, "center", "top"),
-    "A1": (12.0, -15.0, "left", "top"),
-    "A3": (0.0, 5.0, "center", "bottom"),
-}
+#: Panel (b), top: configuration labels at the F means, ``arm: (dx, dy, ha, va)`` in points.
+#: Empty in the two-column layout: the 1.5 in scatter has no free room next to its F cluster,
+#: and the coloured column headers of (a), on the same row, are the configuration key.
+PR_LABELS: dict[str, tuple[float, float, str, str]] = {}
 #: Labels drawn with a leader line to their mean.
-PR_LEADERS: tuple[str, ...] = ("A1",)
+PR_LEADERS: tuple[str, ...] = ()
+#: Room below the lowest precision (in precision units) for the two-line fill key.
+PR_FOOT: float = 0.12
 
 
 def _draw_pr(fig: Any, data: F2Data, lay: F2Layout) -> Any:
-    """Panel (b), left: precision against recall, F filled and H hollow (T8.5's panel (a))."""
+    """Panel (b), top: precision against recall, F filled and H hollow (T8.5's panel (a))."""
     from ihdm.analysis.style import INK, MUTED, arm_style
 
     ax = _axes(fig, *lay.pr, "b_pr")
@@ -1478,16 +1493,15 @@ def _draw_pr(fig: Any, data: F2Data, lay: F2Layout) -> Any:
         ax.annotate(ARM_LABELS[arm], xy=(rf, pf_), xytext=(dx, dy), textcoords="offset points",
                     ha=ha, va=va, fontsize=7, color=INK, gid=f"b_pr_label_{arm}",
                     arrowprops=leader)
-    # OASIS-1 is named once, at the middle of its (long) H arrow.
-    o0, o3 = data.pr[("oasis1", "A0")].mean(), data.pr[("oasis1", "A3")].mean()
-    ax.annotate("OASIS-1", xy=((o0[3] + o3[3]) / 2, (o0[2] + o3[2]) / 2), xytext=(3, 3),
-                textcoords="offset points", ha="left", va="bottom", fontsize=7,
-                color=OASIS_GREY, gid="b_pr_label_oasis")
-    # Direct set labels in the empty lower corners: the H cluster sits left, the F cluster right.
-    ax.text(0.02, 0.03, "○ Unseen Seeds (H)", transform=ax.transAxes, fontsize=7, ha="left",
+    # OASIS-1 is named once, right of its matched H square (the end of its long H arrow).
+    o3 = data.pr[("oasis1", "A3")].mean()
+    ax.annotate("OASIS-1", xy=(o3[3], o3[2]), xytext=(6, 3), textcoords="offset points",
+                ha="left", va="center", fontsize=7, color=OASIS_GREY, gid="b_pr_label_oasis")
+    # The fill key, stacked in the empty lower-left corner (below every marker).
+    ax.text(0.02, 0.14, "● Training Seeds (F)", transform=ax.transAxes, fontsize=7,
+            ha="left", va="bottom", color=MUTED, gid="b_pr_label_F")
+    ax.text(0.02, 0.02, "○ Unseen Seeds (H)", transform=ax.transAxes, fontsize=7, ha="left",
             va="bottom", color=MUTED, gid="b_pr_label_H")
-    ax.text(0.98, 0.03, "● Training Seeds (F)", transform=ax.transAxes, fontsize=7,
-            ha="right", va="bottom", color=MUTED, gid="b_pr_label_F")
 
     # Limits from what is drawn: every IXI run, the OASIS-1 seed means.
     xs, ys = [], []
@@ -1500,7 +1514,7 @@ def _draw_pr(fig: Any, data: F2Data, lay: F2Layout) -> Any:
             ys.append(np.array(p.mean()[0::2]))
     x_all, y_all = np.concatenate(xs), np.concatenate(ys)
     ax.set_xlim(max(0.0, float(x_all.min()) - 0.04), float(x_all.max()) + 0.04)
-    ax.set_ylim(float(y_all.min()) - 0.075, float(y_all.max()) + 0.03)
+    ax.set_ylim(float(y_all.min()) - PR_FOOT, float(y_all.max()) + 0.03)
     ax.set_xlabel("Recall vs R⁻", labelpad=2)
     ax.set_ylabel("Precision vs R⁻", labelpad=2)
     ax.tick_params(axis="both", pad=1.5)
@@ -1508,7 +1522,7 @@ def _draw_pr(fig: Any, data: F2Data, lay: F2Layout) -> Any:
 
 
 def _draw_distance(fig: Any, data: F2Data, lay: F2Layout) -> Any:
-    """Panel (b), right: distance to the own seed and to the training set, over D_ref."""
+    """Panel (b), bottom: distance to the own seed and to the training set, over D_ref."""
     from ihdm.analysis.seed_distance import QUANTITIES
     from ihdm.analysis.style import INK, MUTED, arm_style
 
@@ -1547,15 +1561,21 @@ def _draw_distance(fig: Any, data: F2Data, lay: F2Layout) -> Any:
     ax.tick_params(axis="x", length=0, pad=2)
     ax.tick_params(axis="y", pad=1.5)
     ax.grid(axis="x", visible=False)
-    for (c0, c1), text, gid in (((centres[0], centres[1]), "Training Seeds (F)", "F"),
-                                ((centres[2], centres[3]), "Unseen Seeds (H)", "H")):
+    for (c0, c1), text, gid in (((centres[0], centres[1]), DIST_GROUPS[0], "F"),
+                                ((centres[2], centres[3]), DIST_GROUPS[1], "H")):
         ax.annotate(text, xy=((c0 + c1) / 2, 0.0), xycoords=("data", "axes fraction"),
                     xytext=(0, -12), textcoords="offset points", ha="center", va="top",
                     fontsize=7, color=INK, gid=f"b_dist_group_{gid}", annotation_clip=False)
-    ax.text(centres[-1] + 0.47, hi, "new real\nimage", fontsize=7, ha="right", va="bottom",
-            color=MUTED, linespacing=1.0, gid="b_dist_real_label")
+    # The grey band is R⁻ (new real images); its label sits inside it, at the right edge, in
+    # the upper half that no whisker reaches.
+    ax.text(centres[-1] + 0.47, (1.0 + hi) / 2, "R⁻", fontsize=7, ha="right", va="center",
+            color=MUTED, gid="b_dist_real_label")
     ax.set_ylabel(r"Distance / $D_{\mathrm{ref}}$", labelpad=2)
     return ax
+
+
+#: Group labels under the distance plot's columns (the scatter above defines F and H).
+DIST_GROUPS: tuple[str, str] = ("Training (F)", "Unseen (H)")
 
 
 def _distance_columns() -> np.ndarray:
@@ -1564,15 +1584,21 @@ def _distance_columns() -> np.ndarray:
 
 
 def _draw_panel_b(fig: Any, data: F2Data, lay: F2Layout) -> tuple[Any, Any]:
-    from ihdm.analysis.style import INK
+    from ihdm.analysis.style import INK, MUTED
 
-    _fig_text(fig, 0.02, lay.b_title_y, "(b)", "b_label", fontsize=8, fontweight="bold",
+    _fig_text(fig, *lay.b_label, "(b)", "b_label", fontsize=8, fontweight="bold",
               va="center", ha="left")
-    _fig_text(fig, lay.b_title_x[0], lay.b_title_y, "Fidelity vs Diversity", "b_title",
-              fontsize=7.5, va="center", ha="left", color=INK)
-    _fig_text(fig, lay.b_title_x[1], lay.b_title_y, "Distance to Seed and Train (Post Hoc)",
-              "b_title_dist", fontsize=7.5, va="center", ha="left", color=INK)
+    _fig_text(fig, *lay.pr_title, "Fidelity vs Diversity", "b_title", fontsize=7.5,
+              va="center", ha="left", color=INK)
+    _fig_text(fig, *lay.dist_title, DIST_TITLE, "b_title_dist", fontsize=7.5, va="center",
+              ha="left", color=INK)
+    _fig_text(fig, *lay.size_key, "small: runs · large: seed means", "key_sizes", fontsize=7,
+              va="center", ha="left", color=MUTED)
     return _draw_pr(fig, data, lay), _draw_distance(fig, data, lay)
+
+
+#: Title of the distance plot (short enough for the right column).
+DIST_TITLE: str = "Distance to Seed, Train (Post Hoc)"
 
 
 def _x_inch(c: float, box: Box) -> float:
@@ -1584,27 +1610,30 @@ def _x_inch(c: float, box: Box) -> float:
 def _draw_bands(fig: Any, bands: BandImages, lay: F2Layout, ymax: float) -> None:
     """One band-pass image per octave, inside the strip [-1, STRIP_TOP] of the spectrum axes.
 
-    Every image shows the common head crop, is square with the strip's height and is centred
-    in its octave; an octave narrower than the strip (64-96 c/img) shows the centre columns of
+    Every image shows the common head crop and is square: as tall as the strip, or as wide as
+    a full octave when that is smaller (then centred vertically in the strip); it is centred
+    in its octave. An octave narrower than that side (64-96 c/img) shows the centre columns of
     the crop only. Each image is drawn in its own axes so that its pixels stay square on the
     log axis, with a symmetric grey map scaled to its own largest |value|.
     """
     x0, y0, w, h = lay.spec
     strip = h * (STRIP_TOP - SPEC_YMIN) / (ymax - SPEC_YMIN)
     pad = 0.006
-    side = strip - 2 * pad
+    octave = _x_inch(OCTAVE_EDGES[0][1], lay.spec) - _x_inch(OCTAVE_EDGES[0][0], lay.spec)
+    side = min(strip, octave) - 2 * pad
+    bottom = y0 + (strip - side) / 2
     r0, r1, c0, c1 = bands.crop
     for k, ((lo, hi), band) in enumerate(zip(OCTAVE_EDGES, bands.bands, strict=True)):
         left, right = _x_inch(lo, lay.spec) + pad, _x_inch(hi, lay.spec) - pad
         width = min(side, right - left)
         crop = band[r0:r1, c0:c1]
-        if width < side:  # keep the centre columns, at the same pixel scale
+        if width < side - 1e-9:  # keep the centre columns, at the same pixel scale
             keep = int(round(crop.shape[1] * width / side))
             start = (crop.shape[1] - keep) // 2
             crop = crop[:, start:start + keep]
             width = side * crop.shape[1] / (r1 - r0)
         centre = _x_inch(math.sqrt(lo * hi), lay.spec)
-        ax = _axes(fig, centre - width / 2, y0 + pad, width, side, f"c_band_{k}")
+        ax = _axes(fig, centre - width / 2, bottom, width, side, f"c_band_{k}")
         scale = float(np.max(np.abs(crop))) or 1.0
         ax.imshow(crop, cmap="gray", vmin=-scale, vmax=scale, interpolation="none",
                   resample=False, aspect="auto")
@@ -1657,16 +1686,14 @@ def _draw_panel_c(fig: Any, data: F2Data, lay: F2Layout) -> Any:
     ax.set_ylabel(r"$\log_{10} P_{\mathrm{synth}}/P_{\mathrm{real}}$", labelpad=2)
     _draw_bands(fig, data.bands, lay, ymax)
 
-    # The bottom key row: marker sizes (panels b, c) and the prior shading (panel c).
-    _fig_text(fig, 0.47, lay.key_y, "small: run · large: seed mean", "key_sizes", fontsize=7,
-              va="center", ha="left", color=MUTED)
-    swatch_x = lay.spec[0] + lay.spec[2] - 1.32
-    swatch = Rectangle((swatch_x / PAPER_WIDTH_IN, (lay.key_y - 0.04) / lay.height),
+    # The prior-shading key, in the bottom row under the panel.
+    key_x, key_y = lay.shade_key
+    swatch = Rectangle((key_x / PAPER_WIDTH_IN, (key_y - 0.04) / lay.height),
                        0.16 / PAPER_WIDTH_IN, 0.08 / lay.height, transform=fig.transFigure,
                        color=PRIOR_FILL, lw=0)
     swatch.set_gid("c_prior_swatch")
     fig.add_artist(swatch)
-    _fig_text(fig, swatch_x + 0.21, lay.key_y, "kept by matched prior", "c_prior_label",
+    _fig_text(fig, key_x + 0.21, key_y, "variance kept by the matched prior", "c_prior_label",
               fontsize=7, va="center", ha="left", color=MUTED)
     return ax
 
@@ -1718,10 +1745,19 @@ def audit_layout(fig: Any) -> LayoutAudit:
     width, height = (float(v) for v in fig.get_size_inches())
     band = _smallest(fig, "c_band", side="height")
     overlaps: tuple[str, ...] = ()
+    left, aspect = 0.0, 0.0
     if band != float("inf"):
         overlaps = tuple(_text_problems(fig, texts))
+        left = max(ax.get_position().x1 for ax in fig.axes
+                   if (ax.get_gid() or "").startswith(("a_thumb", "c_spectrum")))
+        # Every octave but the narrower 64-96 one holds a full square image.
+        full = [ax.get_position() for ax in fig.axes
+                if (ax.get_gid() or "").startswith("c_band_")
+                and ax.get_gid() != f"c_band_{len(OCTAVE_EDGES) - 1}"]
+        aspect = max((abs(p.width * width / (p.height * height) - 1.0) for p in full),
+                     default=0.0)
     return LayoutAudit(width, height, min(float(t.get_fontsize()) for t in texts),
-                       _smallest(fig, "a_thumb"), len(texts), band, overlaps)
+                       _smallest(fig, "a_thumb"), len(texts), band, overlaps, left, aspect)
 
 
 def _text_problems(fig: Any, texts: Sequence[Any]) -> list[str]:
@@ -2015,7 +2051,7 @@ def _f2_caption(report: BuildReport) -> str:
         f"{CRN_RUN_SEED}, pre-declared rows{skip_clause}); $u(\\sigma)$: noise-free prior "
         "state.",
         ">",
-        "> (b) Left: Inception precision and recall (k = 5) against R⁻ (the reference minus "
+        "> (b) Top: Inception precision and recall (k = 5) against R⁻ (the reference minus "
         f"the 40 seed subjects, {n_minus} images) of 2,000 training-seeded samples (F, filled) "
         f"and 40 unseen seeds × 50 (H, hollow); circles: IXI (n = {n_ixi} runs; large: means), "
         f"squares: OASIS-1 means (n = {n_oasis}). Default → matched, F: precision "
@@ -2023,7 +2059,7 @@ def _f2_caption(report: BuildReport) -> str:
         f"{_half_up(i3[1])}; H: {_half_up(i0[2])} → {_half_up(i3[2])}, {_half_up(i0[3])} → "
         f"{_half_up(i3[3])}. H has 40 prior states at one slice level; against the "
         f"slice-matched R5 its recall still falls ({_half_up(r5[0])} → {_half_up(r5[1])}). "
-        "Right: median pixel distance to the own seed and to the nearest training image of "
+        "Bottom: median pixel distance to the own seed and to the nearest training image of "
         "another subject, in units of R⁻'s median distance to the training set (grey: its "
         f"interquartile range). Default → matched, the distance to the own seed {seed_f} (F) "
         f"and {seed_h} (H); {h_train}.",
@@ -2039,12 +2075,12 @@ def _f2_caption(report: BuildReport) -> str:
 
 
 def _pr_lines(report: BuildReport) -> list[str]:
-    """Panel (b), left: precision and recall per run, with the seed-NN of ``index.csv``."""
+    """Panel (b), top: precision and recall per run, with the seed-NN of ``index.csv``."""
     src = report.heldout_record["sources"]
     seed_nn = {rid: float(v) for pts in (*report.ixi.values(), *report.oasis.values())
                for rid, v in zip(pts.run_ids, pts.seed_nn, strict=True)}
     lines = [
-        "### Panel (b), left: precision and recall against R⁻ (Inception, k = 5)",
+        "### Panel (b), top: precision and recall against R⁻ (Inception, k = 5)",
         "",
         "Loaded with `paper_f3.load_pr` from `runs.<id>.metrics.{F_rminus,H_rminus}."
         f"{{precision,recall}}` and `H_r5.recall` of {_sources_line(report)}. F = 2,000 "
@@ -2073,7 +2109,7 @@ def _pr_lines(report: BuildReport) -> list[str]:
 
 
 def _distance_lines(report: BuildReport) -> list[str]:
-    """Panel (b), right: the per-run medians, seed means, pooled quartiles and the reference."""
+    """Panel (b), bottom: the per-run medians, seed means, pooled quartiles and the reference."""
     from ihdm.analysis.seed_distance import QUANTITIES
 
     dist = report.distances
@@ -2081,7 +2117,7 @@ def _distance_lines(report: BuildReport) -> list[str]:
         return []
     refs = report.heldout_record["references"]
     lines = [
-        "### Panel (b), right: distance to the own seed and to the training set (post hoc)",
+        "### Panel (b), bottom: distance to the own seed and to the training set (post hoc)",
         "",
         "Pixel-space Euclidean distance with each image's DC removed "
         "(`ihdm.metrics.memorisation.nn_distances`, CPU, float32), computed by "
@@ -2175,9 +2211,10 @@ def _band_lines(report: BuildReport) -> list[str]:
         f"- **Crop:** every band shows the same square window, rows {r0}–{r1 - 1} and columns "
         f"{c0}–{c1 - 1} ({r1 - r0} px; the smallest square centred on the pixels above "
         f"{EMPTY_LEVEL} of the slice), so the head fills the image. Each image is square, as "
-        "tall as the strip between −1 and −0.55, centred in its octave; the 64–96 octave is "
-        "narrower than the strip, so its image shows the centre columns of the window at the "
-        "same pixel scale.",
+        "tall as the strip between −1 and −0.55 or as wide as one octave on the log axis, "
+        "whichever is smaller, and centred in its octave and in the strip; the 64–96 octave "
+        "is narrower, so its image shows the centre columns of the window at the same pixel "
+        "scale.",
         "- **Grey map:** symmetric, mid-grey = 0, each band scaled to its own range "
         f"(± its largest |value| in the window; slice on [0, 1]): {scales}.",
         "- **Shading:** the share of variance kept by the matched prior is drawn above the image "
@@ -2254,7 +2291,7 @@ def render_f2_notes(report: BuildReport) -> str:
                  f"`{held['references']['ixi']['r_minus_idx_sha256'][:12]}…` "
                  f"({held['references']['ixi']['n_r_minus']} images).")
     lines += [f"- {line}" for line in report.precision_checks]
-    lines.append("- **Panel (b), left (T8.5's expectation table, `paper_f3.assert_pr_means`):**")
+    lines.append("- **Panel (b), top (T8.5's expectation table, `paper_f3.assert_pr_means`):**")
     lines += [f"  - {line}" for line in report.pr_checks]
     lines.append("- **Distance anchor (`M` and seed-NN recomputed from the samples):**")
     lines += [f"  - {line}" for line in report.anchor_checks]
@@ -2267,10 +2304,11 @@ def render_f2_notes(report: BuildReport) -> str:
     lines += [
         f"- **Layout (measured on the drawn figure):** {a.width_in:.2f} × {a.height_in:.2f} in, "
         f"smallest font {a.min_font_pt:g} pt over {a.n_texts} text elements, smallest thumbnail "
-        f"{a.min_thumb_in:.2f} in, smallest band image {a.min_band_in:.3f} in tall, "
+        f"{a.min_thumb_in:.2f} in, smallest band image {a.min_band_in:.3f} in tall (square to "
+        f"{a.band_aspect:.1e}), left column {a.left_fraction:.1%} of the width, "
         f"{len(a.overlaps)} overlapping text boxes (limits: {PAPER_WIDTH_IN} in wide, "
         f"≤ {MAX_HEIGHT_IN} in, ≥ {MIN_FONT_PT:g} pt, thumbnails ≥ {MIN_THUMB_IN} in, band "
-        f"images ≥ {MIN_BAND_IN} in, no overlap).",
+        f"images ≥ {MIN_BAND_IN} in, left column ≤ {MAX_LEFT_FRACTION:.0%}, no overlap).",
         "",
         "## Files",
         "",
