@@ -43,7 +43,8 @@ working tree, not under version control):
 | **T1** | the main table | **done (W16, T8.2)**: `docs/RESULTS/paper/t1_main.{tex,md}` |
 | **A1** | appendix (≤ 3/4 page, outside the 8): the natural-image reference runs. Loss against iteration (with epochs; no LSD panel, per Mario's rule), sample thumbnails across checkpoints, the differences-from-paper table, about 155 words | **done (W17, T8.3)**: `docs/RESULTS/paper/a1_natural_images.{svg,pdf,png}`, `a1_table.{tex,md}`, `A1.md` |
 | T1 | the compact main table: IXI A0–A3 and OASIS-1 A0/A3 on the pre-registered endpoints (KID, LSD) plus precision, recall, seed-NN, $D_{pix}$ | outlined in `figure-plan-part1.md` §3 |
-| F3 | fidelity against diversity (the professor's rule 3): under-dispersion, within-seed diversity, held-out seeds | **part 2, not yet designed** |
+| **FM** | the method figure (Methodology): an IXI slice as octave-coloured DCT modes, the forward/reverse heat rows (one macro-step per octave), the per-octave variance and level counts | **done (W18, T8.4)**: `docs/RESULTS/paper/fm_method.{svg,pdf,png}`, `FM.md` |
+| F3 | fidelity against diversity (the professor's rule 3). Design approved by Mario on 2026-10-07: (a) precision against recall, training-seeded (F) against unseen-seeded (H); (b) within-seed diversity, ideal $1-I$ against measured $1-I_w$, ρ, and the total variance ratio | **ticket T8.5** (wave W19): [`T8.5-fidelity-diversity.md`](T8.5-fidelity-diversity.md) |
 | A1–A3 | appendices: the photograph failure and diagnostics, the development-protocol table (H-P1), LSD against iteration and the degenerate $T_\tau$ | later |
 
 **Draft page budget** (8 pages before the bibliography):
