@@ -67,8 +67,10 @@ every band. That is the continuum idealisation, and it is wrong in two ways.
 
 The visual message of both figures is unchanged: IXI departs from any $1/f^2$ reference. But the
 label "1/f²" is attached to a line that does not equal the $1/f^2$ share on the grid the bars are
-measured on. **[ask Mario]** whether to correct the reference line in F1 and FM, in a small
-follow-up ticket.
+measured on.
+
+**Mario's decision (2026-10-07): leave as is.** The figures keep the 12.5% line. The paper text
+words the $1/f^2$ equal share as a continuum property and does not tie it to the grid.
 
 ## Merge record
 
@@ -77,7 +79,13 @@ follow-up ticket.
 | `integration/W18` cut from `main` `20e95c3` | — |
 | `f152260` | merge(T8.4) |
 | `29679fc` | the T8.4 prompt pasted into its log |
-| next docs commit | the paper README row; this file |
+| `f05fa02` | the paper README row; this file; ticket T8.5 |
+| next docs commit | the suite result; Mario's decision on the $1/f^2$ line |
+
+**Full suite on `integration/W18`:** 1416 passed, 1 skipped, 27 deselected (937.96 s).
+
+**Merged to `main` and pushed** with Mario's GO (2026-10-07). `fm_method.pdf` was copied to
+Overleaf `proyecto/figures/`.
 
 ## Follow-ups
 
@@ -85,4 +93,4 @@ follow-up ticket.
    `ihdm.cli.paper_f1`.
 2. `ihdm.cli.paper_f1` does not catch `ScheduleError`: an out-of-range schedule ends in a
    traceback. Found by the agent while reading the code; not run.
-3. The $1/f^2$ reference line, as described in the finding above.
+3. The $1/f^2$ reference line: closed by Mario's decision ("leave as is").
