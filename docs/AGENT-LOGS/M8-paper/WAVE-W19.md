@@ -73,7 +73,13 @@ result files before spawning.
 | `integration/W19` cut from `main` `8898dd0` | — |
 | `49e0d61` | merge(T8.5) |
 | `5f35f05` | the T8.5 prompt pasted into its log |
-| next docs commit | the paper README row; the M8 README status; this file |
+| `58eaf7e` | the paper README row; the M8 README status; this file |
+| next docs commit | the suite result and the merge note |
+
+**Full suite on `integration/W19`:** 1439 passed, 1 skipped, 27 deselected (937.84 s).
+
+**Merged to `main`** on Mario's instruction ("Merge all work on main", 2026-10-07). It is not pushed
+yet, and `f3_fidelity_diversity.pdf` is not yet in Overleaf.
 
 ## Follow-ups
 
