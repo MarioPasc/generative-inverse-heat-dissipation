@@ -47,4 +47,4 @@ Width 5.5 in (the NIPS 2015 `\textwidth`); smallest font 7 pt.
 |---|---|---|---|
 | **F3**, fidelity against diversity | `f3_fidelity_diversity.{svg,pdf,png}` | [`F3.md`](F3.md): caption, numbers per run with sources, the R5 sensitivity, the denominator check, the corrections to the ticket | `python -m ihdm.cli.paper_f3 --results $IHDM_DATA_ROOT/_results --heldout docs/RESULTS/heldout_fidelity/heldout_fidelity.json docs/RESULTS/paper/f2_a2_heldout/heldout_fidelity.json --tables docs/RESULTS/tables/tables.json --exploratory docs/RESULTS/exploratory/exploratory.json --constants docs/RESULTS/inherited_band_constants.json --out docs/RESULTS/paper` |
 
-**Every planned main-text figure and table is done** (F1, FM, F2, T1, F3; appendix A1). Next: the paper text.
+**2026-10-07, later (Mario):** F3 leaves the paper. Its panel (a) moves into a reworked F2, which also gains a distance-to-seed plot and band-pass images on the spectrum (ticket T8.8, wave W21). The F3 files stay here as a record. The paper's main text uses F1, FM, F2 and T1.
