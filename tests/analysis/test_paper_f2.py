@@ -753,6 +753,16 @@ def test_committed_caption_length_and_content() -> None:
         assert phrase in caption, phrase
 
 
+def test_layout_audit_limits_of_the_two_column_layout() -> None:
+    ok = pf.LayoutAudit(5.5, 3.53, 7.0, 0.43, 60, 0.38, (), 0.627, 0.0)
+    assert ok.problems() == []
+    bad = pf.LayoutAudit(5.5, 4.9, 6.5, 0.39, 60, 0.33, ("x / y",), 0.66, 0.05)
+    text = "; ".join(bad.problems())
+    for part in ("height 4.9", "smallest font 6.5", "thumbnail 0.390", "band image 0.330",
+                 "left column 66.0%", "not square", "overlapping texts: x / y"):
+        assert part in text, part
+
+
 def test_caption_words_ignores_markup() -> None:
     assert pf.caption_words("> **Bold title.**\n>\n> (a) One → two, 0.5 c/img.") == 7
 
