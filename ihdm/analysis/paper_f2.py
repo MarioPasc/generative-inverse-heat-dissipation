@@ -1964,14 +1964,14 @@ def _change(before: float, after: float, places: int = 2) -> str:
     return f"{'falls' if after < before else 'rises'} from {a} to {b}"
 
 
-def _position(value: float, band: tuple[float, float], places: int = 2) -> str:
-    """Where ``value`` sits relative to the real images' interquartile range."""
+def _position(value: float, band: tuple[float, float], name: str = "the grey band") -> str:
+    """Where ``value`` sits relative to the real images' interquartile range ``band``."""
     lo, hi = band
     if value < lo:
-        return "below the grey band"
+        return f"below {name}"
     if value > hi:
-        return "above the grey band"
-    return "inside the grey band"
+        return f"above {name}"
+    return f"inside {name}"
 
 
 def caption_words(caption: str) -> int:
@@ -2132,6 +2132,14 @@ def _distance_lines(report: BuildReport) -> list[str]:
                          f"{index[rid].value('seed_nn_fraction'):.4f} |")
         means = " | ".join(f"**{v:.3f}**" for v in cfg.mean())
         lines.append(f"| {ds} | **{label} seed mean** (n = {cfg.n}) | | {means} | | | | |")
+    lines += ["", "Default → matched, seed means (computed, not interpreted):", ""]
+    for dataset in dist.d_ref:
+        d0, d3 = dist.configs[(dataset, "A0")].mean(), dist.configs[(dataset, "A3")].mean()
+        band = dist.real_quartiles[dataset]
+        parts = [f"{q.replace('_', ' ')} {_change(a, b, 3)} (matched "
+                 f"{_position(b, band, 'the R⁻ band')})"
+                 for q, a, b in zip(QUANTITIES, d0, d3, strict=True)]
+        lines.append(f"- {DATASET_NAMES[dataset]}: " + "; ".join(parts) + ".")
     lines += [
         "",
         "Interquartile range of the samples, pooled over the runs (the vertical lines):",
