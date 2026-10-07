@@ -41,4 +41,10 @@ Width 5.5 in (the NIPS 2015 `\textwidth`); smallest font 7 pt.
 |---|---|---|---|
 | **FM**, the method figure | `fm_method.{svg,pdf,png}` | [`FM.md`](FM.md): caption, modes, variance and levels per octave, the macro-step check, sources. 6 explicit macro-steps plus an ellipsis for 32–96 c/img; `stixsans` mathtext (FM only) | `python -m ihdm.cli.paper_fm --data-root $IHDM_DATA_ROOT --out docs/RESULTS/paper` |
 
-**Pending:** F3, fidelity against diversity (ticket T8.5, wave W19).
+**Wave W19 (2026-10-07):**
+
+| item | files | notes | command |
+|---|---|---|---|
+| **F3**, fidelity against diversity | `f3_fidelity_diversity.{svg,pdf,png}` | [`F3.md`](F3.md): caption, numbers per run with sources, the R5 sensitivity, the denominator check, the corrections to the ticket | `python -m ihdm.cli.paper_f3 --results $IHDM_DATA_ROOT/_results --heldout docs/RESULTS/heldout_fidelity/heldout_fidelity.json docs/RESULTS/paper/f2_a2_heldout/heldout_fidelity.json --tables docs/RESULTS/tables/tables.json --exploratory docs/RESULTS/exploratory/exploratory.json --constants docs/RESULTS/inherited_band_constants.json --out docs/RESULTS/paper` |
+
+**Every planned main-text figure and table is done** (F1, FM, F2, T1, F3; appendix A1). Next: the paper text.
