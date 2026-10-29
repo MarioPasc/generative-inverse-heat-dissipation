@@ -35,12 +35,14 @@
 #   regression target over the levels;
 # - read the results of our experiment, re-plotted from small files.
 #
-# The notebook does not train or sample. Both need a GPU and the trained checkpoints, which are not
-# in the repository, so every result in Section 7 is loaded from a file. The notebook runs on a CPU
-# and reads only files tracked in the repository; the last cell prints its run time. The full
-# discussion of the results is in
-# [`docs/RESULTS/results_discussion.md`](docs/RESULTS/results_discussion.md). Formulas follow the
+# The notebook does not train or sample. Training needs a GPU, and sampling needs the trained
+# checkpoints, which are not in the repository, so every result in Section 7 is loaded from a
+# file. The notebook runs on a CPU and reads only files tracked in the repository; the last cell
+# prints its run time. The full discussion of the results is in
+# [`docs/RESULTS/results_discussion.md`][results-discussion]. Formulas follow the
 # course notation, as in the Methodology (Section 4) and Appendix C of our report.
+#
+# [results-discussion]: https://github.com/MarioPasc/generative-inverse-heat-dissipation/blob/main/docs/RESULTS/results_discussion.md
 
 # %% [markdown]
 # ## 1. Setup
@@ -201,7 +203,7 @@ for k, s in enumerate(sigmas_b):
     print(f"sigma_B = {s:4.0f} px: max |heat - DCTBlur| = {np.abs(ours - theirs).max():.1e}")
 
 # %% [markdown]
-# The largest difference is of the order of float32 rounding: our three lines and the released
+# The largest difference is of the order of float32 rounding: our function `heat` and the released
 # operator compute the same $F(t)$. The next figure blurs one brain slice and one photograph to
 # $\sigma_B\in\{0, 2, 8, 24, 96\}$ px.
 
@@ -272,13 +274,18 @@ for name, p in P.items():
 # %%
 cycles = radial_index(W) / 2  # c_i of every mode, (W, W)
 bins = octave_bins()
-counts = [int(((cycles >= lo) & ((cycles < hi) | (cycles == 96.0))).sum()) for _, lo, hi in bins]
+# half-open bins, the last one closed at 96 c/img, as in octave_shares
+counts = [int(((cycles >= lo) & ((cycles < hi) | ((hi == 96.0) & (cycles == 96.0)))).sum())
+          for _, lo, hi in bins]
 print("modes per octave:", dict(zip([b[0] for b in bins], counts, strict=True)))
 print("corner modes above 96 c/img:", int((cycles > 96.0).sum()))
 shares = {name: octave_shares(p) for name, p in P.items()}
 print(f"\n{'octave (c/img)':15s}" + "".join(f"{label:>8s}" for label, _, _ in bins))
 for name, s in shares.items():
     print(f"{name:15s}" + "".join(f"{100 * v:7.1f}%" for v in s.values()))
+# continuum c^-2: equal variance per full octave, so a bin's share is its width in octaves
+continuum = [np.log2(hi / lo) / np.log2(96.0 / 0.5) for _, lo, hi in bins]
+print(f"{'continuum c^-2':15s}" + "".join(f"{100 * v:7.1f}%" for v in continuum))
 for name, key in (("IXI", "ixi"), ("Churches", "lsun_church")):
     stored = profile[key]["octave_shares_train"]
     print(f"{name} equals the stored octave_shares_train:",
@@ -296,7 +303,8 @@ x_oct = np.arange(len(bins))
 for j, (name, s) in enumerate(shares.items()):
     ax_b.bar(x_oct + (j - 1) * 0.27, [100 * v for v in s.values()], width=0.27,
              color=COLORS[name], label=name)
-ax_b.axhline(12.5, color="k", linestyle=":", linewidth=0.8)
+ax_b.plot(x_oct, [100 * v for v in continuum], "k_", markersize=22, markeredgewidth=1.5,
+          label="continuum $c^{-2}$")
 ax_b.set_xticks(x_oct, [b[0] for b in bins], rotation=45)
 ax_b.set(xlabel="octave (c/img)", ylabel="share of between-image variance (%)",
          title="(b) octave shares")
@@ -310,12 +318,15 @@ plt.show()
 # in 8–16 c/img. Panel (a) shows the same difference: the fitted exponent is 2.28 for
 # Churches, close to the synthetic spectrum, and 3.22 for IXI, whose spectrum is curved.
 #
-# On a continuous plane, a $c^{-2}$ spectrum gives every octave the same share, 12.5% for eight
-# octaves (report, Appendix C; dotted line in panel b). On the $192^2$ grid it does not. The
-# synthetic spectrum gives 23.7% to 0.5–1 c/img, 15.2% to 1–2 c/img and 6.1% to 64–96 c/img,
-# and between 10.4% and 11.2% to each of the four octaves from 4 to 64 c/img. The coarsest octave
-# holds three modes, too few for the continuum count, and 64–96 c/img is half an octave. Equal
-# shares therefore hold only roughly, and only from about 4 c/img up.
+# On a continuous plane, a $c^{-2}$ spectrum holds the same variance in every full octave
+# (report, Appendix C). On these bins a bin's continuum share is
+# $\log_2(\text{hi}/\text{lo})/\log_2(96/0.5)$: 13.2% for each of the seven full octaves and
+# 7.7% for the 0.58 octave 64–96 c/img (row `continuum c^-2` above; black marks in panel b). On
+# the $192^2$ grid the synthetic spectrum departs from it. It gives 23.7% to 0.5–1 c/img, 15.2% to
+# 1–2 c/img and 6.1% to 64–96 c/img, and between 10.4% and 11.2% to each of the four octaves from
+# 4 to 64 c/img. The coarsest octave holds three modes, too few for the continuum count, and
+# 64–96 c/img is 0.58 of an octave. Equal shares per full octave therefore hold only roughly, and
+# only from about 4 c/img up.
 
 # %% [markdown]
 # ## 5. Change 1: the prior
@@ -405,7 +416,9 @@ plt.show()
 #
 # $$E_k=\sum_i\big(d_{k-1,i}-d_{k,i}\big)^2P_i$$
 #
-# (report, Section 4.2; derivation in Appendix C). The noise part is the same at every level.
+# (report, Section 4.2; derivation in Appendix C). $E_k$ excludes the DC mode, as $P_i$ does,
+# while the noise term $W^2\sigma^2$ counts every pixel, DC included. The noise part is the same
+# at every level.
 # $E_k$ is the between-image variance of the level-$k$ target, the part of the image that level $k$
 # teaches the network to restore. Where the levels $t_k$ sit therefore decides how this variance,
 # and with it the training effort, is spread over the levels.
@@ -417,8 +430,8 @@ plt.show()
 # the same number of levels into every octave of $\sigma_B$. Our matched spacing places
 # $t_2,\dots,t_{K-1}$ so that $E_2=\dots=E_K$ on the IXI training split, with both endpoints
 # fixed. Algorithm 1 of the report (Section 4.2) finds it with two nested bisections, and
-# `ihdm.spectral.schedules.matched_schedule` implements it. One fit takes minutes on a CPU, so we
-# load the four frozen schedules from `schedules/`, written by
+# `ihdm.spectral.schedules.matched_schedule` implements it. One fit takes more than three
+# minutes on a CPU, so we load the four frozen schedules from `schedules/`, written by
 # `python -m ihdm.cli.build_schedules`. The names give the spacing (`log` or `ixi`-matched) and
 # the terminal blur (`W2`: 96 px, `W8`: 24 px). The log schedules can be rebuilt instantly, and
 # the cell checks that the rebuild equals the frozen file.
@@ -497,6 +510,12 @@ plt.show()
 for name, p in P.items():
     print(f"{name:15s} log_W2 spread = {per_level_spread(p, schedules['log_W2']):.1f}x   "
           f"log_W8 spread = {per_level_spread(p, schedules['log_W8']):.1f}x")
+ratio = per_level_removed(P["synthetic c^-2"], schedules["log_W2"])
+ratio = ratio / ratio.mean()  # synthetic c^-2 under log_W2, E_k / mean_k E_k
+middle = ratio[(k >= 25) & (k <= 100)]
+print(f"synthetic c^-2, E_k / mean: k = 2: {ratio[0]:.2f}; k = 25: {ratio[k == 25][0]:.2f}; "
+      f"k = 25-100: {middle.min():.2f}-{middle.max():.2f}; max {ratio.max():.2f} at "
+      f"k = {k[ratio.argmax()]}; k = 200: {ratio[-1]:.2f}")
 
 # %% [markdown]
 # On IXI the paper's spacing makes $E_k$ vary by a factor of 8.9 at 96 px and 8.5 at 24 px. Under
@@ -512,9 +531,10 @@ for name, p in P.items():
 #
 # which does not depend on $k$ (report, Section 4.2 and Appendix C): every octave holds the same
 # variance and receives the same number of levels. On the $192^2$ grid the synthetic $c^{-2}$
-# spectrum is not flat: its $E_k$ is nearly constant over the first half of the levels and rises
-# at the large blurs, and its spread under `log_W2` is 2.0. The cause is the one of Section 4: the
-# coarse octaves hold few modes, and the grid ends at 96 c/img. So 2.0 is what logarithmic
+# spectrum is not flat: its $E_k$ rises from 0.71 of its mean at $k=2$ to about 0.9 by $k=25$,
+# stays between 0.88 and 0.92 of the mean up to $k=100$, then rises to 1.42 near $k=192$ and falls
+# to 1.26 at the last level. Its spread under `log_W2` is 2.0. The cause is the one of Section 4:
+# the coarse octaves hold few modes, and the grid ends at 96 c/img. So 2.0 is what logarithmic
 # spacing gives on this grid even for ideal $c^{-2}$ data. Churches comes close to it with 3.8;
 # IXI is far from it with 8.9. At 24 px (`log_W8`) the three spreads are 1.5, 3.5 and 8.5.
 
@@ -527,7 +547,9 @@ for name, p in P.items():
 # second brain cohort, tests transfer with default and matched (two seeds each). Every run trains
 # for 60,000 iterations (report, Section 4.4). Set F holds 2,000 samples seeded from training
 # images, and set H 50 samples from each of 40 held-out subjects; $\mathcal{R}^-$ is the reference
-# of held-out slices without the 40 seed subjects (report, Section 4.3).
+# of held-out slices without the 40 seed subjects (400 images; report, Section 4.3). Panel (b)
+# compares the samples with $\mathcal{R}^-$ (400 images), while the octave errors of panel (c)
+# use the full reference $\mathcal{R}$ (800 images).
 #
 # The cells below re-plot simplified versions of Figure 2 of the report from
 # `assets/results/f2_results.json`. `python -m ihdm.cli.build_tutorial_assets` builds that file
@@ -601,8 +623,9 @@ plt.show()
 
 # %% [markdown]
 # From default to matched the median distance to the own seed falls from 1.287 to 0.893 (set F)
-# and from 1.282 to 0.867 (set H). Both matched values lie below the grey band (0.936–1.078), so a
-# matched sample is closer to its seed than three in four new real images are to the training set.
+# and from 1.282 to 0.867 (set H). Both matched values lie below the grey band (0.936–1.078), so
+# the median matched sample is closer to its seed than three in four new real images are to the
+# training set.
 # The distance to other training images rises from 0.910 to 0.940 (F) and from 0.902 to 0.927 (H).
 #
 # **Spectral error per octave (Figure 2c).** The octave error compares the radial variance
@@ -624,7 +647,7 @@ plt.show()
 # %% [markdown]
 # The default runs lack variance at 1–2 and 2–4 c/img ($e_o=-0.302$ and $-0.389$). With the
 # 24 px prior (+prior and matched) the error in these two octaves stays within 0.05 of zero. At
-# 24 px the prior keeps the octaves below about 2 c/img, so there the error reflects the seed
+# 24 px the prior keeps the frequencies below about 1.8 c/img, so there the error reflects the seed
 # rather than the chain (report, Section 4.3). The octave error sees how much the images vary at
 # each scale but not what varies, so we read it next to precision.
 #
