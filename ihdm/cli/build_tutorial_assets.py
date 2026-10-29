@@ -69,6 +69,7 @@ RESULTS_NAME = "f2_results.json"
 MANIFEST_NAME = "manifest.json"
 
 _RUN_ID = re.compile(r"^(?P<dataset>[a-z0-9]+)_(?P<arm>A\d)_s(?P<seed>\d+)$")
+_SEED_MEAN = re.compile(r"^(?P<label>.+) seed mean \(n = (?P<n>\d+)\)$")
 
 
 class TutorialAssetError(Exception):
@@ -321,7 +322,9 @@ def parse_f2_distances(f2_text: str) -> dict[str, Any]:
     -------
     dict[str, Any]
         ``per_run``: ``{run: {"F_seed", "F_train", "H_seed", "H_train"}}`` (medians in units of
-        D_ref); ``band``: ``{dataset: [p25, p75]}`` of the R⁻ images; ``pooled_iqr``:
+        D_ref); ``seed_mean``: ``{dataset: {configuration: {key: mean, "n": n}}}``, the seed
+        means as F2.md prints them (computed there from unrounded medians); ``band``:
+        ``{dataset: [p25, p75]}`` of the R⁻ images; ``pooled_iqr``:
         ``{dataset: {configuration: {key: [p25, p75]}}}``.
 
     Raises
@@ -333,12 +336,20 @@ def parse_f2_distances(f2_text: str) -> dict[str, Any]:
     per_run_table = _find_table(tables, "run", *DISTANCE_KEYS)
     header = per_run_table[0]
     per_run: dict[str, dict[str, float]] = {}
+    seed_mean: dict[str, dict[str, dict[str, float]]] = {}
     for cells in per_run_table[1:]:
+        values = {
+            key.replace(" ", "_"): float(_strip(cells[header.index(key)])) for key in DISTANCE_KEYS
+        }
         run = _strip(cells[header.index("run")])
         if run:
-            per_run[run] = {
-                key.replace(" ", "_"): float(cells[header.index(key)]) for key in DISTANCE_KEYS
-            }
+            per_run[run] = values
+            continue
+        match = _SEED_MEAN.match(_strip(cells[header.index("configuration")]))
+        if match is None:
+            raise TutorialAssetError(f"unexpected row in the F2.md distance table: {cells}")
+        dataset = DATASET_NAMES[cells[header.index("dataset")]]
+        seed_mean.setdefault(dataset, {})[match["label"]] = {**values, "n": int(match["n"])}
 
     band_table = _find_table(tables, "dataset", "R⁻ band (25th–75th percentile)")
     band_header = band_table[0]
@@ -363,7 +374,7 @@ def parse_f2_distances(f2_text: str) -> dict[str, Any]:
         pooled.setdefault(dataset, {})[cells[1]] = {
             key.replace(" ", "_"): _range(cells[iqr_header.index(key)]) for key in DISTANCE_KEYS
         }
-    return {"per_run": per_run, "band": band, "pooled_iqr": pooled}
+    return {"per_run": per_run, "seed_mean": seed_mean, "band": band, "pooled_iqr": pooled}
 
 
 def parse_f2_lsd_means(f2_text: str) -> dict[str, dict[str, float]]:
@@ -525,6 +536,7 @@ def build_results(
         "configurations": CONFIGURATIONS,
         "octaves": list(OCTAVE_LABELS),
         "runs": per_run,
+        "distance_seed_mean": distances["seed_mean"],
         "distance_band_rminus": distances["band"],
         "distance_pooled_iqr": distances["pooled_iqr"],
         "units": {
@@ -537,7 +549,7 @@ def build_results(
                 {"path": _display_path(path), "sha256": sha256_file(path)}
                 for path in heldout_paths
             ],
-            "distance_median, distance_band_rminus, distance_pooled_iqr": {
+            "distance_median, distance_seed_mean, distance_band_rminus, distance_pooled_iqr": {
                 "path": _display_path(f2_md),
                 "sha256": sha256_file(f2_md),
                 "note": "parsed from the generated tables; no machine-readable source exists",

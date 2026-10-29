@@ -130,6 +130,54 @@
    }
   }
  },
+ "distance_seed_mean": {
+  "ixi": {
+   "+prior": {
+    "F_seed": 0.912,
+    "F_train": 0.941,
+    "H_seed": 0.883,
+    "H_train": 0.927,
+    "n": 2
+   },
+   "+spacing": {
+    "F_seed": 1.239,
+    "F_train": 0.914,
+    "H_seed": 1.225,
+    "H_train": 0.898,
+    "n": 2
+   },
+   "default": {
+    "F_seed": 1.287,
+    "F_train": 0.91,
+    "H_seed": 1.282,
+    "H_train": 0.902,
+    "n": 3
+   },
+   "matched": {
+    "F_seed": 0.893,
+    "F_train": 0.94,
+    "H_seed": 0.867,
+    "H_train": 0.927,
+    "n": 3
+   }
+  },
+  "oasis1": {
+   "default": {
+    "F_seed": 1.312,
+    "F_train": 1.0,
+    "H_seed": 1.283,
+    "H_train": 0.991,
+    "n": 2
+   },
+   "matched": {
+    "F_seed": 0.949,
+    "F_train": 0.955,
+    "H_seed": 0.933,
+    "H_train": 0.925,
+    "n": 2
+   }
+  }
+ },
  "octaves": [
   "0.5-1",
   "1-2",
@@ -551,7 +599,7 @@
   }
  },
  "sources": {
-  "distance_median, distance_band_rminus, distance_pooled_iqr": {
+  "distance_median, distance_seed_mean, distance_band_rminus, distance_pooled_iqr": {
    "note": "parsed from the generated tables; no machine-readable source exists",
    "path": "docs/RESULTS/paper/F2.md",
    "sha256": "27b323a30f2acc58e95bca3846ad5f9273c4d9b49c9080e3e0a7c95350109a70"

@@ -72,6 +72,10 @@ def test_build_is_exact_and_byte_stable(synthetic_dataset: Path, tmp_path: Path)
     assert run["precision_recall"]["F"] == {"precision": 0.6015, "recall": 0.3025}
     assert run["distance_median"]["F_seed"] == pytest.approx(1.329)
     assert payload["distance_band_rminus"]["ixi"] == [0.936, 1.078]
+    # F2.md prints seed means from unrounded medians: 0.893, not the 0.892 of the rounded runs.
+    assert payload["distance_seed_mean"]["ixi"]["matched"] == {
+        "F_seed": 0.893, "F_train": 0.94, "H_seed": 0.867, "H_train": 0.927, "n": 3
+    }
     assert len(payload["runs"]) == len(cli.RUNS)
 
 

@@ -52,6 +52,7 @@ three seeds, A1, A2 with two; OASIS-1: A0, A3 with two). Every field names its s
 |---|---|---|
 | `runs.<id>.precision_recall.{F,H}.{precision,recall}` | (b) top | `docs/RESULTS/heldout_fidelity/heldout_fidelity.json` (A0, A1, A3, OASIS-1) and `docs/RESULTS/paper/f2_a2_heldout/heldout_fidelity.json` (A2), keys `runs.<id>.metrics.{F_rminus,H_rminus}` |
 | `runs.<id>.distance_median.{F_seed,F_train,H_seed,H_train}` | (b) bottom | parsed from the per-run table of `docs/RESULTS/paper/F2.md` |
+| `distance_seed_mean.<dataset>.<configuration>` | (b) bottom | the "seed mean" rows of the same table; F2.md computed them from unrounded medians, so they can differ by 0.001 from the mean of the rounded per-run values |
 | `distance_band_rminus`, `distance_pooled_iqr` | (b) bottom | parsed from the band and pooled-IQR tables of `docs/RESULTS/paper/F2.md` |
 | `runs.<id>.lsd_octaves` (IXI only) | (c) | `lsd_octaves` of `$IHDM_DATA_ROOT/_results/runs/<id>/final.json`; the build checks that the seed means equal the panel (c) table of `F2.md` to its printed rounding (0.0005) |
 
