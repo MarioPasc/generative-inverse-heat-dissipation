@@ -13,8 +13,11 @@ Writes two kinds of file (ticket T9.1 §5):
   ``final.json`` under the results root, and their seed means are checked against ``F2.md``.
 
 The outputs carry no timestamp and no commit hash, so two builds from the same sources are
-byte-identical. Run as ``python -m ihdm.cli.build_tutorial_assets``; this is the only part of the
-tutorial that reads the data drive.
+byte-identical. Every output is first built in a temporary folder and copied into ``--out`` only
+after every check passed, so a failed build leaves ``--out`` as it was. Without ``--force``, the
+command returns early when ``manifest.json`` and ``f2_results.json`` already exist, without
+reading or checking any source. Run as ``python -m ihdm.cli.build_tutorial_assets``; this is the
+only part of the tutorial that reads the data drive.
 """
 
 from __future__ import annotations
@@ -24,6 +27,8 @@ import hashlib
 import json
 import logging
 import re
+import shutil
+import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -297,6 +302,13 @@ def _find_table(tables: list[list[list[str]]], *required: str) -> list[list[str]
     raise TutorialAssetError(f"F2.md has no table with the columns {required}")
 
 
+def _dataset_id(label: str) -> str:
+    """Map an F2.md dataset label (``"IXI"``, ``"OASIS-1"``) to its dataset id."""
+    if label not in DATASET_NAMES:
+        raise TutorialAssetError(f"unknown dataset label {label!r} in F2.md")
+    return DATASET_NAMES[label]
+
+
 def _range(text: str) -> list[float]:
     """Parse ``"0.936–1.078"`` (en dash) into ``[0.936, 1.078]``."""
     low, sep, high = text.partition("–")
@@ -348,13 +360,13 @@ def parse_f2_distances(f2_text: str) -> dict[str, Any]:
         match = _SEED_MEAN.match(_strip(cells[header.index("configuration")]))
         if match is None:
             raise TutorialAssetError(f"unexpected row in the F2.md distance table: {cells}")
-        dataset = DATASET_NAMES[cells[header.index("dataset")]]
+        dataset = _dataset_id(cells[header.index("dataset")])
         seed_mean.setdefault(dataset, {})[match["label"]] = {**values, "n": int(match["n"])}
 
     band_table = _find_table(tables, "dataset", "R⁻ band (25th–75th percentile)")
     band_header = band_table[0]
     band = {
-        DATASET_NAMES[cells[0]]: _range(cells[band_header.index("R⁻ band (25th–75th percentile)")])
+        _dataset_id(cells[0]): _range(cells[band_header.index("R⁻ band (25th–75th percentile)")])
         for cells in band_table[1:]
     }
 
@@ -370,7 +382,7 @@ def parse_f2_distances(f2_text: str) -> dict[str, Any]:
     iqr_header = iqr_tables[0][0]
     pooled: dict[str, dict[str, dict[str, list[float]]]] = {}
     for cells in iqr_tables[0][1:]:
-        dataset = DATASET_NAMES[cells[0]]
+        dataset = _dataset_id(cells[0])
         pooled.setdefault(dataset, {})[cells[1]] = {
             key.replace(" ", "_"): _range(cells[iqr_header.index(key)]) for key in DISTANCE_KEYS
         }
@@ -568,6 +580,15 @@ def _outputs_exist(out_dir: Path) -> bool:
     ).is_file()
 
 
+def _install(staging: Path, out_dir: Path) -> None:
+    """Copy every file of ``staging`` to the same relative path under ``out_dir``."""
+    for source in sorted(staging.rglob("*")):
+        if source.is_file():
+            target = out_dir / source.relative_to(staging)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point.
 
@@ -601,7 +622,11 @@ def main(argv: list[str] | None = None) -> int:
         ],
     )
     parser.add_argument("--f2-md", type=Path, default=repo / "docs/RESULTS/paper/F2.md")
-    parser.add_argument("--force", action="store_true", help="rebuild even if the files exist")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="rebuild even if the files exist; without it an existing build returns early "
+        "without checking the sources",
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
     logging.basicConfig(level=args.log_level, format="%(levelname)s %(name)s: %(message)s")
@@ -611,18 +636,21 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("tutorial assets already in %s; --force to rebuild", out_dir)
         return 0
     results_root: Path = args.results if args.results is not None else args.data_root / "_results"
-    try:
-        specs = [ImageSpec.from_text(text) for text in args.images]
-        manifest = export_images(args.data_root, specs, out_dir / "images")
-        results = build_results(
-            heldout_paths=args.heldout, f2_md=args.f2_md, results_root=results_root
-        )
-    except TutorialAssetError as exc:
-        logger.error("FAILED: %s", exc)
-        return 1
-    write_json(out_dir / "images" / MANIFEST_NAME, manifest)
-    (out_dir / "results").mkdir(parents=True, exist_ok=True)
-    write_json(out_dir / "results" / RESULTS_NAME, results)
+    with tempfile.TemporaryDirectory(prefix="tutorial_assets_") as tmp:
+        staging = Path(tmp)
+        try:
+            specs = [ImageSpec.from_text(text) for text in args.images]
+            results = build_results(
+                heldout_paths=args.heldout, f2_md=args.f2_md, results_root=results_root
+            )
+            manifest = export_images(args.data_root, specs, staging / "images")
+        except TutorialAssetError as exc:
+            logger.error("FAILED: %s; %s left unchanged", exc, out_dir)
+            return 1
+        write_json(staging / "images" / MANIFEST_NAME, manifest)
+        (staging / "results").mkdir()
+        write_json(staging / "results" / RESULTS_NAME, results)
+        _install(staging, out_dir)
     logger.info(
         "wrote %d images and %s (%d runs) to %s",
         len(specs), RESULTS_NAME, len(results["runs"]), out_dir,

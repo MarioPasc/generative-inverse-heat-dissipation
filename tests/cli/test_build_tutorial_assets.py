@@ -88,6 +88,30 @@ def test_build_rejects_octave_errors_that_disagree_with_f2(
     assert not (tmp_path / "out" / "results" / cli.RESULTS_NAME).exists()
 
 
+def test_failed_build_leaves_the_output_folder_unchanged(
+    synthetic_dataset: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "out"
+    assert _build(synthetic_dataset.parent, _write_fake_results(tmp_path / "good"), out) == 0
+    before = {p.relative_to(out): p.read_bytes() for p in out.rglob("*") if p.is_file()}
+    bad = _write_fake_results(tmp_path / "bad", shift=0.01)
+    # A different image and --force: a build that wrote PNGs before checking would add one.
+    status = cli.main(
+        [
+            "--data-root", str(synthetic_dataset.parent), "--results", str(bad),
+            "--out", str(out), "--images", "synthetic:5", "--force", "--log-level", "CRITICAL",
+        ]
+    )
+    assert status == 1
+    after = {p.relative_to(out): p.read_bytes() for p in out.rglob("*") if p.is_file()}
+    assert after == before
+
+
+def test_unknown_dataset_label_raises_the_package_error() -> None:
+    with pytest.raises(cli.TutorialAssetError):
+        cli._dataset_id("BraTS")
+
+
 def test_image_spec_rejects_malformed_text() -> None:
     with pytest.raises(cli.TutorialAssetError):
         cli.ImageSpec.from_text("ixi-3705")
