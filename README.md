@@ -1,3 +1,47 @@
+# Matching the Prior and Level Spacing of Inverse Heat Dissipation Models to Brain MRI
+
+This fork of the IHDM code asks whether the settings that Rissanen et al. chose for natural images
+suit brain MRI. Two settings of IHDM depend on the data: the terminal blur of the prior, which
+decides how much of a training image each sample inherits, and the spacing of the blur levels,
+which decides how the training effort is spread over frequency. We set both from the statistics
+of registered T1 slices (IXI) and measure what the change gains in fidelity and what it costs in
+diversity and copying, on IXI and, without refitting, on OASIS-1. The `ihdm/` package holds our
+code; the released model code is unchanged in `model_code/`.
+
+Four configurations cross the two changes:
+
+| Configuration | Terminal blur | Level spacing |
+|---|---|---|
+| A0, *default* (the paper's) | $W/2$ = 96 px | logarithmic |
+| A1, *+prior* | $W/8$ = 24 px | logarithmic |
+| A2, *+spacing* | $W/2$ = 96 px | matched to IXI |
+| A3, *matched* | $W/8$ = 24 px | matched to IXI |
+
+- **Tutorial:** [`ihdm_mri_tutorial.ipynb`](ihdm_mri_tutorial.ipynb) walks through both changes
+  with figures computed from our code, then re-plots our results; a rendered copy is
+  [`docs/tutorial/ihdm_mri_tutorial.html`](docs/tutorial/ihdm_mri_tutorial.html). Its source is
+  [`ihdm_mri_tutorial.py`](ihdm_mri_tutorial.py) (jupytext), and its inputs are in
+  [`assets/`](assets/README.md).
+- **Results:** [`docs/RESULTS/results_discussion.md`](docs/RESULTS/results_discussion.md) and the
+  paper figures with their numbers in [`docs/RESULTS/paper/`](docs/RESULTS/paper/).
+- **Reproduction:** the commands are in
+  [Section 13 of `results_discussion.md`](docs/RESULTS/results_discussion.md#13-reproduction) and
+  at the end of each figure's notes in `docs/RESULTS/paper/` (for example `F2.md`).
+
+Set up the environment and run the tutorial on a CPU (it reads only tracked files):
+
+```bash
+conda env create -f environment.yml && conda activate ihdm
+pip install -e ".[dev]"
+jupyter nbconvert --to notebook --execute --inplace ihdm_mri_tutorial.ipynb
+```
+
+The datasets (IXI, OASIS-1, LSUN), the training checkpoints and the evaluation archives are not in
+the repository. The code finds them through `IHDM_DATA_ROOT` and the other variables of
+`ihdm/paths.py`; only small derived files (spectra, frozen schedules, result tables) are tracked.
+
+## Upstream README (Rissanen et al.)
+
 # Generative Modelling With Inverse Heat Dissipation
  
 This repository is the official implementation of the methods in the publication:
