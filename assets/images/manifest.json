@@ -1,0 +1,65 @@
+{
+ "images": [
+  {
+   "dataset_id": "ixi",
+   "dtype": "uint8",
+   "file": "ixi_3705.png",
+   "row": 3705,
+   "sha256": "babe49095ded6599f73feab9becf8d1033c2cea927dc318d0ef10c5ce8f7faf0",
+   "shape": [
+    192,
+    192
+   ],
+   "slice": 5,
+   "source": "607_Guys/IXI607-Guys-1097-T1.nii.gz",
+   "split": "seed",
+   "subject": "IXI607"
+  },
+  {
+   "dataset_id": "ixi",
+   "dtype": "uint8",
+   "file": "ixi_3311.png",
+   "row": 3311,
+   "sha256": "01d2ae657aa2ace683c242fde51fbbe3699521753a40da4c75eb58d5aa7af5a8",
+   "shape": [
+    192,
+    192
+   ],
+   "slice": 1,
+   "source": "541_IOP/IXI541-IOP-1146-T1.nii.gz",
+   "split": "train",
+   "subject": "IXI541"
+  },
+  {
+   "dataset_id": "lsun_church",
+   "dtype": "uint8",
+   "file": "lsun_church_1180.png",
+   "row": 1180,
+   "sha256": "a1be9ac5d492df3efcaf2cdae1f2f8a10c8d2140fb26844e32e651b12016ea88",
+   "shape": [
+    192,
+    192
+   ],
+   "slice": 0,
+   "source": "tglcourse/lsun_church_train/data/test-00000-of-00001-b3f98c62a94e5d25.parquet/1180",
+   "split": "train",
+   "subject": "church_01180"
+  },
+  {
+   "dataset_id": "lsun_church",
+   "dtype": "uint8",
+   "file": "lsun_church_107.png",
+   "row": 107,
+   "sha256": "ac08dc93c95c1f558b05e0e923044453909cb30840ad309ab5eb44ee68a95b25",
+   "shape": [
+    192,
+    192
+   ],
+   "slice": 0,
+   "source": "tglcourse/lsun_church_train/data/test-00000-of-00001-b3f98c62a94e5d25.parquet/107",
+   "split": "seed",
+   "subject": "church_00107"
+  }
+ ],
+ "rebuild": "python -m ihdm.cli.build_tutorial_assets"
+}

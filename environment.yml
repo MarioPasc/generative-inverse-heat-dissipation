@@ -28,6 +28,12 @@ dependencies:
       - prdc
       - pytest
       - ruff
+      # Tutorial notebook (T9.1): jupytext pairing, execution and the HTML export.
+      - jupytext>=1.19.6
+      - nbclient>=0.11.0
+      - nbconvert>=7.17.2
+      - nbformat>=5.11.1
+      - ipykernel>=7.4.0
       # Not in the ticket's package list but required by the released code we run
       # unmodified: scripts/datasets.py imports `blobfile` at module level;
       # scripts/utils.py imports `cv2` at module level and is imported by train.py
