@@ -32,6 +32,7 @@ Set up the environment and run the tutorial on a CPU (it reads only tracked file
 
 ```bash
 conda env create -f environment.yml && conda activate ihdm
+# or, for an existing env: conda env update -n ihdm -f environment.yml --prune
 pip install -e ".[dev]"
 jupyter nbconvert --to notebook --execute --inplace ihdm_mri_tutorial.ipynb
 ```

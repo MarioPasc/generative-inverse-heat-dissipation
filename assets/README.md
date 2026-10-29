@@ -8,8 +8,8 @@ python -m ihdm.cli.build_tutorial_assets --force            # into assets/
 python -m ihdm.cli.build_tutorial_assets --out /tmp/assets  # into another folder, for a byte comparison
 ```
 
-The command reads the datasets under `$IHDM_DATA_ROOT` (default
-`/media/mpascual/MeningD2/spectral_allocation_heat_diffusion_project`) and the per-run
+The command reads the datasets under `$IHDM_DATA_ROOT` (when unset, the default set in
+`ihdm/paths.py`) and the per-run
 `final.json` files under `$IHDM_DATA_ROOT/_results`. Its outputs carry no timestamp or commit hash,
 so a second build from the same sources writes the same bytes.
 
@@ -28,19 +28,25 @@ subject, slice, split, source and SHA-256 of each file, and the notebook takes i
 
 The IXI slices come from T1-weighted volumes that we rigidly registered to MNI152 2009c at 1 mm,
 corrected with N4 and scaled to [0, 1] by the 99th percentile of the foreground
-(`ihdm.preprocess.mri`, pipeline 1.1). The Churches images are photographs converted to grayscale,
-resized to a 256 px short side when the short side exceeds 256 px, and centre-cropped to 192 × 192
-(`ihdm.preprocess.photos`, pipeline 1.0).
+(`ihdm.preprocess.mri`, pipeline 1.1). The Churches images are photographs converted to grayscale
+and centre-cropped to 192 × 192 (`ihdm.preprocess.photos`, pipeline 1.0). The pipeline would
+resize a frame whose short side exceeds 256 px, but no frame of this dataset needed it: the
+dataset's `meta.json` counts `"resized": 0` of 4,000 accepted images.
 
-**Licences.**
+**Licences** (pages checked on 2026-10-29).
 
-- IXI: the IXI dataset is distributed under CC BY-SA 3.0. Attribution: "IXI dataset,
+- IXI: the IXI page, https://brain-development.org/ixi-dataset/, states: "This data is made
+  available under the Creative Commons CC BY-SA 3.0 license. If you use the IXI data please
+  acknowledge the source of the IXI data, e.g. this website." Attribution: "IXI dataset,
   https://brain-development.org/ixi-dataset/". The two derived slices here are shared under the
-  same licence, CC BY-SA 3.0.
+  same licence, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/legalcode).
 - LSUN Churches: source Hugging Face `tglcourse/lsun_church_train` (shard
   `data/test-00000-of-00001-b3f98c62a94e5d25.parquet`, rows 1180 and 107), taken from LSUN
-  (Yu et al., 2015, arXiv 1506.03365). Licence of the individual images not stated by the source;
-  check before public release.
+  (Yu et al., 2015, arXiv 1506.03365). The dataset card,
+  https://huggingface.co/datasets/tglcourse/lsun_church_train, states no licence; it says
+  "Uploading lsun church train dataset for convenience" and points to https://github.com/fyu/lsun,
+  whose README states no licence either and refers to the LSUN page, http://www.yf.io/p/lsun,
+  which could not be reached. Licence of the individual images: to verify before public release.
 
 ## Results (`results/f2_results.json`)
 
