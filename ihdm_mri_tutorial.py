@@ -398,7 +398,7 @@ plt.show()
 # photographs keep their variance at the coarse frequencies that survive the blur. At 96 px the
 # brain prior keeps almost nothing, and the chain must also generate the head outline and the
 # coarse anatomy that all subjects share. $I$ is a prediction for an ideal sampler, not a
-# measurement. Its expected cost, samples that copy their seed, is measured in Section 7.
+# measurement. Its expected cost, samples that stay close to their seed, is measured in Section 7.
 
 # %% [markdown]
 # ## 6. Change 2: the level spacing
@@ -429,7 +429,7 @@ plt.show()
 # Rissanen et al. space the levels logarithmically, $\sigma_{B,k}=\sigma_{B,1}r^{k-1}$, which puts
 # the same number of levels into every octave of $\sigma_B$. Our matched spacing places
 # $t_2,\dots,t_{K-1}$ so that $E_2=\dots=E_K$ on the IXI training split, with both endpoints
-# fixed. Algorithm 1 of the report (Section 4.2) finds it with two nested bisections, and
+# fixed. Algorithm 1 of the report (Appendix D) finds it with two nested bisections, and
 # `ihdm.spectral.schedules.matched_schedule` implements it. One fit takes more than three
 # minutes on a CPU, so we load the four frozen schedules from `schedules/`, written by
 # `python -m ihdm.cli.build_schedules`. The names give the spacing (`log` or `ixi`-matched) and
